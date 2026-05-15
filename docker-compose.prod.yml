@@ -1,0 +1,63 @@
+version: "3.9"
+
+# Production overrides — use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  db:
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports: []  # Don't expose DB externally
+
+  redis:
+    restart: always
+    ports: []
+
+  backend:
+    build:
+      target: prod
+    restart: always
+    env_file: ./backend/.env
+    environment:
+      DEBUG: "false"
+    ports: []  # Exposed via nginx only
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  worker:
+    build:
+      target: prod
+    restart: always
+    command: celery -A app.workers.celery_app worker --loglevel=warning --concurrency=8
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  beat:
+    build:
+      target: prod
+    restart: always
+
+  flower:
+    ports: []  # Don't expose flower publicly in prod
+
+  nginx:
+    image: nginx:alpine
+    restart: always
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl.conf:/etc/nginx/ssl.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./frontend/dist:/var/www/netsupportai:ro
+      - nginx_logs:/var/log/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+
+volumes:
+  nginx_logs:

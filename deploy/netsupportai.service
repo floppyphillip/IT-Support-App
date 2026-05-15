@@ -1,0 +1,55 @@
+[Unit]
+Description=NetSupportAI FastAPI Application
+After=network.target postgresql.service redis.service
+Requires=postgresql.service redis.service
+
+[Service]
+Type=notify
+User=netsupportai
+Group=netsupportai
+WorkingDirectory=/opt/netsupportai/backend
+EnvironmentFile=/opt/netsupportai/backend/.env
+ExecStart=/opt/netsupportai/venv/bin/gunicorn app.main:app \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --workers 4 \
+    --bind 127.0.0.1:8000 \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
+    --access-logfile /var/log/netsupportai/access.log \
+    --error-logfile /var/log/netsupportai/error.log \
+    --log-level warning
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/log/netsupportai /opt/netsupportai
+
+[Install]
+WantedBy=multi-user.target
+
+# ─── Celery Worker ────────────────────────────────────────────────────────────
+# Create /etc/systemd/system/netsupportai-worker.service with:
+#
+# [Unit]
+# Description=NetSupportAI Celery Worker
+# After=network.target redis.service
+#
+# [Service]
+# User=netsupportai
+# WorkingDirectory=/opt/netsupportai/backend
+# EnvironmentFile=/opt/netsupportai/backend/.env
+# ExecStart=/opt/netsupportai/venv/bin/celery -A app.workers.celery_app worker \
+#     --loglevel=warning --concurrency=4 --logfile=/var/log/netsupportai/celery.log
+# Restart=on-failure
+#
+# [Install]
+# WantedBy=multi-user.target
