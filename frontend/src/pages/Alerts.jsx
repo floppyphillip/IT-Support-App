@@ -2,22 +2,14 @@ import { useEffect, useState } from 'react'
 import { alertsAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
-import { AlertTriangle, CheckCircle, Bell, Trash2, RefreshCw } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Bell, Trash2, RefreshCw, ShieldCheck } from 'lucide-react'
+import { SkeletonCard } from '../components/Skeleton'
+import EmptyState from '../components/EmptyState'
 
-const SEV_DOT = {
-  critical: 'bg-red-500',
-  warning: 'bg-amber-500',
-  info: 'bg-blue-500',
-}
-const SEV_BADGE = {
-  critical: 'bg-red-50 text-red-700',
-  warning: 'bg-amber-50 text-amber-700',
-  info: 'bg-blue-50 text-blue-700',
-}
-const SEV_ICON = {
-  critical: 'text-red-500',
-  warning: 'text-amber-500',
-  info: 'text-blue-500',
+const SEV = {
+  critical: { dot: 'bg-red-500',   badge: 'bg-red-50 text-red-700 border-red-100',    left: 'border-l-red-500' },
+  warning:  { dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-100', left: 'border-l-amber-500' },
+  info:     { dot: 'bg-blue-500',  badge: 'bg-blue-50 text-blue-700 border-blue-100',  left: 'border-l-blue-500' },
 }
 
 const TABS = [['active', 'Active'], ['all', 'All'], ['resolved', 'Resolved']]
@@ -69,97 +61,67 @@ export default function Alerts() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit">
         {TABS.map(([v, l]) => (
-          <button
-            key={v}
-            onClick={() => setFilter(v)}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
-              filter === v ? 'bg-white shadow-sm text-zoho-text' : 'text-zoho-muted hover:text-zoho-text'
+          <button key={v} onClick={() => setFilter(v)}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+              filter === v ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
             }`}
-          >
-            {l}
-          </button>
+          >{l}</button>
         ))}
       </div>
 
       {loading ? (
-        <div className="py-16 text-center text-zoho-muted text-sm">Loading…</div>
+        <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} rows={2} />)}</div>
       ) : alerts.length === 0 ? (
-        <div className="card py-16 text-center">
-          <CheckCircle className="w-10 h-10 mx-auto mb-3 text-green-400" />
-          <p className="text-zoho-muted text-sm">
-            {filter === 'active' ? 'No active alerts — all clear!' : 'No alerts found.'}
-          </p>
+        <div className="card">
+          <EmptyState
+            icon={ShieldCheck}
+            title={filter === 'active' ? 'All clear!' : 'No alerts found'}
+            description={filter === 'active' ? 'No active alerts right now. Your infrastructure looks healthy.' : 'No alerts match this filter.'}
+          />
         </div>
       ) : (
-        <div className="card overflow-hidden">
-          {alerts.map((a, idx) => (
-            <div
-              key={a.id}
-              className={`flex items-start gap-4 px-5 py-4 ${idx !== alerts.length - 1 ? 'border-b border-zoho-border' : ''}`}
-            >
-              {/* Severity dot */}
-              <div className="flex-shrink-0 mt-1">
-                <span className={`inline-block w-2.5 h-2.5 rounded-full ${SEV_DOT[a.severity] ?? 'bg-gray-400'}`} />
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                  <span className="text-sm font-semibold text-zoho-text">{a.title}</span>
-                  <span className={`badge ${SEV_BADGE[a.severity] ?? 'bg-gray-100 text-gray-600'}`}>
-                    {a.severity}
-                  </span>
-                  {a.is_acknowledged && (
-                    <span className="badge bg-gray-100 text-zoho-muted">acknowledged</span>
-                  )}
-                  {a.is_resolved && (
-                    <span className="badge bg-green-50 text-green-700">resolved</span>
-                  )}
+        <div className="space-y-2">
+          {alerts.map((a) => {
+            const s = SEV[a.severity] ?? SEV.info
+            return (
+              <div key={a.id} className={`card border-l-4 ${s.left} p-4 transition-all duration-200 hover:shadow-md`}>
+                <div className="flex items-start gap-3">
+                  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${s.dot}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      <span className="text-sm font-semibold text-slate-900">{a.title}</span>
+                      <span className={`badge border ${s.badge}`}>{a.severity}</span>
+                      {a.is_acknowledged && <span className="badge bg-slate-100 text-slate-500 border border-slate-200">ack'd</span>}
+                      {a.is_resolved && <span className="badge bg-emerald-50 text-emerald-700 border border-emerald-100">resolved</span>}
+                    </div>
+                    <p className="text-sm text-slate-500">{a.message}</p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                      <span className="capitalize">{a.alert_type.replace(/_/g, ' ')}</span>
+                      {a.metric_value != null && <span>Value: {a.metric_value}</span>}
+                      <span>{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {!a.is_acknowledged && !a.is_resolved && (
+                      <button className="btn-ghost py-1.5 px-2" onClick={() => doAction(a.id, 'acknowledge')} disabled={actioning === a.id} title="Acknowledge">
+                        <Bell className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {!a.is_resolved && (
+                      <button className="btn-ghost py-1.5 px-2 text-emerald-600 hover:bg-emerald-50" onClick={() => doAction(a.id, 'resolve')} disabled={actioning === a.id} title="Resolve">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button className="btn-ghost py-1.5 px-2 text-red-400 hover:bg-red-50" onClick={() => doAction(a.id, 'delete')} disabled={actioning === a.id} title="Delete">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-                <p className="text-sm text-zoho-muted">{a.message}</p>
-                <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                  <span className="capitalize">{a.alert_type.replace(/_/g, ' ')}</span>
-                  {a.metric_value != null && <span>Value: {a.metric_value}</span>}
-                  <span>{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</span>
-                </div>
               </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {!a.is_acknowledged && !a.is_resolved && (
-                  <button
-                    className="btn-ghost py-1.5 px-2.5 text-xs"
-                    onClick={() => doAction(a.id, 'acknowledge')}
-                    disabled={actioning === a.id}
-                    title="Acknowledge"
-                  >
-                    <Bell className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                {!a.is_resolved && (
-                  <button
-                    className="btn-ghost py-1.5 px-2.5 text-xs text-green-600 hover:bg-green-50"
-                    onClick={() => doAction(a.id, 'resolve')}
-                    disabled={actioning === a.id}
-                    title="Resolve"
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                <button
-                  className="btn-ghost py-1.5 px-2.5 text-xs text-red-400 hover:bg-red-50"
-                  onClick={() => doAction(a.id, 'delete')}
-                  disabled={actioning === a.id}
-                  title="Delete"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

@@ -16,6 +16,7 @@ export default function ChatWindow() {
   const [streaming, setStreaming] = useState(false)
   const bottomRef = useRef(null)
   const abortRef = useRef(null)
+  const inputRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -25,14 +26,13 @@ export default function ChatWindow() {
     e.preventDefault()
     if (!input.trim() || streaming) return
 
-    const userMsg = { role: 'user', content: input }
+    const userMsg = { role: 'user', content: input.trim() }
     const history = [...messages, userMsg]
     setMessages(history)
     setInput('')
     setStreaming(true)
 
-    const assistantMsg = { role: 'assistant', content: '' }
-    setMessages((m) => [...m, assistantMsg])
+    setMessages((m) => [...m, { role: 'assistant', content: '' }])
 
     try {
       const response = await fetch('/api/ai/chat/stream', {
@@ -61,7 +61,7 @@ export default function ChatWindow() {
         buf = lines.pop() ?? ''
         for (const line of lines) {
           if (!line.startsWith('data:')) continue
-          const raw = line.replace('data:', '').trim()
+          const raw = line.slice(5).trim()
           if (raw === '[DONE]') break
           try {
             const { token } = JSON.parse(raw)
@@ -75,7 +75,7 @@ export default function ChatWindow() {
                 return updated
               })
             }
-          } catch { /* ignore parse errors */ }
+          } catch { /* ignore malformed SSE frames */ }
         }
       }
     } catch (err) {
@@ -91,6 +91,7 @@ export default function ChatWindow() {
       }
     } finally {
       setStreaming(false)
+      inputRef.current?.focus()
     }
   }
 
@@ -98,47 +99,48 @@ export default function ChatWindow() {
     abortRef.current?.abort()
     setMessages(INITIAL)
     setStreaming(false)
+    inputRef.current?.focus()
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      send(e)
+    }
   }
 
   return (
     <div className="card flex flex-col" style={{ height: 560 }}>
       {/* Header */}
-      <div className="card-header flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-brand-50 flex items-center justify-center">
-            <Bot className="w-4 h-4 text-brand-500" />
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center">
+            <Bot className="w-4 h-4 text-blue-600" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-zoho-text">AI Support Chat</p>
-            {streaming && (
-              <p className="text-xs text-brand-500 animate-pulse">thinking…</p>
-            )}
+            <p className="text-sm font-semibold text-slate-900">AI Support Chat</p>
+            {streaming && <p className="text-xs text-blue-500 animate-pulse">thinking…</p>}
           </div>
         </div>
-        <button
-          onClick={clear}
-          className="btn-ghost py-1.5 px-2"
-          title="Clear chat"
-        >
+        <button onClick={clear} title="Clear chat"
+          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all duration-200">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-5 space-y-4">
         {messages.map((m, i) => (
           <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-              m.role === 'user' ? 'bg-brand-500' : 'bg-gray-100'
-            }`}>
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 ${m.role === 'user' ? 'bg-blue-600' : 'bg-slate-100'}`}>
               {m.role === 'user'
                 ? <User className="w-3.5 h-3.5 text-white" />
-                : <Bot className="w-3.5 h-3.5 text-zoho-muted" />}
+                : <Bot className="w-3.5 h-3.5 text-slate-500" />}
             </div>
-            <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed ${
+            <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed transition-all duration-200 ${
               m.role === 'user'
-                ? 'bg-brand-500 text-white rounded-tr-sm'
-                : 'bg-gray-100 text-zoho-text rounded-tl-sm'
+                ? 'bg-blue-600 text-white rounded-tr-sm'
+                : 'bg-slate-100 text-slate-800 rounded-tl-sm'
             }`}>
               {m.content || <span className="opacity-40 italic text-xs">…</span>}
             </div>
@@ -148,19 +150,19 @@ export default function ChatWindow() {
       </div>
 
       {/* Input */}
-      <form onSubmit={send} className="p-4 border-t border-zoho-border flex gap-2 flex-shrink-0">
-        <input
-          className="input flex-1 text-sm"
+      <form onSubmit={send} className="p-4 border-t border-slate-100 flex gap-2 flex-shrink-0">
+        <textarea
+          ref={inputRef}
+          rows={1}
+          className="input flex-1 text-sm resize-none"
           placeholder="Ask about network issues, devices, troubleshooting…"
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
           disabled={streaming}
+          style={{ minHeight: '38px', maxHeight: '120px' }}
         />
-        <button
-          type="submit"
-          className="btn-primary px-3"
-          disabled={streaming || !input.trim()}
-        >
+        <button type="submit" className="btn-primary px-3 self-end" disabled={streaming || !input.trim()}>
           <Send className="w-4 h-4" />
         </button>
       </form>

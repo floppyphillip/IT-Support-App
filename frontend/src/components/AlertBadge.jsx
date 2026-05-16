@@ -1,22 +1,16 @@
-const PRIORITY_STYLES = {
-  low:      'bg-gray-100 text-gray-600',
-  medium:   'bg-blue-50 text-blue-700',
-  high:     'bg-orange-50 text-orange-700',
-  critical: 'bg-red-50 text-red-700 font-semibold',
-}
-
-const PRIORITY_DOT = {
-  low:      'bg-gray-400',
-  medium:   'bg-blue-500',
-  high:     'bg-orange-500',
-  critical: 'bg-red-500',
+const STYLES = {
+  low:      { badge: 'bg-slate-100 text-slate-600 border-slate-200',   dot: 'bg-slate-400' },
+  medium:   { badge: 'bg-blue-50 text-blue-700 border-blue-100',       dot: 'bg-blue-500' },
+  high:     { badge: 'bg-amber-50 text-amber-700 border-amber-100',    dot: 'bg-amber-500' },
+  critical: { badge: 'bg-red-50 text-red-700 border-red-100 font-semibold', dot: 'bg-red-500' },
 }
 
 export default function AlertBadge({ priority }) {
   if (!priority) return null
+  const s = STYLES[priority] ?? STYLES.low
   return (
-    <span className={`badge gap-1 ${PRIORITY_STYLES[priority] ?? 'bg-gray-100 text-gray-500'}`}>
-      <span className={`w-1.5 h-1.5 rounded-full inline-block ${PRIORITY_DOT[priority] ?? 'bg-gray-400'}`} />
+    <span className={`badge gap-1 border ${s.badge}`}>
+      <span className={`w-1.5 h-1.5 rounded-full inline-block ${s.dot}`} />
       {priority}
     </span>
   )

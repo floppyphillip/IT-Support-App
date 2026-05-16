@@ -1,11 +1,19 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ticketsAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import StatusIndicator from '../components/StatusIndicator'
 import AlertBadge from '../components/AlertBadge'
-import { Monitor, Ticket, Plus, LogIn, ArrowRight, Shield } from 'lucide-react'
+import { Skeleton } from '../components/Skeleton'
+import EmptyState from '../components/EmptyState'
 import useAuth from '../hooks/useAuth'
-import { useNavigate } from 'react-router-dom'
+import { Monitor, LogIn, ArrowRight, Shield, Plus, Ticket, X, CheckCircle, Clock, Users } from 'lucide-react'
+
+const FEATURES = [
+  { icon: CheckCircle, title: 'Submit Tickets',   desc: 'Report issues directly from this portal' },
+  { icon: Clock,       title: 'Track Progress',   desc: 'Monitor ticket status in real-time' },
+  { icon: Users,       title: 'AI-Assisted',      desc: 'Faster resolutions with Claude AI diagnosis' },
+]
 
 export default function ClientPortal() {
   const { isAuthenticated, login, user } = useAuth()
@@ -14,9 +22,9 @@ export default function ClientPortal() {
   const [logging, setLogging] = useState(false)
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(false)
+  const [showForm, setShowForm] = useState(false)
   const [newTicket, setNewTicket] = useState({ title: '', description: '', priority: 'medium' })
   const [submitting, setSubmitting] = useState(false)
-  const [showForm, setShowForm] = useState(false)
 
   const doLogin = async (e) => {
     e.preventDefault()
@@ -29,19 +37,22 @@ export default function ClientPortal() {
   }
 
   useEffect(() => {
-    if (isAuthenticated && user?.role === 'client_user') {
+    if (isAuthenticated) {
+      if (user?.role !== 'client' && user?.role !== 'client_user') {
+        navigate('/dashboard')
+        return
+      }
       loadTickets()
-    } else if (isAuthenticated) {
-      navigate('/dashboard')
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, user])
 
   const loadTickets = async () => {
     setLoading(true)
     try {
-      const { data } = await ticketsAPI.list({ limit: 20 })
-      setTickets(data.items)
-    } finally { setLoading(false) }
+      const { data } = await ticketsAPI.list({ limit: 30 })
+      setTickets(data.items || [])
+    } catch { /* handled silently */ }
+    finally { setLoading(false) }
   }
 
   const submitTicket = async (e) => {
@@ -49,7 +60,7 @@ export default function ClientPortal() {
     setSubmitting(true)
     try {
       await ticketsAPI.create(newTicket)
-      toast.success('Ticket submitted! Our team will be in touch shortly.')
+      toast.success('Ticket submitted — our team will be in touch shortly.')
       setShowForm(false)
       setNewTicket({ title: '', description: '', priority: 'medium' })
       loadTickets()
@@ -61,93 +72,80 @@ export default function ClientPortal() {
     return (
       <div className="min-h-screen flex">
         {/* Left panel */}
-        <div className="hidden lg:flex lg:w-2/5 bg-brand-500 flex-col justify-between p-12">
+        <div className="hidden lg:flex lg:w-5/12 bg-slate-900 flex-col justify-between p-12">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
               <Monitor className="w-5 h-5 text-white" />
             </div>
             <span className="text-white font-bold text-lg">NetSupportAI</span>
           </div>
+
           <div>
-            <h1 className="text-3xl font-bold text-white leading-tight mb-4">
-              Client Support Portal
+            <h1 className="text-4xl font-bold text-white leading-tight mb-4">
+              Client Support<br />Portal
             </h1>
-            <p className="text-brand-100 text-base mb-8">
+            <p className="text-slate-400 text-lg mb-10">
               Submit tickets, track issues, and get AI-powered IT support.
             </p>
-            <div className="space-y-3">
-              {[
-                ['Submit Tickets', 'Report issues directly from this portal'],
-                ['Track Progress', 'Monitor your ticket status in real-time'],
-                ['AI-Assisted', 'Automatic diagnosis and faster resolutions'],
-              ].map(([title, desc]) => (
+            <div className="space-y-4">
+              {FEATURES.map(({ icon: Icon, title, desc }) => (
                 <div key={title} className="flex items-start gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-white/60 mt-2 flex-shrink-0" />
+                  <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Icon className="w-4 h-4 text-blue-400" />
+                  </div>
                   <div>
-                    <p className="text-white font-medium text-sm">{title}</p>
-                    <p className="text-brand-200 text-sm">{desc}</p>
+                    <p className="text-white font-semibold text-sm">{title}</p>
+                    <p className="text-slate-400 text-sm">{desc}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <p className="text-brand-300 text-xs">
-            © {new Date().getFullYear()} NetSupportAI. All rights reserved.
-          </p>
+
+          <p className="text-slate-600 text-xs">© {new Date().getFullYear()} NetSupportAI. All rights reserved.</p>
         </div>
 
         {/* Right panel */}
-        <div className="flex-1 flex items-center justify-center bg-zoho-body p-8">
+        <div className="flex-1 flex items-center justify-center bg-slate-50 p-8">
           <div className="w-full max-w-sm">
             <div className="flex items-center gap-2 mb-8 lg:hidden">
-              <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center">
                 <Monitor className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-zoho-text">NetSupportAI Client Portal</span>
+              <span className="font-bold text-slate-900">NetSupportAI Client Portal</span>
             </div>
 
-            <div className="bg-white rounded-xl border border-zoho-border shadow-card p-8">
-              <h2 className="text-xl font-bold text-zoho-text mb-1">Client Sign In</h2>
-              <p className="text-sm text-zoho-muted mb-6">Enter your credentials to access the portal</p>
+            <div className="card p-8">
+              <h2 className="text-xl font-bold text-slate-900 mb-1">Client Sign In</h2>
+              <p className="text-sm text-slate-500 mb-6">Enter your credentials to access the portal</p>
 
               <form onSubmit={doLogin} className="space-y-4">
                 <div>
                   <label className="label">Email address</label>
-                  <input
-                    className="input"
-                    type="email"
-                    required
-                    value={creds.email}
-                    onChange={(e) => setCreds((c) => ({ ...c, email: e.target.value }))}
-                    autoFocus
-                  />
+                  <input className="input" type="email" required autoFocus placeholder="you@company.com"
+                    value={creds.email} onChange={(e) => setCreds((c) => ({ ...c, email: e.target.value }))} />
                 </div>
                 <div>
                   <label className="label">Password</label>
-                  <input
-                    className="input"
-                    type="password"
-                    required
-                    value={creds.password}
-                    onChange={(e) => setCreds((c) => ({ ...c, password: e.target.value }))}
-                  />
+                  <input className="input" type="password" required placeholder="••••••••"
+                    value={creds.password} onChange={(e) => setCreds((c) => ({ ...c, password: e.target.value }))} />
                 </div>
-                <button type="submit" className="btn-primary w-full justify-center py-2.5 mt-2" disabled={logging}>
-                  {logging ? 'Signing in…' : <><LogIn className="w-4 h-4" /> Sign in</>}
+                <button type="submit" className="btn-primary w-full justify-center py-2.5 mt-1" disabled={logging}>
+                  {logging ? 'Signing in…' : <><LogIn className="w-4 h-4" />Sign in</>}
                 </button>
               </form>
 
-              <div className="mt-6 pt-5 border-t border-zoho-border">
-                <p className="text-xs text-zoho-muted text-center">
+              <div className="mt-6 pt-5 border-t border-slate-100">
+                <p className="text-xs text-slate-400 text-center">
                   Staff member?{' '}
-                  <a href="/login" className="text-brand-500 hover:text-brand-600 font-medium">
-                    Staff login <ArrowRight className="inline w-3 h-3" />
+                  <a href="/login" className="text-blue-600 hover:text-blue-700 font-medium transition-all duration-200">
+                    Go to staff login <ArrowRight className="inline w-3 h-3" />
                   </a>
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-1.5 mt-5 text-xs text-gray-400">
+            <div className="flex items-center justify-center gap-1.5 mt-5 text-xs text-slate-400">
               <Shield className="w-3 h-3" />
               <span>Secured with JWT + bcrypt</span>
             </div>
@@ -158,17 +156,20 @@ export default function ClientPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-zoho-body">
+    <div className="min-h-screen bg-slate-50">
       {/* Portal header */}
-      <header className="bg-white border-b border-zoho-border px-6 py-3 flex items-center justify-between">
+      <header className="bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center">
+          <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
             <Monitor className="w-4 h-4 text-white" />
           </div>
-          <span className="font-semibold text-zoho-text text-sm">NetSupportAI</span>
-          <span className="text-zoho-muted text-sm">/ Client Portal</span>
+          <span className="font-semibold text-slate-900 text-sm">NetSupportAI</span>
+          <span className="text-slate-400 text-sm">/</span>
+          <span className="text-slate-500 text-sm">Client Portal</span>
         </div>
-        <span className="text-sm text-zoho-muted">Welcome, <span className="text-zoho-text font-medium">{user?.full_name}</span></span>
+        <span className="text-sm text-slate-500">
+          Welcome, <span className="text-slate-900 font-medium">{user?.full_name}</span>
+        </span>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
@@ -178,77 +179,79 @@ export default function ClientPortal() {
             <p className="page-sub">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''}</p>
           </div>
           <button className="btn-primary" onClick={() => setShowForm(true)}>
-            <Plus className="w-4 h-4" /> New Ticket
+            <Plus className="w-4 h-4" />New Ticket
           </button>
         </div>
 
         {/* New ticket form */}
         {showForm && (
-          <div className="card p-5">
-            <h2 className="text-sm font-semibold text-zoho-text mb-4">Submit a Support Request</h2>
+          <div className="card p-5 animate-slide-up">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-slate-900">Submit a Support Request</h2>
+              <button onClick={() => setShowForm(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all duration-200">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
             <form onSubmit={submitTicket} className="space-y-4">
               <div>
                 <label className="label">Issue Title *</label>
-                <input
-                  className="input"
-                  required
-                  value={newTicket.title}
-                  onChange={(e) => setNewTicket((t) => ({ ...t, title: e.target.value }))}
-                  placeholder="Brief description of the issue"
-                />
+                <input className="input" required placeholder="Brief description of the issue"
+                  value={newTicket.title} onChange={(e) => setNewTicket((t) => ({ ...t, title: e.target.value }))} />
               </div>
               <div>
                 <label className="label">Description</label>
-                <textarea
-                  className="input h-28 resize-none"
-                  value={newTicket.description}
-                  onChange={(e) => setNewTicket((t) => ({ ...t, description: e.target.value }))}
-                  placeholder="Please describe the issue in detail…"
-                />
+                <textarea className="input h-28 resize-none" placeholder="Please describe the issue in detail…"
+                  value={newTicket.description} onChange={(e) => setNewTicket((t) => ({ ...t, description: e.target.value }))} />
               </div>
               <div>
                 <label className="label">Priority</label>
-                <select
-                  className="input w-40"
-                  value={newTicket.priority}
-                  onChange={(e) => setNewTicket((t) => ({ ...t, priority: e.target.value }))}
-                >
+                <select className="input w-40" value={newTicket.priority}
+                  onChange={(e) => setNewTicket((t) => ({ ...t, priority: e.target.value }))}>
                   {['low', 'medium', 'high', 'critical'].map((p) => (
-                    <option key={p} value={p}>{p}</option>
+                    <option key={p} value={p} className="capitalize">{p.charAt(0).toUpperCase() + p.slice(1)}</option>
                   ))}
                 </select>
               </div>
-              <div className="flex gap-3 pt-1 border-t border-zoho-border">
+              <div className="flex gap-3 pt-1 border-t border-slate-100">
                 <button type="submit" className="btn-primary" disabled={submitting}>
                   {submitting ? 'Submitting…' : 'Submit Ticket'}
                 </button>
-                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
-                  Cancel
-                </button>
+                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
               </div>
             </form>
           </div>
         )}
 
-        {/* Tickets list */}
+        {/* Ticket list */}
         <div className="card overflow-hidden">
           {loading ? (
-            <div className="py-12 text-center text-zoho-muted text-sm">Loading…</div>
-          ) : tickets.length === 0 ? (
-            <div className="py-12 text-center">
-              <Ticket className="w-10 h-10 mx-auto mb-3 text-gray-200" />
-              <p className="text-zoho-muted text-sm mb-3">No tickets yet.</p>
-              <button className="btn-primary" onClick={() => setShowForm(true)}>
-                Submit your first ticket
-              </button>
+            <div className="p-5 space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
+              ))}
             </div>
+          ) : tickets.length === 0 ? (
+            <EmptyState
+              icon={Ticket}
+              title="No tickets yet"
+              description="Submit a support request and our team will get back to you."
+              action={() => setShowForm(true)}
+              actionLabel="Submit your first ticket"
+            />
           ) : (
-            <div className="divide-y divide-zoho-border">
+            <div className="divide-y divide-slate-100">
               {tickets.map((t) => (
-                <div key={t.id} className="flex items-center gap-4 px-5 py-4">
+                <div key={t.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-all duration-200">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-zoho-text">{t.title}</p>
-                    <p className="text-xs text-zoho-muted mt-0.5">
+                    <p className="text-sm font-medium text-slate-900 truncate">{t.title}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
                       {t.ticket_number} · {new Date(t.created_at).toLocaleDateString()}
                     </p>
                   </div>

@@ -9,20 +9,14 @@ const CATEGORIES = ['network', 'hardware', 'software', 'security', 'connectivity
 
 export default function NewTicket() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({
-    title: '', description: '', priority: 'medium', category: 'other',
-    client_id: '', device_id: '', tags: '',
-  })
+  const [form, setForm] = useState({ title: '', description: '', priority: 'medium', category: 'other', client_id: '', device_id: '', tags: '' })
   const [clients, setClients] = useState([])
   const [devices, setDevices] = useState([])
   const [loading, setLoading] = useState(false)
   const [classifying, setClassifying] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      clientsAPI.list({ limit: 100 }),
-      devicesAPI.list({ limit: 100 }),
-    ]).then(([c, d]) => {
+    Promise.all([clientsAPI.list({ limit: 100 }), devicesAPI.list({ limit: 100 })]).then(([c, d]) => {
       setClients(c.data.items)
       setDevices(d.data.items)
     })
@@ -43,20 +37,12 @@ export default function NewTicket() {
     e.preventDefault()
     setLoading(true)
     try {
-      const payload = {
-        ...form,
-        client_id: form.client_id || undefined,
-        device_id: form.device_id || undefined,
-        tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-      }
+      const payload = { ...form, client_id: form.client_id || undefined, device_id: form.device_id || undefined, tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : [] }
       const { data } = await ticketsAPI.create(payload)
       toast.success(`Ticket ${data.ticket_number} created`)
       navigate(`/tickets/${data.id}`)
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create ticket')
-    } finally {
-      setLoading(false)
-    }
+    } catch (err) { toast.error(err.response?.data?.detail || 'Failed to create ticket') }
+    finally { setLoading(false) }
   }
 
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
@@ -64,7 +50,7 @@ export default function NewTicket() {
   return (
     <div className="max-w-2xl animate-fade-in">
       <div className="flex items-center gap-3 mb-6">
-        <Link to="/tickets" className="text-zoho-muted hover:text-zoho-text transition-colors">
+        <Link to="/tickets" className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all duration-200">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
@@ -74,24 +60,11 @@ export default function NewTicket() {
       </div>
 
       <form onSubmit={submit} className="card p-6 space-y-5">
-        {/* Title + AI classify */}
         <div>
           <label className="label">Title *</label>
           <div className="flex gap-2">
-            <input
-              className="input flex-1"
-              required
-              value={form.title}
-              onChange={set('title')}
-              placeholder="Brief description of the issue"
-            />
-            <button
-              type="button"
-              className="btn-secondary flex-shrink-0"
-              onClick={autoClassify}
-              disabled={classifying}
-              title="Auto-classify with AI"
-            >
+            <input className="input flex-1" required value={form.title} onChange={set('title')} placeholder="Brief description of the issue" />
+            <button type="button" className="btn-secondary flex-shrink-0" onClick={autoClassify} disabled={classifying} title="Auto-classify with AI">
               <Sparkles className="w-4 h-4" />
               {classifying ? '…' : 'AI Classify'}
             </button>
@@ -100,12 +73,7 @@ export default function NewTicket() {
 
         <div>
           <label className="label">Description</label>
-          <textarea
-            className="input h-28 resize-none"
-            value={form.description}
-            onChange={set('description')}
-            placeholder="Describe symptoms, affected users, recent changes…"
-          />
+          <textarea className="input h-28 resize-none" value={form.description} onChange={set('description')} placeholder="Describe symptoms, affected users, recent changes…" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -142,21 +110,12 @@ export default function NewTicket() {
 
         <div>
           <label className="label">Tags (comma-separated)</label>
-          <input
-            className="input"
-            value={form.tags}
-            onChange={set('tags')}
-            placeholder="dns, vpn, firewall"
-          />
+          <input className="input" value={form.tags} onChange={set('tags')} placeholder="dns, vpn, firewall" />
         </div>
 
-        <div className="flex gap-3 pt-1 border-t border-zoho-border">
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Creating…' : 'Create Ticket'}
-          </button>
-          <button type="button" className="btn-secondary" onClick={() => navigate('/tickets')}>
-            Cancel
-          </button>
+        <div className="flex gap-3 pt-2 border-t border-slate-100">
+          <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Creating…' : 'Create Ticket'}</button>
+          <button type="button" className="btn-secondary" onClick={() => navigate('/tickets')}>Cancel</button>
         </div>
       </form>
     </div>
