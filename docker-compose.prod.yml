@@ -38,6 +38,7 @@ services:
     build:
       target: prod
     restart: always
+    command: celery -A app.workers.celery_app beat --loglevel=warning -s /tmp/celerybeat-schedule
 
   flower:
     ports: []  # Don't expose flower publicly in prod
