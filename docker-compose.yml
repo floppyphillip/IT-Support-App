@@ -39,11 +39,6 @@ services:
       target: dev
     restart: unless-stopped
     env_file: ./backend/.env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://netsupport:secret@db:5432/netsupportai
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
     volumes:
       - ./backend:/app
       - logs:/var/log/netsupportai
@@ -63,11 +58,6 @@ services:
     restart: unless-stopped
     command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=4
     env_file: ./backend/.env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://netsupport:secret@db:5432/netsupportai
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
     volumes:
       - ./backend:/app
       - logs:/var/log/netsupportai
@@ -83,10 +73,6 @@ services:
     restart: unless-stopped
     command: celery -A app.workers.celery_app beat --loglevel=info
     env_file: ./backend/.env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://netsupport:secret@db:5432/netsupportai
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
     volumes:
       - ./backend:/app
     depends_on:
@@ -100,8 +86,6 @@ services:
     restart: unless-stopped
     command: celery -A app.workers.celery_app flower --port=5555
     env_file: ./backend/.env
-    environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
     ports:
       - "5555:5555"
     depends_on:
