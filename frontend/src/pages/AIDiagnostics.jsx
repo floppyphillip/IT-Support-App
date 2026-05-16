@@ -46,52 +46,69 @@ export default function AIDiagnostics() {
   return (
     <div className="space-y-5 animate-fade-in">
       <div>
-        <h1 className="page-title flex items-center gap-2"><Bot className="w-5 h-5 text-blue-500" />AI Diagnostics</h1>
+        <h1 className="page-title flex items-center gap-2"><Bot className="w-5 h-5 text-blue-400" />AI Diagnostics</h1>
         <p className="page-sub">Powered by Claude — network engineering AI assistant</p>
       </div>
 
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit flex-wrap">
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 rounded-xl w-fit flex-wrap" style={{ background: '#0d1526' }}>
         {TABS.map(([key, label, Icon]) => (
           <button key={key} onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${tab === key ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-          ><Icon className="w-3.5 h-3.5" />{label}</button>
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+              tab === key ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
+            }`}
+            style={tab === key ? { background: '#182035' } : {}}>
+            <Icon className="w-3.5 h-3.5" />{label}
+          </button>
         ))}
       </div>
 
       {tab === 'diagnose' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <form onSubmit={runDiagnose} className="card p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-900">Describe the Issue</h2>
+            <h2 className="text-sm font-semibold text-slate-200">Describe the Issue</h2>
             <div><label className="label">Issue Description *</label>
-              <textarea className="input h-32 resize-none" required value={diagnoseForm.description} onChange={(e) => setDiagnoseForm((f) => ({ ...f, description: e.target.value }))} placeholder="Symptoms, error messages, affected users, recent changes…" /></div>
+              <textarea className="input h-32 resize-none" required value={diagnoseForm.description}
+                onChange={(e) => setDiagnoseForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Symptoms, error messages, affected users, recent changes…" /></div>
             <div><label className="label">Device Info</label>
-              <input className="input" value={diagnoseForm.device_info} onChange={(e) => setDiagnoseForm((f) => ({ ...f, device_info: e.target.value }))} placeholder="e.g. Cisco ISR 4451, IP 10.0.1.1" /></div>
+              <input className="input" value={diagnoseForm.device_info}
+                onChange={(e) => setDiagnoseForm((f) => ({ ...f, device_info: e.target.value }))}
+                placeholder="e.g. Cisco ISR 4451, IP 10.0.1.1" /></div>
             <div><label className="label">Additional Context</label>
-              <textarea className="input h-20 resize-none" value={diagnoseForm.additional_context} onChange={(e) => setDiagnoseForm((f) => ({ ...f, additional_context: e.target.value }))} placeholder="Network topology, recent changes…" /></div>
-            <button type="submit" className="btn-primary w-full justify-center" disabled={diagnosing}><Zap className="w-4 h-4" />{diagnosing ? 'Analysing…' : 'Run AI Diagnosis'}</button>
+              <textarea className="input h-20 resize-none" value={diagnoseForm.additional_context}
+                onChange={(e) => setDiagnoseForm((f) => ({ ...f, additional_context: e.target.value }))}
+                placeholder="Network topology, recent changes…" /></div>
+            <button type="submit" className="btn-primary w-full justify-center" disabled={diagnosing}>
+              <Zap className="w-4 h-4" />{diagnosing ? 'Analysing…' : 'Run AI Diagnosis'}
+            </button>
           </form>
           {diagnoseResult && (
             <div className="card p-5 space-y-4 overflow-y-auto max-h-[600px]">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-blue-700">Diagnosis Result</h2>
-                <span className="badge bg-blue-50 text-blue-700 border border-blue-100">{Math.round((diagnoseResult.confidence_score ?? 0) * 100)}% confidence</span>
+                <h2 className="text-sm font-semibold text-blue-400">Diagnosis Result</h2>
+                <span className="badge bg-blue-500/20 text-blue-400 border border-blue-500/30">{Math.round((diagnoseResult.confidence_score ?? 0) * 100)}% confidence</span>
               </div>
-              {diagnoseResult.error ? <p className="text-red-600 text-sm">{diagnoseResult.error}</p> : (
+              {diagnoseResult.error ? <p className="text-red-400 text-sm">{diagnoseResult.error}</p> : (
                 <>
-                  <div><p className="label">Diagnosis</p><p className="text-sm text-slate-700 leading-relaxed">{diagnoseResult.diagnosis}</p></div>
-                  <div><p className="label">Root Cause</p><p className="text-sm text-slate-700">{diagnoseResult.root_cause}</p></div>
+                  <div><p className="label">Diagnosis</p><p className="text-sm text-slate-300 leading-relaxed">{diagnoseResult.diagnosis}</p></div>
+                  <div><p className="label">Root Cause</p><p className="text-sm text-slate-400">{diagnoseResult.root_cause}</p></div>
                   {diagnoseResult.fix_steps?.length > 0 && (
                     <div><p className="label">Fix Steps</p>
                       <ol className="space-y-1.5">{diagnoseResult.fix_steps.map((step, i) => (
-                        <li key={i} className="text-sm text-slate-700 flex gap-2"><span className="text-slate-400 font-medium flex-shrink-0">{i + 1}.</span>{step}</li>
-                      ))}</ol></div>
+                        <li key={i} className="text-sm text-slate-400 flex gap-2"><span className="text-slate-500 font-medium flex-shrink-0">{i + 1}.</span>{step}</li>
+                      ))}</ol>
+                    </div>
                   )}
                   {diagnoseResult.cli_commands?.length > 0 && (
                     <div><p className="label">CLI Commands</p>
-                      {diagnoseResult.cli_commands.map((cmd, i) => <code key={i} className="cli-block mb-1">{cmd}</code>)}</div>
+                      {diagnoseResult.cli_commands.map((cmd, i) => <code key={i} className="cli-block mb-1">{cmd}</code>)}
+                    </div>
                   )}
                   {diagnoseResult.escalate_to_human && (
-                    <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-700">Human engineer review recommended</div>
+                    <div className="rounded-xl p-3 text-sm text-red-400" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                      Human engineer review recommended
+                    </div>
                   )}
                 </>
               )}
@@ -103,30 +120,35 @@ export default function AIDiagnostics() {
       {tab === 'config' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <form onSubmit={runAnalyzeConfig} className="card p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-900">Paste Device Configuration</h2>
+            <h2 className="text-sm font-semibold text-slate-200">Paste Device Configuration</h2>
             <div><label className="label">Device Type</label>
               <select className="input" value={deviceType} onChange={(e) => setDeviceType(e.target.value)}>
                 {DEVICE_TYPES.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
               </select></div>
             <div><label className="label">Configuration *</label>
-              <textarea className="input h-72 resize-none font-mono text-xs" required placeholder="Paste show running-config, /export, or similar…" value={configText} onChange={(e) => setConfigText(e.target.value)} /></div>
-            <button type="submit" className="btn-primary w-full justify-center" disabled={analyzingConfig}><Shield className="w-4 h-4" />{analyzingConfig ? 'Analysing…' : 'Analyze Configuration'}</button>
+              <textarea className="input h-72 resize-none font-mono text-xs" required
+                placeholder="Paste show running-config, /export, or similar…"
+                value={configText} onChange={(e) => setConfigText(e.target.value)} /></div>
+            <button type="submit" className="btn-primary w-full justify-center" disabled={analyzingConfig}>
+              <Shield className="w-4 h-4" />{analyzingConfig ? 'Analysing…' : 'Analyze Configuration'}
+            </button>
           </form>
           {configResult && (
             <div className="card p-5 space-y-4 overflow-y-auto max-h-[600px]">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-900">Security Analysis</h2>
+                <h2 className="text-sm font-semibold text-slate-200">Security Analysis</h2>
                 {configResult.overall_security_score != null && (
-                  <span className={`badge border ${configResult.overall_security_score >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : configResult.overall_security_score >= 50 ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                  <span className={`badge border ${configResult.overall_security_score >= 80 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : configResult.overall_security_score >= 50 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
                     Score: {configResult.overall_security_score}/100
                   </span>
                 )}
               </div>
-              {configResult.summary && <p className="text-sm text-slate-500">{configResult.summary}</p>}
+              {configResult.summary && <p className="text-sm text-slate-400">{configResult.summary}</p>}
               {configResult.security_issues?.map((issue, i) => (
-                <div key={i} className={`p-3 rounded-xl border-l-4 ${issue.severity === 'critical' ? 'border-red-500 bg-red-50' : issue.severity === 'high' ? 'border-orange-500 bg-orange-50' : 'border-amber-500 bg-amber-50'}`}>
+                <div key={i} className="p-3 rounded-xl"
+                  style={{ borderLeft: `4px solid ${issue.severity === 'critical' ? '#ef4444' : issue.severity === 'high' ? '#f97316' : '#f59e0b'}`, background: '#1e2840' }}>
                   <p className="text-xs font-semibold uppercase text-slate-500">{issue.severity}</p>
-                  <p className="text-sm font-medium text-slate-900">{issue.issue}</p>
+                  <p className="text-sm font-medium text-slate-200">{issue.issue}</p>
                   <p className="text-xs text-slate-500 mt-1">{issue.recommendation}</p>
                 </div>
               ))}
@@ -138,29 +160,33 @@ export default function AIDiagnostics() {
       {tab === 'logs' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <form onSubmit={runInterpretLogs} className="card p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-900">Paste Syslog / Log Output</h2>
+            <h2 className="text-sm font-semibold text-slate-200">Paste Syslog / Log Output</h2>
             <div><label className="label">Device Type</label>
               <select className="input" value={logDeviceType} onChange={(e) => setLogDeviceType(e.target.value)}>
                 {LOG_TYPES.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
               </select></div>
             <div><label className="label">Log Output *</label>
-              <textarea className="input h-72 resize-none font-mono text-xs" required placeholder="Paste syslog, dmesg, event viewer, or any logs…" value={logText} onChange={(e) => setLogText(e.target.value)} /></div>
-            <button type="submit" className="btn-primary w-full justify-center" disabled={analyzingLogs}><FileText className="w-4 h-4" />{analyzingLogs ? 'Analysing…' : 'Interpret Logs'}</button>
+              <textarea className="input h-72 resize-none font-mono text-xs" required
+                placeholder="Paste syslog, dmesg, event viewer, or any logs…"
+                value={logText} onChange={(e) => setLogText(e.target.value)} /></div>
+            <button type="submit" className="btn-primary w-full justify-center" disabled={analyzingLogs}>
+              <FileText className="w-4 h-4" />{analyzingLogs ? 'Analysing…' : 'Interpret Logs'}
+            </button>
           </form>
           {logResult && (
             <div className="card p-5 space-y-4 overflow-y-auto max-h-[600px]">
-              <h2 className="text-sm font-semibold text-slate-900">Log Analysis</h2>
-              {logResult.timeline_summary && <p className="text-sm text-slate-500">{logResult.timeline_summary}</p>}
+              <h2 className="text-sm font-semibold text-slate-200">Log Analysis</h2>
+              {logResult.timeline_summary && <p className="text-sm text-slate-400">{logResult.timeline_summary}</p>}
               {logResult.requires_immediate_attention && (
-                <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-700 font-medium">
+                <div className="rounded-xl p-3 text-sm text-red-400 font-medium" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
                   Requires immediate attention — {logResult.critical_events_count} critical event(s)
                 </div>
               )}
               {logResult.error_patterns?.map((p, i) => (
-                <div key={i} className={`p-3 rounded-xl ${p.severity === 'critical' ? 'bg-red-50' : p.severity === 'warning' ? 'bg-amber-50' : 'bg-blue-50'}`}>
+                <div key={i} className="p-3 rounded-xl" style={{ background: '#1e2840' }}>
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium text-slate-900">{p.pattern}</p>
-                    <span className="badge bg-white text-slate-500 border border-slate-200">{p.occurrences}×</span>
+                    <p className="text-sm font-medium text-slate-200">{p.pattern}</p>
+                    <span className="badge bg-slate-700/50 text-slate-400 border border-slate-600/50">{p.occurrences}×</span>
                   </div>
                   <p className="text-xs text-slate-500">{p.interpretation}</p>
                   <p className="text-xs text-slate-500 mt-1 font-medium">→ {p.recommended_action}</p>

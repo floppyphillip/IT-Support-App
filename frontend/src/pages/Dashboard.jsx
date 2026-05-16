@@ -7,19 +7,27 @@ import StatusIndicator from '../components/StatusIndicator'
 import { SkeletonStats } from '../components/Skeleton'
 import useWebSocket from '../hooks/useWebSocket'
 import useAuth from '../hooks/useAuth'
+import { formatDistanceToNow } from 'date-fns'
 import {
-  BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { Ticket, Server, AlertTriangle, Clock, Activity, ArrowRight, CheckCircle } from 'lucide-react'
+import { Ticket, Server, AlertTriangle, Clock, Activity, ArrowRight, Clock3 } from 'lucide-react'
 
 const STATUS_COLORS = {
-  open: '#2563eb', in_progress: '#f59e0b', ai_resolved: '#8b5cf6',
-  escalated: '#ef4444', pending: '#f97316', resolved: '#10b981', closed: '#94a3b8',
+  open: '#3b82f6', in_progress: '#f59e0b', ai_resolved: '#8b5cf6',
+  escalated: '#ef4444', pending: '#f97316', resolved: '#10b981', closed: '#475569',
 }
-const DEVICE_COLORS = ['#10b981', '#ef4444', '#f59e0b', '#94a3b8']
 
-const TooltipStyle = { fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }
+const TTStyle = {
+  background: '#182035', border: '1px solid #1e2d47',
+  borderRadius: 8, fontSize: 11, color: '#e2e8f0',
+}
+
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+function buildWeekChart(byStatus = []) {
+  return DAYS.map((day) => ({ day, open: 0, resolved: 0, ai_fixed: 0, ...byStatus.find((d) => d.day === day) }))
+}
 
 export default function Dashboard() {
   const { accessToken } = useAuth()
@@ -31,7 +39,7 @@ export default function Dashboard() {
     try {
       const [{ data: s }, { data: a }] = await Promise.all([
         dashboardAPI.stats(),
-        dashboardAPI.recentActivity(8),
+        dashboardAPI.recentActivity(10),
       ])
       setStats(s)
       setActivity(a.activity || [])
@@ -50,162 +58,169 @@ export default function Dashboard() {
       if (data.type === 'stats_update') {
         setStats((prev) => prev ? {
           ...prev,
-          alerts: { ...prev.alerts, active: data.active_alerts },
+          alerts:  { ...prev.alerts,  active: data.active_alerts },
           devices: { ...prev.devices, online: data.online_devices },
-          tickets: { ...prev.tickets, open: data.open_tickets },
+          tickets: { ...prev.tickets, open:   data.open_tickets },
         } : prev)
+      }
+      if (data.type === 'activity') {
+        setActivity((prev) => [data, ...prev].slice(0, 10))
       }
     },
   })
 
-  const ticketChartData = stats?.charts?.tickets_by_status ?? []
-  const deviceChartData = [
-    { name: 'Online', value: stats?.devices.online ?? 0 },
-    { name: 'Offline', value: stats?.devices.offline ?? 0 },
-  ]
+  const weekData = buildWeekChart(stats?.charts?.tickets_by_day ?? [])
+  const criticalTickets = (stats?.recent_tickets ?? []).filter((t) => t.priority === 'critical' || t.priority === 'high')
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       <div>
         <h1 className="page-title">Dashboard</h1>
         <p className="page-sub">Real-time infrastructure overview</p>
       </div>
 
-      {/* Stats */}
+      {/* Stats row */}
       {loading ? <SkeletonStats /> : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard title="Open Tickets" value={stats?.tickets.open ?? '–'} icon={<Ticket className="w-5 h-5" />} color="blue" sub={`${stats?.tickets.critical ?? 0} critical`} />
-          <StatsCard title="Online Devices" value={stats?.devices.online ?? '–'} icon={<Server className="w-5 h-5" />} color="green" sub={`${stats?.devices.availability_pct ?? 0}% availability`} />
-          <StatsCard title="Active Alerts" value={stats?.alerts.active ?? '–'} icon={<AlertTriangle className="w-5 h-5" />} color={stats?.alerts.critical > 0 ? 'red' : 'yellow'} sub={`${stats?.alerts.critical ?? 0} critical`} />
-          <StatsCard title="SLA Breached" value={stats?.tickets.sla_breached ?? '–'} icon={<Clock className="w-5 h-5" />} color={stats?.tickets.sla_breached > 0 ? 'red' : 'green'} sub={`${stats?.tickets.closed_this_week ?? 0} closed this week`} />
+          <StatsCard
+            title="Open Tickets" icon={<Ticket className="w-5 h-5" />} color="blue"
+            value={stats?.tickets.open ?? '–'}
+            sub={`${stats?.tickets.new_today ?? 0} new today`} trend="up"
+          />
+          <StatsCard
+            title="Online Devices" icon={<Server className="w-5 h-5" />}
+            color={stats?.devices.offline > 0 ? 'red' : 'green'}
+            value={stats?.devices.online ?? '–'}
+            sub={stats?.devices.offline > 0 ? `${stats.devices.offline} offline` : 'All reachable'}
+            trend={stats?.devices.offline > 0 ? 'down' : 'up'}
+          />
+          <StatsCard
+            title="Active Alerts" icon={<AlertTriangle className="w-5 h-5" />}
+            color={stats?.alerts.critical > 0 ? 'red' : 'yellow'}
+            value={stats?.alerts.active ?? '–'}
+            sub={`${stats?.alerts.critical ?? 0} critical`}
+            trend={stats?.alerts.critical > 0 ? 'up' : undefined}
+          />
+          <StatsCard
+            title="SLA Breached" icon={<Clock className="w-5 h-5" />}
+            color={stats?.tickets.sla_breached > 0 ? 'red' : 'green'}
+            value={stats?.tickets.sla_breached ?? '–'}
+            sub={`${stats?.tickets.closed_this_week ?? 0} closed this week`}
+            trend={stats?.tickets.sla_breached > 0 ? 'up' : undefined}
+          />
         </div>
       )}
 
-      {/* Charts */}
+      {/* Charts + Live Activity */}
       {!loading && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 card p-5">
-            <h2 className="text-sm font-semibold text-slate-900 mb-4">Tickets by Status</h2>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={ticketChartData} barCategoryGap="45%">
-                <XAxis dataKey="status" tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(v) => v.replace(/_/g, ' ')} axisLine={false} tickLine={false} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TooltipStyle} formatter={(val, _n, p) => [val, p.payload.status?.replace(/_/g, ' ')]} labelFormatter={() => ''} />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-                  {ticketChartData.map((entry) => (
-                    <Cell key={entry.status} fill={STATUS_COLORS[entry.status] ?? '#94a3b8'} />
-                  ))}
-                </Bar>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* Weekly ticket chart */}
+          <div className="lg:col-span-3 card p-5">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-100">Tickets This Week</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Mon – Sun</p>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-slate-500">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" />Open</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />Resolved</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-violet-500 inline-block" />AI-fixed</span>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={190}>
+              <BarChart data={weekData} barGap={3} barCategoryGap="35%">
+                <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={TTStyle} cursor={{ fill: 'rgba(59,130,246,0.06)' }} />
+                <Bar dataKey="open"     fill="#3b82f6" radius={[4,4,0,0]} name="Open" />
+                <Bar dataKey="resolved" fill="#10b981" radius={[4,4,0,0]} name="Resolved" />
+                <Bar dataKey="ai_fixed" fill="#8b5cf6" radius={[4,4,0,0]} name="AI-fixed" />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="card p-5 flex flex-col">
-            <h2 className="text-sm font-semibold text-slate-900 mb-2">Device Health</h2>
-            <div className="flex-1 flex flex-col items-center justify-center">
-              <ResponsiveContainer width="100%" height={160}>
-                <PieChart>
-                  <Pie data={deviceChartData} cx="50%" cy="50%" innerRadius={45} outerRadius={68} paddingAngle={3} dataKey="value">
-                    {deviceChartData.map((_, i) => <Cell key={i} fill={DEVICE_COLORS[i]} />)}
-                  </Pie>
-                  <Tooltip contentStyle={TooltipStyle} />
-                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-                </PieChart>
-              </ResponsiveContainer>
-              <p className="text-sm text-slate-500">{stats?.devices.total ?? 0} devices total</p>
+          {/* Live activity */}
+          <div className="lg:col-span-2 card overflow-hidden">
+            <div className="card-header">
+              <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5 text-blue-400" />Live Activity
+              </h2>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             </div>
+            {activity.length === 0 ? (
+              <div className="py-10 text-center text-slate-600 text-sm">No recent activity</div>
+            ) : (
+              <div className="divide-y" style={{ borderColor: '#1e2d47' }}>
+                {activity.map((log) => (
+                  <div key={log.id} className="flex items-start gap-3 px-4 py-3 hover:bg-[#1e2840] transition-all duration-200">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-blue-500/20">
+                      <Activity className="w-3.5 h-3.5 text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-slate-200 capitalize truncate">
+                        {log.action?.replace(/_/g, ' ')}{' '}
+                        <span className="text-slate-500">{log.resource_type}</span>
+                      </p>
+                      {log.resource_name && <p className="text-xs text-slate-500 truncate">{log.resource_name}</p>}
+                      <p className="text-[10px] text-slate-600 mt-0.5">
+                        {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Recent data */}
+      {/* Critical & High Priority Tickets */}
       {!loading && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Recent tickets */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="text-sm font-semibold text-slate-900">Recent Tickets</h2>
-              <Link to="/tickets" className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 transition-all duration-200">
-                View all <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-            {!stats?.recent_tickets?.length ? (
-              <div className="flex flex-col items-center py-8 text-center px-4">
-                <CheckCircle className="w-8 h-8 text-slate-200 mb-2" />
-                <p className="text-sm text-slate-400">No tickets yet</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {stats.recent_tickets.map((t) => (
-                  <Link key={t.id} to={`/tickets/${t.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-all duration-200">
+        <div className="card overflow-hidden">
+          <div className="card-header">
+            <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-400" />Critical &amp; High Priority Tickets
+            </h2>
+            <Link to="/tickets?status=open" className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1 transition-all duration-200">
+              View all <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {criticalTickets.length === 0 ? (
+            <div className="py-8 text-center text-slate-600 text-sm">No critical or high priority tickets</div>
+          ) : (
+            <div className="divide-y" style={{ borderColor: '#1e2d47' }}>
+              {criticalTickets.map((t) => {
+                const slaOk = t.sla_deadline && new Date(t.sla_deadline) > new Date()
+                const slaBreached = t.sla_deadline && !slaOk
+                return (
+                  <Link
+                    key={t.id}
+                    to={`/tickets/${t.id}`}
+                    className="flex items-center gap-4 px-5 py-3.5 hover:bg-[#1e2840] transition-all duration-200"
+                    style={{ borderLeft: t.priority === 'critical' ? '3px solid #ef4444' : '3px solid #f59e0b' }}
+                  >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{t.title}</p>
-                      <p className="text-xs text-slate-500">{t.ticket_number}</p>
+                      <p className="text-sm font-medium text-slate-200 truncate">{t.title}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {t.ticket_number}
+                        {t.client?.name && <> · {t.client.name}</>}
+                        {t.category && <> · {t.category}</>}
+                      </p>
                     </div>
                     <AlertBadge priority={t.priority} />
+                    <StatusIndicator status={t.status} />
+                    {t.sla_deadline && (
+                      <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg font-medium ${slaBreached ? 'bg-red-500/20 text-red-400' : 'bg-slate-700/50 text-slate-400'}`}>
+                        <Clock3 className="w-3 h-3" />
+                        {slaBreached ? 'BREACHED' : formatDistanceToNow(new Date(t.sla_deadline), { addSuffix: true })}
+                      </span>
+                    )}
                   </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Active alerts */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="text-sm font-semibold text-slate-900">Active Alerts</h2>
-              <Link to="/alerts" className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 transition-all duration-200">
-                View all <ArrowRight className="w-3 h-3" />
-              </Link>
+                )
+              })}
             </div>
-            {!stats?.recent_alerts?.length ? (
-              <div className="flex flex-col items-center py-8 text-center px-4">
-                <CheckCircle className="w-8 h-8 text-emerald-300 mb-2" />
-                <p className="text-sm text-slate-400">All clear — no active alerts</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {stats.recent_alerts.map((a) => (
-                  <div key={a.id} className="flex items-start gap-3 px-5 py-3">
-                    <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${a.severity === 'critical' ? 'text-red-500' : a.severity === 'warning' ? 'text-amber-500' : 'text-blue-500'}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{a.title}</p>
-                      <p className="text-xs text-slate-500 capitalize">{a.alert_type.replace(/_/g, ' ')}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Activity feed */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <Activity className="w-3.5 h-3.5 text-slate-400" /> Activity
-              </h2>
-            </div>
-            {!activity.length ? (
-              <div className="flex flex-col items-center py-8 text-center px-4">
-                <Activity className="w-8 h-8 text-slate-200 mb-2" />
-                <p className="text-sm text-slate-400">No activity yet</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {activity.map((log) => (
-                  <div key={log.id} className="flex items-start gap-3 px-5 py-3">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-700 capitalize">
-                        {log.action.replace(/_/g, ' ')}{' '}
-                        <span className="text-slate-400">{log.resource_type}</span>
-                      </p>
-                      <p className="text-xs text-slate-400">{new Date(log.created_at).toLocaleTimeString()}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       )}
     </div>

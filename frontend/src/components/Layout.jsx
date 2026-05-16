@@ -4,7 +4,7 @@ import Navbar from './Navbar'
 
 export default function Layout() {
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden" style={{ background: '#0d1526' }}>
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Navbar />

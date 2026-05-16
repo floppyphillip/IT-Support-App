@@ -8,15 +8,17 @@ import { ArrowLeft, Terminal, RefreshCw, Database, Download, Zap, Cpu, HardDrive
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatDistanceToNow } from 'date-fns'
 
+const METRIC_COLORS = {
+  blue:    { bg: 'bg-blue-500/20 text-blue-400' },
+  violet:  { bg: 'bg-violet-500/20 text-violet-400' },
+  emerald: { bg: 'bg-emerald-500/20 text-emerald-400' },
+  amber:   { bg: 'bg-amber-500/20 text-amber-400' },
+}
+
 function MetricTile({ label, value, icon: Icon, color }) {
-  const colors = {
-    blue: 'bg-blue-50 text-blue-600',
-    violet: 'bg-violet-50 text-violet-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    amber: 'bg-amber-50 text-amber-600',
-  }
+  const c = METRIC_COLORS[color] ?? METRIC_COLORS.blue
   return (
-    <div className={`rounded-xl p-4 ${colors[color] ?? colors.blue}`}>
+    <div className={`rounded-xl p-4 ${c.bg}`} style={{ background: 'rgba(30,40,64,0.6)' }}>
       <div className="flex items-center gap-1.5 mb-2">
         <Icon className="w-3.5 h-3.5 opacity-70" />
         <p className="text-xs font-medium opacity-70">{label}</p>
@@ -44,9 +46,7 @@ export default function DeviceDetail() {
         devicesAPI.getMetrics(id, { limit: 30 }),
         devicesAPI.getConfigBackups(id),
       ])
-      setDevice(d)
-      setMetrics([...m].reverse())
-      setBackups(b)
+      setDevice(d); setMetrics([...m].reverse()); setBackups(b)
     } catch { navigate('/devices') }
     finally { setLoading(false) }
   }
@@ -88,7 +88,7 @@ export default function DeviceDetail() {
     } catch { toast.error('Download failed') }
   }
 
-  const TTStyle = { fontSize: 11, border: '1px solid #e2e8f0', borderRadius: 6 }
+  const TTStyle = { background: '#182035', border: '1px solid #1e2d47', borderRadius: 6, fontSize: 11, color: '#e2e8f0' }
 
   if (loading) {
     return (
@@ -109,7 +109,9 @@ export default function DeviceDetail() {
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="flex items-start gap-3">
-        <Link to="/devices" className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0">
+        <Link to="/devices" className="p-2 text-slate-500 hover:text-slate-200 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0"
+          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#1e2840'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="flex-1 min-w-0">
@@ -117,7 +119,7 @@ export default function DeviceDetail() {
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <code className="text-sm text-slate-500 font-mono">{device.ip_address}</code>
             <StatusIndicator status={device.status} />
-            <span className="text-xs text-slate-400 capitalize">{device.vendor} · {device.device_type?.replace('_', ' ')}</span>
+            <span className="text-xs text-slate-500 capitalize">{device.vendor} · {device.device_type?.replace('_', ' ')}</span>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap flex-shrink-0">
@@ -135,7 +137,7 @@ export default function DeviceDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-4">
           <div className="card p-5">
-            <h2 className="text-sm font-semibold text-slate-900 mb-4">Live Metrics</h2>
+            <h2 className="text-sm font-semibold text-slate-200 mb-4">Live Metrics</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
               <MetricTile label="Latency" value={device.last_ping_ms != null ? `${device.last_ping_ms.toFixed(1)}ms` : '—'} icon={Activity} color="blue" />
               <MetricTile label="CPU" value={device.cpu_usage != null ? `${device.cpu_usage.toFixed(1)}%` : '—'} icon={Cpu} color="violet" />
@@ -143,19 +145,19 @@ export default function DeviceDetail() {
               <MetricTile label="Disk" value={device.disk_usage != null ? `${device.disk_usage.toFixed(1)}%` : '—'} icon={Database} color="amber" />
             </div>
             {metrics.length > 1 && (
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+              <div className="grid grid-cols-2 gap-4 pt-4" style={{ borderTop: '1px solid #1e2d47' }}>
                 <div>
-                  <p className="text-xs text-slate-400 mb-2">Latency (ms) — last {metrics.length} polls</p>
+                  <p className="text-xs text-slate-500 mb-2">Latency (ms) — last {metrics.length} polls</p>
                   <ResponsiveContainer width="100%" height={60}>
                     <LineChart data={latencyData}>
-                      <Line type="monotone" dataKey="v" stroke="#2563eb" dot={false} strokeWidth={2} />
+                      <Line type="monotone" dataKey="v" stroke="#3b82f6" dot={false} strokeWidth={2} />
                       <Tooltip formatter={(v) => [`${v?.toFixed(1)}ms`, 'Latency']} labelFormatter={() => ''} contentStyle={TTStyle} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
                 {cpuData.some((d) => d.v != null) && (
                   <div>
-                    <p className="text-xs text-slate-400 mb-2">CPU % — last {metrics.length} polls</p>
+                    <p className="text-xs text-slate-500 mb-2">CPU % — last {metrics.length} polls</p>
                     <ResponsiveContainer width="100%" height={60}>
                       <LineChart data={cpuData}>
                         <Line type="monotone" dataKey="v" stroke="#8b5cf6" dot={false} strokeWidth={2} />
@@ -169,19 +171,19 @@ export default function DeviceDetail() {
           </div>
 
           <div className="card p-5">
-            <h2 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <Database className="w-4 h-4 text-slate-400" /> Config Backups ({backups.length})
+            <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
+              <Database className="w-4 h-4 text-slate-500" />Config Backups ({backups.length})
             </h2>
             {backups.length === 0 ? (
-              <p className="text-sm text-slate-400">No backups yet. Click "Backup" to create one.</p>
+              <p className="text-sm text-slate-500">No backups yet. Click "Backup" to create one.</p>
             ) : (
               <div className="space-y-2">
                 {backups.map((b) => (
-                  <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
-                    <Database className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: '#1e2840' }}>
+                    <Database className="w-4 h-4 text-slate-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{new Date(b.backed_up_at).toLocaleString()}</p>
-                      <p className="text-xs text-slate-400">{formatDistanceToNow(new Date(b.backed_up_at), { addSuffix: true })}{b.notes && ` · ${b.notes}`}</p>
+                      <p className="text-sm font-medium text-slate-200">{new Date(b.backed_up_at).toLocaleString()}</p>
+                      <p className="text-xs text-slate-500">{formatDistanceToNow(new Date(b.backed_up_at), { addSuffix: true })}{b.notes && ` · ${b.notes}`}</p>
                     </div>
                     <button onClick={() => downloadBackup(b.id)} className="btn-secondary text-xs py-1.5"><Download className="w-3 h-3" />Download</button>
                   </div>
@@ -204,7 +206,7 @@ export default function DeviceDetail() {
             ].filter(([, v]) => v != null).map(([k, v]) => (
               <div key={k} className="flex justify-between gap-2">
                 <dt className="text-slate-500 capitalize flex-shrink-0">{k}</dt>
-                <dd className="text-right text-slate-900 capitalize truncate">{v}</dd>
+                <dd className="text-right text-slate-300 capitalize truncate">{v}</dd>
               </div>
             ))}
           </dl>

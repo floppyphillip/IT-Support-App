@@ -7,9 +7,9 @@ import { SkeletonCard } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
 
 const SEV = {
-  critical: { dot: 'bg-red-500',   badge: 'bg-red-50 text-red-700 border-red-100',    left: 'border-l-red-500' },
-  warning:  { dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-100', left: 'border-l-amber-500' },
-  info:     { dot: 'bg-blue-500',  badge: 'bg-blue-50 text-blue-700 border-blue-100',  left: 'border-l-blue-500' },
+  critical: { dot: 'bg-red-500',   badge: 'bg-red-500/20 text-red-400 border-red-500/30',     left: 'border-l-red-500' },
+  warning:  { dot: 'bg-amber-500', badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30', left: 'border-l-amber-500' },
+  info:     { dot: 'bg-blue-500',  badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',   left: 'border-l-blue-500' },
 }
 
 const TABS = [['active', 'Active'], ['all', 'All'], ['resolved', 'Resolved']]
@@ -57,17 +57,20 @@ export default function Alerts() {
           <p className="page-sub">{active} active · {total} total</p>
         </div>
         <button className="btn-secondary" onClick={load}>
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />Refresh
         </button>
       </div>
 
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit">
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: '#0d1526' }}>
         {TABS.map(([v, l]) => (
           <button key={v} onClick={() => setFilter(v)}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-              filter === v ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
+              filter === v ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
             }`}
-          >{l}</button>
+            style={filter === v ? { background: '#182035' } : {}}>
+            {l}
+          </button>
         ))}
       </div>
 
@@ -78,7 +81,7 @@ export default function Alerts() {
           <EmptyState
             icon={ShieldCheck}
             title={filter === 'active' ? 'All clear!' : 'No alerts found'}
-            description={filter === 'active' ? 'No active alerts right now. Your infrastructure looks healthy.' : 'No alerts match this filter.'}
+            description={filter === 'active' ? 'No active alerts — infrastructure looks healthy.' : 'No alerts match this filter.'}
           />
         </div>
       ) : (
@@ -86,18 +89,18 @@ export default function Alerts() {
           {alerts.map((a) => {
             const s = SEV[a.severity] ?? SEV.info
             return (
-              <div key={a.id} className={`card border-l-4 ${s.left} p-4 transition-all duration-200 hover:shadow-md`}>
+              <div key={a.id} className={`card border-l-4 ${s.left} p-4 hover:shadow-lg transition-all duration-200`}>
                 <div className="flex items-start gap-3">
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${s.dot}`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                      <span className="text-sm font-semibold text-slate-900">{a.title}</span>
+                      <span className="text-sm font-semibold text-slate-200">{a.title}</span>
                       <span className={`badge border ${s.badge}`}>{a.severity}</span>
-                      {a.is_acknowledged && <span className="badge bg-slate-100 text-slate-500 border border-slate-200">ack'd</span>}
-                      {a.is_resolved && <span className="badge bg-emerald-50 text-emerald-700 border border-emerald-100">resolved</span>}
+                      {a.is_acknowledged && <span className="badge bg-slate-700/50 text-slate-400 border border-slate-600/50">ack'd</span>}
+                      {a.is_resolved && <span className="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">resolved</span>}
                     </div>
-                    <p className="text-sm text-slate-500">{a.message}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                    <p className="text-sm text-slate-400">{a.message}</p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                       <span className="capitalize">{a.alert_type.replace(/_/g, ' ')}</span>
                       {a.metric_value != null && <span>Value: {a.metric_value}</span>}
                       <span>{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</span>
@@ -105,16 +108,19 @@ export default function Alerts() {
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {!a.is_acknowledged && !a.is_resolved && (
-                      <button className="btn-ghost py-1.5 px-2" onClick={() => doAction(a.id, 'acknowledge')} disabled={actioning === a.id} title="Acknowledge">
+                      <button className="btn-ghost py-1.5 px-2" onClick={() => doAction(a.id, 'acknowledge')}
+                        disabled={actioning === a.id} title="Acknowledge">
                         <Bell className="w-3.5 h-3.5" />
                       </button>
                     )}
                     {!a.is_resolved && (
-                      <button className="btn-ghost py-1.5 px-2 text-emerald-600 hover:bg-emerald-50" onClick={() => doAction(a.id, 'resolve')} disabled={actioning === a.id} title="Resolve">
+                      <button className="btn-ghost py-1.5 px-2 text-emerald-500 hover:bg-emerald-500/10"
+                        onClick={() => doAction(a.id, 'resolve')} disabled={actioning === a.id} title="Resolve">
                         <CheckCircle className="w-3.5 h-3.5" />
                       </button>
                     )}
-                    <button className="btn-ghost py-1.5 px-2 text-red-400 hover:bg-red-50" onClick={() => doAction(a.id, 'delete')} disabled={actioning === a.id} title="Delete">
+                    <button className="btn-ghost py-1.5 px-2 text-red-400 hover:bg-red-500/10"
+                      onClick={() => doAction(a.id, 'delete')} disabled={actioning === a.id} title="Delete">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>

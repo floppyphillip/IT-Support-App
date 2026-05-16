@@ -34,10 +34,14 @@ export default function NewTicket() {
   }
 
   const submit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault(); setLoading(true)
     try {
-      const payload = { ...form, client_id: form.client_id || undefined, device_id: form.device_id || undefined, tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : [] }
+      const payload = {
+        ...form,
+        client_id: form.client_id || undefined,
+        device_id: form.device_id || undefined,
+        tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+      }
       const { data } = await ticketsAPI.create(payload)
       toast.success(`Ticket ${data.ticket_number} created`)
       navigate(`/tickets/${data.id}`)
@@ -50,7 +54,9 @@ export default function NewTicket() {
   return (
     <div className="max-w-2xl animate-fade-in">
       <div className="flex items-center gap-3 mb-6">
-        <Link to="/tickets" className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all duration-200">
+        <Link to="/tickets" className="p-2 text-slate-500 hover:text-slate-200 rounded-lg transition-all duration-200"
+          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#1e2840'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
@@ -73,7 +79,8 @@ export default function NewTicket() {
 
         <div>
           <label className="label">Description</label>
-          <textarea className="input h-28 resize-none" value={form.description} onChange={set('description')} placeholder="Describe symptoms, affected users, recent changes…" />
+          <textarea className="input h-28 resize-none" value={form.description} onChange={set('description')}
+            placeholder="Describe symptoms, affected users, recent changes…" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -113,7 +120,7 @@ export default function NewTicket() {
           <input className="input" value={form.tags} onChange={set('tags')} placeholder="dns, vpn, firewall" />
         </div>
 
-        <div className="flex gap-3 pt-2 border-t border-slate-100">
+        <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid #1e2d47' }}>
           <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Creating…' : 'Create Ticket'}</button>
           <button type="button" className="btn-secondary" onClick={() => navigate('/tickets')}>Cancel</button>
         </div>

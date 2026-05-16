@@ -21,42 +21,31 @@ export default function TicketDetail() {
   const [diagnosing, setDiagnosing] = useState(false)
 
   const load = async () => {
-    try {
-      const { data } = await ticketsAPI.get(id)
-      setTicket(data)
-    } catch { navigate('/tickets') }
+    try { const { data } = await ticketsAPI.get(id); setTicket(data) }
+    catch { navigate('/tickets') }
     finally { setLoading(false) }
   }
 
   useEffect(() => { load() }, [id])
 
   const updateStatus = async (status) => {
-    try {
-      const { data } = await ticketsAPI.update(id, { status })
-      setTicket(data)
-      toast.success('Status updated')
-    } catch { toast.error('Failed') }
+    try { const { data } = await ticketsAPI.update(id, { status }); setTicket(data); toast.success('Status updated') }
+    catch { toast.error('Failed') }
   }
 
   const submitMessage = async (e) => {
     e.preventDefault()
     if (!message.trim()) return
     setSubmitting(true)
-    try {
-      await ticketsAPI.addMessage(id, { message, is_internal: isInternal })
-      setMessage('')
-      await load()
-    } catch { toast.error('Failed to post message') }
+    try { await ticketsAPI.addMessage(id, { message, is_internal: isInternal }); setMessage(''); await load() }
+    catch { toast.error('Failed to post message') }
     finally { setSubmitting(false) }
   }
 
   const runAI = async () => {
     setDiagnosing(true)
-    try {
-      await aiAPI.diagnose({ ticket_id: id, description: ticket?.description || ticket?.title })
-      toast.success('AI diagnosis complete')
-      await load()
-    } catch { toast.error('AI diagnosis failed') }
+    try { await aiAPI.diagnose({ ticket_id: id, description: ticket?.description || ticket?.title }); toast.success('AI diagnosis complete'); await load() }
+    catch { toast.error('AI diagnosis failed') }
     finally { setDiagnosing(false) }
   }
 
@@ -72,10 +61,7 @@ export default function TicketDetail() {
       <div className="max-w-5xl space-y-4">
         <Skeleton className="h-8 w-64" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 space-y-4">
-            <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-64 w-full" />
-          </div>
+          <div className="lg:col-span-2 space-y-4"><Skeleton className="h-40 w-full" /><Skeleton className="h-64 w-full" /></div>
           <Skeleton className="h-48 w-full" />
         </div>
       </div>
@@ -88,22 +74,24 @@ export default function TicketDetail() {
   return (
     <div className="space-y-5 animate-fade-in max-w-5xl">
       <div className="flex items-start gap-3">
-        <Link to="/tickets" className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0">
+        <Link to="/tickets" className="p-2 text-slate-500 hover:text-slate-200 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0"
+          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#1e2840'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="text-xs font-mono text-slate-400">{ticket.ticket_number}</span>
+            <span className="text-xs font-mono text-slate-500">{ticket.ticket_number}</span>
             <AlertBadge priority={ticket.priority} />
             <StatusIndicator status={ticket.status} />
             {ticket.sla_deadline && (
-              <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${slaOk ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+              <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${slaOk ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
                 <Clock className="w-3 h-3" />
                 SLA {slaOk ? formatDistanceToNow(new Date(ticket.sla_deadline), { addSuffix: true }) : 'BREACHED'}
               </span>
             )}
           </div>
-          <h1 className="text-base font-semibold text-slate-900">{ticket.title}</h1>
+          <h1 className="text-base font-semibold text-slate-100">{ticket.title}</h1>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <button onClick={runAI} className="btn-secondary" disabled={diagnosing}>
@@ -115,90 +103,76 @@ export default function TicketDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-4">
-          {/* Description */}
           <div className="card p-5">
-            <h2 className="text-sm font-semibold text-slate-900 mb-3">Description</h2>
-            <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{ticket.description || 'No description provided.'}</p>
+            <h2 className="text-sm font-semibold text-slate-200 mb-3">Description</h2>
+            <p className="text-sm text-slate-400 whitespace-pre-wrap leading-relaxed">{ticket.description || 'No description provided.'}</p>
             {ticket.tags?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-100">
-                {ticket.tags.map((tag) => <span key={tag} className="badge bg-slate-100 text-slate-600 border border-slate-200">#{tag}</span>)}
+              <div className="flex flex-wrap gap-1.5 mt-3 pt-3" style={{ borderTop: '1px solid #1e2d47' }}>
+                {ticket.tags.map((tag) => <span key={tag} className="badge bg-slate-700/50 text-slate-400 border border-slate-600/50">#{tag}</span>)}
               </div>
             )}
           </div>
 
-          {/* AI Diagnosis */}
           {ticket.ai_diagnosis && (
-            <div className="card p-5 border-l-4 border-blue-500">
+            <div className="card p-5" style={{ borderLeft: '4px solid #3b82f6' }}>
               <div className="flex items-center gap-2 mb-3">
-                <Bot className="w-4 h-4 text-blue-500" />
-                <h2 className="text-sm font-semibold text-blue-700">AI Diagnosis</h2>
+                <Bot className="w-4 h-4 text-blue-400" />
+                <h2 className="text-sm font-semibold text-blue-400">AI Diagnosis</h2>
                 {ticket.ai_confidence_score != null && (
-                  <span className="badge bg-blue-50 text-blue-700 border border-blue-100 ml-auto">
+                  <span className="badge bg-blue-500/20 text-blue-400 border border-blue-500/30 ml-auto">
                     {Math.round(ticket.ai_confidence_score * 100)}% confidence
                   </span>
                 )}
               </div>
-              <p className="text-sm text-slate-700 mb-3 leading-relaxed">{ticket.ai_diagnosis}</p>
+              <p className="text-sm text-slate-300 mb-3 leading-relaxed">{ticket.ai_diagnosis}</p>
               {ticket.ai_structured?.root_cause && (
-                <div className="mb-3">
-                  <p className="label">Root Cause</p>
-                  <p className="text-sm text-slate-700">{ticket.ai_structured.root_cause}</p>
-                </div>
+                <div className="mb-3"><p className="label">Root Cause</p><p className="text-sm text-slate-400">{ticket.ai_structured.root_cause}</p></div>
               )}
               {ticket.ai_structured?.fix_steps?.length > 0 && (
                 <div className="mb-3">
                   <p className="label">Fix Steps</p>
                   <ol className="space-y-1.5">
                     {ticket.ai_structured.fix_steps.map((step, i) => (
-                      <li key={i} className="text-sm text-slate-700 flex gap-2">
-                        <span className="font-semibold text-slate-400 flex-shrink-0">{i + 1}.</span>{step}
+                      <li key={i} className="text-sm text-slate-400 flex gap-2">
+                        <span className="font-semibold text-slate-500 flex-shrink-0">{i + 1}.</span>{step}
                       </li>
                     ))}
                   </ol>
                 </div>
               )}
               {ticket.ai_cli_commands?.length > 0 && (
-                <div>
-                  <p className="label">CLI Commands</p>
-                  <div className="space-y-1">
-                    {ticket.ai_cli_commands.map((cmd, i) => (
-                      <code key={i} className="cli-block">{cmd}</code>
-                    ))}
-                  </div>
-                </div>
+                <div><p className="label">CLI Commands</p><div className="space-y-1">{ticket.ai_cli_commands.map((cmd, i) => <code key={i} className="cli-block">{cmd}</code>)}</div></div>
               )}
             </div>
           )}
 
-          {/* Messages */}
           <div className="card p-5">
-            <h2 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-slate-400" />
-              Messages ({ticket.messages?.length ?? 0})
+            <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-slate-500" />Messages ({ticket.messages?.length ?? 0})
             </h2>
             <div className="space-y-4 mb-5">
-              {!ticket.messages?.length && <p className="text-sm text-slate-400">No messages yet.</p>}
+              {!ticket.messages?.length && <p className="text-sm text-slate-500">No messages yet.</p>}
               {ticket.messages?.map((m) => (
-                <div key={m.id} className={`flex gap-3 ${m.is_internal ? 'opacity-70' : ''}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${m.is_ai_generated ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
+                <div key={m.id} className={`flex gap-3 ${m.is_internal ? 'opacity-60' : ''}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${m.is_ai_generated ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-300'}`}>
                     {m.is_ai_generated ? <Bot className="w-4 h-4" /> : (m.sender?.full_name?.[0] ?? '?')}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-sm font-medium text-slate-900">{m.is_ai_generated ? 'AI Assistant' : (m.sender?.full_name ?? 'System')}</span>
+                      <span className="text-sm font-medium text-slate-200">{m.is_ai_generated ? 'AI Assistant' : (m.sender?.full_name ?? 'System')}</span>
                       {m.is_internal && (
-                        <span className="badge bg-amber-50 text-amber-700 border border-amber-100 flex items-center gap-1">
-                          <Shield className="w-3 h-3" /> internal
+                        <span className="badge bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                          <Shield className="w-3 h-3" />internal
                         </span>
                       )}
-                      <span className="text-xs text-slate-400">{formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}</span>
+                      <span className="text-xs text-slate-500">{formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}</span>
                     </div>
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{m.message}</p>
+                    <p className="text-sm text-slate-400 whitespace-pre-wrap leading-relaxed">{m.message}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <form onSubmit={submitMessage} className="space-y-2 pt-4 border-t border-slate-100">
+            <form onSubmit={submitMessage} className="space-y-2 pt-4" style={{ borderTop: '1px solid #1e2d47' }}>
               <textarea className="input resize-none h-20" placeholder="Add a message…" value={message} onChange={(e) => setMessage(e.target.value)} />
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer">
@@ -213,7 +187,6 @@ export default function TicketDetail() {
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-4">
           <div className="card p-4">
             <p className="label mb-2">Status</p>
@@ -234,7 +207,7 @@ export default function TicketDetail() {
               ].map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between gap-2">
                   <dt className="text-slate-500 flex-shrink-0">{k}</dt>
-                  <dd className="text-right text-slate-900">{v}</dd>
+                  <dd className="text-right text-slate-300">{v}</dd>
                 </div>
               ))}
             </dl>
@@ -242,7 +215,7 @@ export default function TicketDetail() {
           {ticket.resolution_notes && (
             <div className="card p-4">
               <p className="label mb-2">Resolution</p>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{ticket.resolution_notes}</p>
+              <p className="text-sm text-slate-400 whitespace-pre-wrap leading-relaxed">{ticket.resolution_notes}</p>
             </div>
           )}
         </div>
