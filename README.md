@@ -2,6 +2,11 @@
 
 AI-powered Remote IT Support SaaS Platform built with FastAPI, React, PostgreSQL, Redis, and Claude AI.
 
+## Always Do First
+
+- **Invoke the 'frontend-design' skill** before writing any
+frontend code, every session, no exceptions.
+
 ## Features
 
 - **AI Diagnostics** — Claude-powered ticket analysis, root cause identification, and recommended remediation steps with streaming chat interface

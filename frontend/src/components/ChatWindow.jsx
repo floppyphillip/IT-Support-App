@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { Bot, User, Send, Trash2 } from 'lucide-react'
 import useAuth from '../hooks/useAuth'
 
@@ -75,7 +75,7 @@ export default function ChatWindow() {
   return (
     <div className="card flex flex-col" style={{ height: 560 }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 flex-shrink-0" style={{ borderBottom: '1px solid #1e2d47' }}>
+      <div className="flex items-center justify-between px-5 py-3 flex-shrink-0" style={{ borderBottom: '1px solid #1a2540' }}>
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center">
             <Bot className="w-4 h-4 text-blue-400" />
@@ -100,7 +100,7 @@ export default function ChatWindow() {
             <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed ${
               m.role === 'user' ? 'bg-blue-600 text-white rounded-tr-sm' : 'text-slate-300 rounded-tl-sm'
             }`}
-            style={m.role !== 'user' ? { background: '#1e2840' } : {}}>
+            style={m.role !== 'user' ? { background: '#162033' } : {}}>
               {m.content || <span className="opacity-40 italic text-xs">…</span>}
             </div>
           </div>
@@ -109,7 +109,7 @@ export default function ChatWindow() {
       </div>
 
       {/* Input */}
-      <form onSubmit={send} className="p-4 flex gap-2 flex-shrink-0" style={{ borderTop: '1px solid #1e2d47' }}>
+      <form onSubmit={send} className="p-4 flex gap-2 flex-shrink-0" style={{ borderTop: '1px solid #1a2540' }}>
         <textarea
           ref={inputRef} rows={1}
           className="input flex-1 text-sm resize-none"

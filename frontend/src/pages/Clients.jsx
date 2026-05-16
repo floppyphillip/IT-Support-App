@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { clientsAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import { Plus, Search, Phone, Mail, Edit2, X, Building2 } from 'lucide-react'
@@ -34,8 +34,8 @@ function ClientModal({ client, onClose, onSave }) {
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ background: 'rgba(0,0,0,0.7)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="rounded-2xl w-full max-w-lg animate-slide-up" style={{ background: '#182035', border: '1px solid #1e2d47' }}>
-        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #1e2d47' }}>
+      <div className="rounded-2xl w-full max-w-lg animate-slide-up" style={{ background: '#0e1525', border: '1px solid #1a2540' }}>
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #1a2540' }}>
           <h2 className="text-base font-semibold text-slate-100">{isEdit ? 'Edit Client' : 'New Client'}</h2>
           <button onClick={onClose} className="btn-ghost p-1"><X className="w-4 h-4" /></button>
         </div>
@@ -55,7 +55,7 @@ function ClientModal({ client, onClose, onSave }) {
             <div><label className="label">SLA (hours)</label><input className="input" type="number" value={form.sla_hours} onChange={set('sla_hours')} /></div>
           </div>
           <div><label className="label">Notes</label><textarea className="input h-20 resize-none" value={form.notes} onChange={set('notes')} /></div>
-          <div className="flex gap-3 pt-1" style={{ borderTop: '1px solid #1e2d47' }}>
+          <div className="flex gap-3 pt-1" style={{ borderTop: '1px solid #1a2540' }}>
             <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Client'}</button>
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           </div>
@@ -164,12 +164,12 @@ export default function Clients() {
         </div>
       ) : (
         <div className="card overflow-hidden">
-          <div className="hidden md:grid grid-cols-[40px_1fr_200px_100px_80px_40px] gap-4 px-4 py-3" style={{ background: '#0d1526', borderBottom: '1px solid #1e2d47' }}>
+          <div className="hidden md:grid grid-cols-[40px_1fr_200px_100px_80px_40px] gap-4 px-4 py-3" style={{ background: '#090d18', borderBottom: '1px solid #1a2540' }}>
             {['', 'Client', 'Contact', 'Contract', 'SLA', ''].map((h, i) => (
               <span key={i} className="th py-0">{h}</span>
             ))}
           </div>
-          <div className="md:divide-y" style={{ borderColor: '#1e2d47' }}>
+          <div className="md:divide-y" style={{ borderColor: '#1a2540' }}>
             {clients.map((c) => <ClientRow key={c.id} c={c} onEdit={setModal} />)}
           </div>
         </div>

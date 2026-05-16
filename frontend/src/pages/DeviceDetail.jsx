@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { devicesAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
@@ -88,7 +88,7 @@ export default function DeviceDetail() {
     } catch { toast.error('Download failed') }
   }
 
-  const TTStyle = { background: '#182035', border: '1px solid #1e2d47', borderRadius: 6, fontSize: 11, color: '#e2e8f0' }
+  const TTStyle = { background: '#0e1525', border: '1px solid #1a2540', borderRadius: 6, fontSize: 11, color: '#e2e8f0' }
 
   if (loading) {
     return (
@@ -110,7 +110,7 @@ export default function DeviceDetail() {
     <div className="space-y-5 animate-fade-in">
       <div className="flex items-start gap-3">
         <Link to="/devices" className="p-2 text-slate-500 hover:text-slate-200 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0"
-          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#1e2840'}
+          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#162033'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
           <ArrowLeft className="w-5 h-5" />
         </Link>
@@ -145,7 +145,7 @@ export default function DeviceDetail() {
               <MetricTile label="Disk" value={device.disk_usage != null ? `${device.disk_usage.toFixed(1)}%` : '—'} icon={Database} color="amber" />
             </div>
             {metrics.length > 1 && (
-              <div className="grid grid-cols-2 gap-4 pt-4" style={{ borderTop: '1px solid #1e2d47' }}>
+              <div className="grid grid-cols-2 gap-4 pt-4" style={{ borderTop: '1px solid #1a2540' }}>
                 <div>
                   <p className="text-xs text-slate-500 mb-2">Latency (ms) — last {metrics.length} polls</p>
                   <ResponsiveContainer width="100%" height={60}>
@@ -179,7 +179,7 @@ export default function DeviceDetail() {
             ) : (
               <div className="space-y-2">
                 {backups.map((b) => (
-                  <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: '#1e2840' }}>
+                  <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: '#162033' }}>
                     <Database className="w-4 h-4 text-slate-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-200">{new Date(b.backed_up_at).toLocaleString()}</p>

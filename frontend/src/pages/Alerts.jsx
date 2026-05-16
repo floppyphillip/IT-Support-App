@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { alertsAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
@@ -62,13 +62,13 @@ export default function Alerts() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: '#0d1526' }}>
+      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: '#090d18' }}>
         {TABS.map(([v, l]) => (
           <button key={v} onClick={() => setFilter(v)}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
               filter === v ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
             }`}
-            style={filter === v ? { background: '#182035' } : {}}>
+            style={filter === v ? { background: '#0e1525' } : {}}>
             {l}
           </button>
         ))}

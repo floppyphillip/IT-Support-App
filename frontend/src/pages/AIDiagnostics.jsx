@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import ChatWindow from '../components/ChatWindow'
 import { aiAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
@@ -51,13 +51,13 @@ export default function AIDiagnostics() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl w-fit flex-wrap" style={{ background: '#0d1526' }}>
+      <div className="flex gap-1 p-1 rounded-xl w-fit flex-wrap" style={{ background: '#090d18' }}>
         {TABS.map(([key, label, Icon]) => (
           <button key={key} onClick={() => setTab(key)}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
               tab === key ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
             }`}
-            style={tab === key ? { background: '#182035' } : {}}>
+            style={tab === key ? { background: '#0e1525' } : {}}>
             <Icon className="w-3.5 h-3.5" />{label}
           </button>
         ))}
@@ -146,7 +146,7 @@ export default function AIDiagnostics() {
               {configResult.summary && <p className="text-sm text-slate-400">{configResult.summary}</p>}
               {configResult.security_issues?.map((issue, i) => (
                 <div key={i} className="p-3 rounded-xl"
-                  style={{ borderLeft: `4px solid ${issue.severity === 'critical' ? '#ef4444' : issue.severity === 'high' ? '#f97316' : '#f59e0b'}`, background: '#1e2840' }}>
+                  style={{ borderLeft: `4px solid ${issue.severity === 'critical' ? '#ef4444' : issue.severity === 'high' ? '#f97316' : '#f59e0b'}`, background: '#162033' }}>
                   <p className="text-xs font-semibold uppercase text-slate-500">{issue.severity}</p>
                   <p className="text-sm font-medium text-slate-200">{issue.issue}</p>
                   <p className="text-xs text-slate-500 mt-1">{issue.recommendation}</p>
@@ -183,7 +183,7 @@ export default function AIDiagnostics() {
                 </div>
               )}
               {logResult.error_patterns?.map((p, i) => (
-                <div key={i} className="p-3 rounded-xl" style={{ background: '#1e2840' }}>
+                <div key={i} className="p-3 rounded-xl" style={{ background: '#162033' }}>
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-sm font-medium text-slate-200">{p.pattern}</p>
                     <span className="badge bg-slate-700/50 text-slate-400 border border-slate-600/50">{p.occurrences}×</span>

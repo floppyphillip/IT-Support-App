@@ -1,10 +1,10 @@
-import { Outlet } from 'react-router-dom'
+﻿import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 
 export default function Layout() {
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#0d1526' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Navbar />

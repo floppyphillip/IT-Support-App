@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ticketsAPI } from '../api/client'
 import AlertBadge from '../components/AlertBadge'
@@ -104,7 +104,7 @@ export default function Tickets() {
       ) : (
         <div className="card overflow-hidden">
           {/* Desktop header */}
-          <div className="hidden md:grid grid-cols-[120px_1fr_130px_100px_140px_120px] gap-4 px-4 py-3" style={{ background: '#0d1526', borderBottom: '1px solid #1e2d47' }}>
+          <div className="hidden md:grid grid-cols-[120px_1fr_130px_100px_140px_120px] gap-4 px-4 py-3" style={{ background: '#090d18', borderBottom: '1px solid #1a2540' }}>
             {['Ticket #','Title','Status','Priority','Assigned','Created'].map((h) => (
               <span key={h} className="th py-0">{h}</span>
             ))}

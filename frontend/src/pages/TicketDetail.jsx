@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ticketsAPI, aiAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
@@ -75,7 +75,7 @@ export default function TicketDetail() {
     <div className="space-y-5 animate-fade-in max-w-5xl">
       <div className="flex items-start gap-3">
         <Link to="/tickets" className="p-2 text-slate-500 hover:text-slate-200 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0"
-          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#1e2840'}
+          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#162033'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
           <ArrowLeft className="w-5 h-5" />
         </Link>
@@ -107,7 +107,7 @@ export default function TicketDetail() {
             <h2 className="text-sm font-semibold text-slate-200 mb-3">Description</h2>
             <p className="text-sm text-slate-400 whitespace-pre-wrap leading-relaxed">{ticket.description || 'No description provided.'}</p>
             {ticket.tags?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3 pt-3" style={{ borderTop: '1px solid #1e2d47' }}>
+              <div className="flex flex-wrap gap-1.5 mt-3 pt-3" style={{ borderTop: '1px solid #1a2540' }}>
                 {ticket.tags.map((tag) => <span key={tag} className="badge bg-slate-700/50 text-slate-400 border border-slate-600/50">#{tag}</span>)}
               </div>
             )}
@@ -172,7 +172,7 @@ export default function TicketDetail() {
                 </div>
               ))}
             </div>
-            <form onSubmit={submitMessage} className="space-y-2 pt-4" style={{ borderTop: '1px solid #1e2d47' }}>
+            <form onSubmit={submitMessage} className="space-y-2 pt-4" style={{ borderTop: '1px solid #1a2540' }}>
               <textarea className="input resize-none h-20" placeholder="Add a message…" value={message} onChange={(e) => setMessage(e.target.value)} />
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer">

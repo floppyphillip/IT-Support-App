@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ticketsAPI, clientsAPI, devicesAPI, aiAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
@@ -55,7 +55,7 @@ export default function NewTicket() {
     <div className="max-w-2xl animate-fade-in">
       <div className="flex items-center gap-3 mb-6">
         <Link to="/tickets" className="p-2 text-slate-500 hover:text-slate-200 rounded-lg transition-all duration-200"
-          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#1e2840'}
+          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#162033'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
           <ArrowLeft className="w-5 h-5" />
         </Link>
@@ -120,7 +120,7 @@ export default function NewTicket() {
           <input className="input" value={form.tags} onChange={set('tags')} placeholder="dns, vpn, firewall" />
         </div>
 
-        <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid #1e2d47' }}>
+        <div className="flex gap-3 pt-2" style={{ borderTop: '1px solid #1a2540' }}>
           <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Creating…' : 'Create Ticket'}</button>
           <button type="button" className="btn-secondary" onClick={() => navigate('/tickets')}>Cancel</button>
         </div>

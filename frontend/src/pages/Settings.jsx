@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { authAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import useAuth from '../hooks/useAuth'
@@ -71,13 +71,13 @@ export default function Settings() {
       <div><h1 className="page-title">Settings</h1><p className="page-sub">Manage your account and preferences</p></div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: '#0d1526' }}>
+      <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: '#090d18' }}>
         {TABS.map(([key, label, Icon]) => (
           <button key={key} onClick={() => setTab(key)}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
               tab === key ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
             }`}
-            style={tab === key ? { background: '#182035' } : {}}>
+            style={tab === key ? { background: '#0e1525' } : {}}>
             <Icon className="w-3.5 h-3.5" />{label}
           </button>
         ))}
@@ -167,9 +167,9 @@ export default function Settings() {
           </div>
           <div className="card overflow-hidden">
             <div className="card-header"><h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2"><Users className="w-4 h-4 text-slate-500" />Team ({teamUsers.length})</h2></div>
-            <div className="divide-y" style={{ borderColor: '#1e2d47' }}>
+            <div className="divide-y" style={{ borderColor: '#1a2540' }}>
               {teamUsers.map((u) => (
-                <div key={u.id} className="flex items-center gap-3 px-5 py-3 hover:bg-[#1e2840] transition-all duration-200">
+                <div key={u.id} className="flex items-center gap-3 px-5 py-3 hover:bg-[#162033] transition-all duration-200">
                   <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-sm font-semibold text-white flex-shrink-0">{u.full_name?.[0] ?? '?'}</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-200">{u.full_name}</p>
