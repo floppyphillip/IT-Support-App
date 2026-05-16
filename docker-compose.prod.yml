@@ -15,6 +15,7 @@ services:
     build:
       target: prod
     restart: always
+    user: root
     env_file: ./backend/.env
     environment:
       DEBUG: "false"
@@ -30,6 +31,7 @@ services:
     build:
       target: prod
     restart: always
+    user: root
     command: celery -A app.workers.celery_app worker --loglevel=warning --concurrency=4
     volumes:
       - backend_logs:/var/log/netsupportai
