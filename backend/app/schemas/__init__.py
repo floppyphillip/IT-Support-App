@@ -4,7 +4,7 @@ from app.schemas.user import (
 )
 from app.schemas.ticket import (
     TicketCreate, TicketUpdate, TicketResponse, TicketList,
-    TicketCommentCreate, TicketCommentResponse,
+    TicketMessageCreate, TicketMessageResponse,
 )
 from app.schemas.device import (
     DeviceCreate, DeviceUpdate, DeviceResponse, DeviceList,
