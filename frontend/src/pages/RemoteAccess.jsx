@@ -40,64 +40,83 @@ export default function RemoteAccess() {
   const vendors = ['all', ...new Set(commands.map((c) => c.vendor))]
 
   const sendCommand = (cmd) => {
-    // Commands are sent via the active terminal — we publish to a custom event
     window.dispatchEvent(new CustomEvent('terminal-send', { detail: cmd + '\r' }))
   }
 
   return (
-    <div className="space-y-5 animate-fade-in h-[calc(100vh-8rem)] flex flex-col">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <TerminalIcon className="w-6 h-6" /> Remote Access
+    <div className="animate-fade-in flex flex-col" style={{ height: 'calc(100vh - 6rem)' }}>
+      <div className="mb-4">
+        <h1 className="page-title flex items-center gap-2">
+          <TerminalIcon className="w-4 h-4 text-zoho-muted" /> Remote Access
         </h1>
-        <p className="text-sm text-gray-500">Browser-based SSH terminal via WebSocket</p>
+        <p className="page-sub">Browser-based SSH terminal via WebSocket</p>
       </div>
 
       <div className="flex gap-4 flex-1 min-h-0">
-        {/* Left panel: connection form + command palette */}
-        <div className="w-72 flex-shrink-0 space-y-3 overflow-y-auto">
+        {/* Left panel */}
+        <div className="w-64 flex-shrink-0 space-y-3 overflow-y-auto">
+          {/* Connection form */}
           <form onSubmit={connect} className="card p-4 space-y-3">
-            <h2 className="font-semibold text-sm">New Connection</h2>
+            <h2 className="text-xs font-semibold text-zoho-text uppercase tracking-wide">New Connection</h2>
             <div>
-              <label className="label text-xs">Host / IP *</label>
-              <input className="input" required value={form.host}
+              <label className="label">Host / IP *</label>
+              <input
+                className="input"
+                required
+                value={form.host}
                 onChange={(e) => setForm((f) => ({ ...f, host: e.target.value }))}
-                placeholder="192.168.1.1" />
+                placeholder="192.168.1.1"
+              />
             </div>
             <div>
-              <label className="label text-xs">Username *</label>
-              <input className="input" required value={form.username}
-                onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))} />
+              <label className="label">Username *</label>
+              <input
+                className="input"
+                required
+                value={form.username}
+                onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+              />
             </div>
             <div>
-              <label className="label text-xs">Password</label>
-              <input className="input" type="password" value={form.password}
+              <label className="label">Password</label>
+              <input
+                className="input"
+                type="password"
+                value={form.password}
                 onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                placeholder="or use SSH key" />
+                placeholder="or use SSH key"
+              />
             </div>
             <div>
-              <label className="label text-xs">Port</label>
-              <input className="input" value={form.port}
-                onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))} />
+              <label className="label">Port</label>
+              <input
+                className="input"
+                value={form.port}
+                onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
+              />
             </div>
-            <button type="submit" className="btn-primary w-full justify-center">Connect</button>
+            <button type="submit" className="btn-primary w-full justify-center">
+              <TerminalIcon className="w-3.5 h-3.5" /> Connect
+            </button>
           </form>
 
           {/* Active sessions */}
           {sessions.length > 0 && (
             <div className="card p-3">
-              <p className="text-xs font-medium text-gray-500 mb-2">Sessions</p>
+              <p className="text-xs font-semibold text-zoho-muted uppercase tracking-wide mb-2">Sessions</p>
               {sessions.map((s) => (
-                <div key={s.id} className="flex items-center gap-2">
+                <div key={s.id} className="flex items-center gap-1">
                   <button
-                    className={`flex-1 text-left text-sm px-3 py-1.5 rounded-lg transition ${
-                      activeSession === s.id ? 'bg-brand-50 text-brand-700 font-medium' : 'hover:bg-gray-50'
+                    className={`flex-1 text-left text-sm px-2.5 py-1.5 rounded-md transition ${
+                      activeSession === s.id
+                        ? 'bg-brand-50 text-brand-600 font-medium'
+                        : 'hover:bg-zoho-body text-zoho-muted hover:text-zoho-text'
                     }`}
                     onClick={() => setActiveSession(s.id)}
                   >
                     <span className="flex items-center gap-1.5">
-                      <TerminalIcon className="w-3 h-3" />
-                      <span className="truncate">{s.username}@{s.host}</span>
+                      <TerminalIcon className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate text-xs">{s.username}@{s.host}</span>
                     </span>
                   </button>
                   <button
@@ -120,8 +139,8 @@ export default function RemoteAccess() {
           {commands.length > 0 && (
             <div className="card p-3">
               <div className="flex items-center gap-2 mb-2">
-                <Cpu className="w-3.5 h-3.5 text-gray-400" />
-                <p className="text-xs font-medium text-gray-500">Command Palette</p>
+                <Cpu className="w-3.5 h-3.5 text-zoho-muted" />
+                <p className="text-xs font-semibold text-zoho-muted uppercase tracking-wide">Commands</p>
               </div>
               <select
                 className="input text-xs mb-2"
@@ -129,7 +148,9 @@ export default function RemoteAccess() {
                 onChange={(e) => setFilterVendor(e.target.value)}
               >
                 {vendors.map((v) => (
-                  <option key={v} value={v}>{v === 'all' ? 'All vendors' : v.charAt(0).toUpperCase() + v.slice(1)}</option>
+                  <option key={v} value={v}>
+                    {v === 'all' ? 'All vendors' : v.charAt(0).toUpperCase() + v.slice(1)}
+                  </option>
                 ))}
               </select>
               <div className="space-y-0.5">
@@ -138,10 +159,10 @@ export default function RemoteAccess() {
                     key={i}
                     onClick={() => sendCommand(cmd.command)}
                     disabled={!activeSession}
-                    className="w-full text-left flex items-center justify-between px-2 py-1.5 text-xs rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed group"
+                    className="w-full text-left flex items-center justify-between px-2 py-1.5 text-xs rounded-md hover:bg-zoho-body disabled:opacity-40 disabled:cursor-not-allowed group transition-colors"
                   >
-                    <span className="text-gray-700">{cmd.label}</span>
-                    <ChevronRight className="w-3 h-3 text-gray-300 group-hover:text-brand-500" />
+                    <span className="text-zoho-text truncate">{cmd.label}</span>
+                    <ChevronRight className="w-3 h-3 text-gray-300 group-hover:text-brand-500 flex-shrink-0 ml-1" />
                   </button>
                 ))}
               </div>
@@ -150,7 +171,7 @@ export default function RemoteAccess() {
         </div>
 
         {/* Terminal */}
-        <div className="flex-1 min-w-0 card overflow-hidden">
+        <div className="flex-1 min-w-0 rounded-lg overflow-hidden border border-zoho-border">
           {activeSession ? (
             <Terminal
               key={activeSession}
@@ -158,11 +179,11 @@ export default function RemoteAccess() {
               token={accessToken}
             />
           ) : (
-            <div className="h-full flex items-center justify-center bg-gray-900 rounded-xl">
+            <div className="h-full flex items-center justify-center bg-gray-900">
               <div className="text-center text-gray-600">
-                <TerminalIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <TerminalIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
                 <p className="text-sm">Connect to a device to open a terminal</p>
-                <p className="text-xs mt-1 opacity-60">Commands from the palette will be sent to the active session</p>
+                <p className="text-xs mt-1 opacity-50">Commands from the palette are sent to the active session</p>
               </div>
             </div>
           )}

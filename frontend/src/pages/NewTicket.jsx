@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { ticketsAPI, clientsAPI, devicesAPI, aiAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
-import { ArrowLeft, Bot, Sparkles } from 'lucide-react'
+import { ArrowLeft, Sparkles } from 'lucide-react'
 
 const PRIORITIES = ['low', 'medium', 'high', 'critical']
 const CATEGORIES = ['network', 'hardware', 'software', 'security', 'connectivity', 'performance', 'other']
@@ -34,7 +34,7 @@ export default function NewTicket() {
     try {
       const { data } = await aiAPI.classifyTicket({ title: form.title, description: form.description })
       setForm((f) => ({ ...f, category: data.category, priority: data.priority }))
-      toast.success(`AI classified: ${data.category} / ${data.priority}`)
+      toast.success(`Classified: ${data.category} / ${data.priority}`)
     } catch { toast.error('Classification failed') }
     finally { setClassifying(false) }
   }
@@ -62,12 +62,15 @@ export default function NewTicket() {
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
   return (
-    <div className="max-w-2xl space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-600">
+    <div className="max-w-2xl animate-fade-in">
+      <div className="flex items-center gap-3 mb-6">
+        <Link to="/tickets" className="text-zoho-muted hover:text-zoho-text transition-colors">
           <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900">New Ticket</h1>
+        </Link>
+        <div>
+          <h1 className="page-title">New Ticket</h1>
+          <p className="page-sub">Report a new issue for triage</p>
+        </div>
       </div>
 
       <form onSubmit={submit} className="card p-6 space-y-5">
@@ -75,17 +78,34 @@ export default function NewTicket() {
         <div>
           <label className="label">Title *</label>
           <div className="flex gap-2">
-            <input className="input flex-1" required value={form.title} onChange={set('title')} placeholder="Brief issue description" />
-            <button type="button" className="btn-secondary" onClick={autoClassify} disabled={classifying} title="Auto-classify with AI">
+            <input
+              className="input flex-1"
+              required
+              value={form.title}
+              onChange={set('title')}
+              placeholder="Brief description of the issue"
+            />
+            <button
+              type="button"
+              className="btn-secondary flex-shrink-0"
+              onClick={autoClassify}
+              disabled={classifying}
+              title="Auto-classify with AI"
+            >
               <Sparkles className="w-4 h-4" />
-              {classifying ? '…' : 'AI'}
+              {classifying ? '…' : 'AI Classify'}
             </button>
           </div>
         </div>
 
         <div>
           <label className="label">Description</label>
-          <textarea className="input h-32 resize-none" value={form.description} onChange={set('description')} placeholder="Detailed description of the issue…" />
+          <textarea
+            className="input h-28 resize-none"
+            value={form.description}
+            onChange={set('description')}
+            placeholder="Describe symptoms, affected users, recent changes…"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -122,10 +142,15 @@ export default function NewTicket() {
 
         <div>
           <label className="label">Tags (comma-separated)</label>
-          <input className="input" value={form.tags} onChange={set('tags')} placeholder="dns, vpn, firewall" />
+          <input
+            className="input"
+            value={form.tags}
+            onChange={set('tags')}
+            placeholder="dns, vpn, firewall"
+          />
         </div>
 
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-3 pt-1 border-t border-zoho-border">
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? 'Creating…' : 'Create Ticket'}
           </button>

@@ -10,16 +10,19 @@ import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { Ticket, Server, AlertTriangle, CheckCircle, Activity, Clock } from 'lucide-react'
+import { Ticket, Server, AlertTriangle, Clock, Activity, ArrowRight } from 'lucide-react'
 
 const STATUS_COLORS = {
-  open: '#3b82f6',
+  open: '#0073EA',
   in_progress: '#f59e0b',
   ai_resolved: '#8b5cf6',
   escalated: '#ef4444',
+  pending: '#f97316',
+  resolved: '#22c55e',
+  closed: '#9ca3af',
 }
 
-const DEVICE_COLORS = ['#22c55e', '#ef4444', '#f59e0b', '#94a3b8', '#64748b']
+const DEVICE_COLORS = ['#22c55e', '#ef4444', '#f59e0b', '#94a3b8']
 
 export default function Dashboard() {
   const { accessToken } = useAuth()
@@ -61,7 +64,13 @@ export default function Dashboard() {
     },
   })
 
-  if (loading) return <div className="p-8 text-gray-500">Loading dashboard…</div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-zoho-muted text-sm">Loading dashboard…</div>
+      </div>
+    )
+  }
 
   const ticketChartData = stats?.charts?.tickets_by_status ?? []
   const deviceChartData = [
@@ -70,10 +79,10 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">Real-time infrastructure overview</p>
+        <h1 className="page-title">Dashboard</h1>
+        <p className="page-sub">Real-time infrastructure overview</p>
       </div>
 
       {/* Stats row */}
@@ -109,15 +118,27 @@ export default function Dashboard() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 card p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Tickets by Status</h2>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={ticketChartData} barCategoryGap="40%">
-              <XAxis dataKey="status" tick={{ fontSize: 12 }} tickFormatter={(v) => v.replace('_', ' ')} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 card p-5">
+          <h2 className="text-sm font-semibold text-zoho-text mb-4">Tickets by Status</h2>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={ticketChartData} barCategoryGap="45%">
+              <XAxis
+                dataKey="status"
+                tick={{ fontSize: 11, fill: '#6B7280' }}
+                tickFormatter={(v) => v.replace(/_/g, ' ')}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: '#6B7280' }}
+                axisLine={false}
+                tickLine={false}
+              />
               <Tooltip
-                formatter={(val, _name, props) => [val, props.payload.status]}
+                contentStyle={{ fontSize: 12, border: '1px solid #E8E8E8', borderRadius: 6 }}
+                formatter={(val, _name, props) => [val, props.payload.status?.replace(/_/g, ' ')]}
                 labelFormatter={() => ''}
               />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
@@ -129,15 +150,15 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        <div className="card p-6 flex flex-col">
-          <h2 className="font-semibold text-gray-900 mb-4">Device Health</h2>
-          <div className="flex-1 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height={180}>
+        <div className="card p-5 flex flex-col">
+          <h2 className="text-sm font-semibold text-zoho-text mb-2">Device Health</h2>
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <ResponsiveContainer width="100%" height={160}>
               <PieChart>
                 <Pie
                   data={deviceChartData}
                   cx="50%" cy="50%"
-                  innerRadius={50} outerRadius={75}
+                  innerRadius={45} outerRadius={68}
                   paddingAngle={3}
                   dataKey="value"
                 >
@@ -145,38 +166,33 @@ export default function Dashboard() {
                     <Cell key={i} fill={DEVICE_COLORS[i]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend iconType="circle" iconSize={10} />
+                <Tooltip contentStyle={{ fontSize: 12, border: '1px solid #E8E8E8', borderRadius: 6 }} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
+            <p className="text-sm text-zoho-muted">{stats?.devices.total ?? 0} devices total</p>
           </div>
-          <p className="text-center text-sm text-gray-500">
-            {stats?.devices.total ?? 0} devices total
-          </p>
         </div>
       </div>
 
-      {/* Recent data + activity feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Recent data */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Recent tickets */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900">Recent Tickets</h2>
-            <Link to="/tickets" className="text-sm text-brand-600 hover:underline">View all</Link>
+        <div className="card">
+          <div className="card-header">
+            <h2 className="text-sm font-semibold text-zoho-text">Recent Tickets</h2>
+            <Link to="/tickets" className="text-xs text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1">
+              View all <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
-          <div className="space-y-2">
-            {stats?.recent_tickets?.length === 0 && (
-              <p className="text-sm text-gray-400">No tickets yet.</p>
-            )}
-            {stats?.recent_tickets?.map((t) => (
-              <Link
-                key={t.id}
-                to={`/tickets/${t.id}`}
-                className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition"
-              >
+          <div className="divide-y divide-zoho-border">
+            {!stats?.recent_tickets?.length ? (
+              <p className="text-sm text-zoho-muted px-5 py-4">No tickets yet.</p>
+            ) : stats.recent_tickets.map((t) => (
+              <Link key={t.id} to={`/tickets/${t.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-zoho-body transition-colors">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{t.title}</p>
-                  <p className="text-xs text-gray-400">{t.ticket_number}</p>
+                  <p className="text-sm font-medium text-zoho-text truncate">{t.title}</p>
+                  <p className="text-xs text-zoho-muted">{t.ticket_number}</p>
                 </div>
                 <AlertBadge priority={t.priority} />
               </Link>
@@ -184,27 +200,26 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent alerts */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900">Active Alerts</h2>
-            <Link to="/alerts" className="text-sm text-brand-600 hover:underline">View all</Link>
+        {/* Active alerts */}
+        <div className="card">
+          <div className="card-header">
+            <h2 className="text-sm font-semibold text-zoho-text">Active Alerts</h2>
+            <Link to="/alerts" className="text-xs text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1">
+              View all <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
-          <div className="space-y-2">
-            {stats?.recent_alerts?.length === 0 && (
-              <p className="text-sm text-gray-400">No active alerts.</p>
-            )}
-            {stats?.recent_alerts?.map((a) => (
-              <div key={a.id} className="flex items-start gap-2 p-2 rounded-lg bg-gray-50">
-                <AlertTriangle
-                  className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                    a.severity === 'critical' ? 'text-red-500' :
-                    a.severity === 'warning'  ? 'text-yellow-500' : 'text-blue-500'
-                  }`}
-                />
+          <div className="divide-y divide-zoho-border">
+            {!stats?.recent_alerts?.length ? (
+              <p className="text-sm text-zoho-muted px-5 py-4">No active alerts.</p>
+            ) : stats.recent_alerts.map((a) => (
+              <div key={a.id} className="flex items-start gap-3 px-5 py-3">
+                <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                  a.severity === 'critical' ? 'text-red-500' :
+                  a.severity === 'warning' ? 'text-amber-500' : 'text-blue-500'
+                }`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{a.title}</p>
-                  <p className="text-xs text-gray-400 capitalize">{a.alert_type.replace(/_/g,' ')}</p>
+                  <p className="text-sm font-medium text-zoho-text truncate">{a.title}</p>
+                  <p className="text-xs text-zoho-muted capitalize">{a.alert_type.replace(/_/g, ' ')}</p>
                 </div>
               </div>
             ))}
@@ -212,23 +227,24 @@ export default function Dashboard() {
         </div>
 
         {/* Activity feed */}
-        <div className="card p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-4 h-4 text-gray-400" />
-            <h2 className="font-semibold text-gray-900">Recent Activity</h2>
+        <div className="card">
+          <div className="card-header">
+            <h2 className="text-sm font-semibold text-zoho-text flex items-center gap-2">
+              <Activity className="w-3.5 h-3.5 text-zoho-muted" /> Activity
+            </h2>
           </div>
-          <div className="space-y-2">
-            {activity.length === 0 && (
-              <p className="text-sm text-gray-400">No activity yet.</p>
-            )}
-            {activity.map((log) => (
-              <div key={log.id} className="flex items-start gap-2 text-sm">
+          <div className="divide-y divide-zoho-border">
+            {!activity.length ? (
+              <p className="text-sm text-zoho-muted px-5 py-4">No activity yet.</p>
+            ) : activity.map((log) => (
+              <div key={log.id} className="flex items-start gap-3 px-5 py-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-brand-400 mt-2 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-gray-700 capitalize">
-                    {log.action.replace(/_/g, ' ')} <span className="text-gray-400">{log.resource_type}</span>
+                  <p className="text-sm text-zoho-text capitalize">
+                    {log.action.replace(/_/g, ' ')}{' '}
+                    <span className="text-zoho-muted">{log.resource_type}</span>
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-zoho-muted">
                     {new Date(log.created_at).toLocaleTimeString()}
                   </p>
                 </div>

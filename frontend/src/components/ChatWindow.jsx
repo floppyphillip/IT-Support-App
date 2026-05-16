@@ -3,7 +3,10 @@ import { Bot, User, Send, Trash2 } from 'lucide-react'
 import useAuth from '../hooks/useAuth'
 
 const INITIAL = [
-  { role: 'assistant', content: "Hi! I'm your NetSupportAI assistant. I specialise in network diagnostics, device troubleshooting, and IT support. How can I help you today?" }
+  {
+    role: 'assistant',
+    content: "Hi! I'm your NetSupportAI assistant. I specialise in network diagnostics, device troubleshooting, and IT support. How can I help you today?",
+  },
 ]
 
 export default function ChatWindow() {
@@ -61,7 +64,7 @@ export default function ChatWindow() {
           const raw = line.replace('data:', '').trim()
           if (raw === '[DONE]') break
           try {
-            const { token, error } = JSON.parse(raw)
+            const { token } = JSON.parse(raw)
             if (token) {
               setMessages((m) => {
                 const updated = [...m]
@@ -79,7 +82,10 @@ export default function ChatWindow() {
       if (err.name !== 'AbortError') {
         setMessages((m) => {
           const updated = [...m]
-          updated[updated.length - 1] = { role: 'assistant', content: '⚠️ Sorry, I encountered an error. Please try again.' }
+          updated[updated.length - 1] = {
+            role: 'assistant',
+            content: 'Sorry, I encountered an error. Please try again.',
+          }
           return updated
         })
       }
@@ -95,16 +101,26 @@ export default function ChatWindow() {
   }
 
   return (
-    <div className="card flex flex-col h-[600px]">
+    <div className="card flex flex-col" style={{ height: 560 }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b">
+      <div className="card-header flex-shrink-0">
         <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5 text-brand-600" />
-          <span className="font-semibold text-sm">AI Support Chat</span>
-          {streaming && <span className="text-xs text-brand-500 animate-pulse">thinking…</span>}
+          <div className="w-7 h-7 rounded-full bg-brand-50 flex items-center justify-center">
+            <Bot className="w-4 h-4 text-brand-500" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-zoho-text">AI Support Chat</p>
+            {streaming && (
+              <p className="text-xs text-brand-500 animate-pulse">thinking…</p>
+            )}
+          </div>
         </div>
-        <button onClick={clear} className="text-gray-400 hover:text-gray-600 p-1 rounded" title="Clear chat">
-          <Trash2 className="w-4 h-4" />
+        <button
+          onClick={clear}
+          className="btn-ghost py-1.5 px-2"
+          title="Clear chat"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
@@ -113,18 +129,18 @@ export default function ChatWindow() {
         {messages.map((m, i) => (
           <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
             <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-              m.role === 'user' ? 'bg-brand-600' : 'bg-gray-200'
+              m.role === 'user' ? 'bg-brand-500' : 'bg-gray-100'
             }`}>
               {m.role === 'user'
                 ? <User className="w-3.5 h-3.5 text-white" />
-                : <Bot className="w-3.5 h-3.5 text-gray-600" />}
+                : <Bot className="w-3.5 h-3.5 text-zoho-muted" />}
             </div>
-            <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap ${
+            <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed ${
               m.role === 'user'
-                ? 'bg-brand-600 text-white rounded-tr-sm'
-                : 'bg-gray-100 text-gray-800 rounded-tl-sm'
+                ? 'bg-brand-500 text-white rounded-tr-sm'
+                : 'bg-gray-100 text-zoho-text rounded-tl-sm'
             }`}>
-              {m.content || <span className="opacity-40 italic">…</span>}
+              {m.content || <span className="opacity-40 italic text-xs">…</span>}
             </div>
           </div>
         ))}
@@ -132,15 +148,19 @@ export default function ChatWindow() {
       </div>
 
       {/* Input */}
-      <form onSubmit={send} className="p-4 border-t flex gap-2">
+      <form onSubmit={send} className="p-4 border-t border-zoho-border flex gap-2 flex-shrink-0">
         <input
-          className="input flex-1"
-          placeholder="Ask about network issues, devices, troubleshooting steps…"
+          className="input flex-1 text-sm"
+          placeholder="Ask about network issues, devices, troubleshooting…"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={streaming}
         />
-        <button type="submit" className="btn-primary" disabled={streaming || !input.trim()}>
+        <button
+          type="submit"
+          className="btn-primary px-3"
+          disabled={streaming || !input.trim()}
+        >
           <Send className="w-4 h-4" />
         </button>
       </form>

@@ -7,7 +7,7 @@ import StatusIndicator from '../components/StatusIndicator'
 import { formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, Bot, MessageSquare, Trash2, Send, Clock, Shield } from 'lucide-react'
 
-const STATUS_OPTIONS = ['open', 'in_progress', 'ai_resolved', 'escalated', 'closed']
+const STATUS_OPTIONS = ['open', 'in_progress', 'ai_resolved', 'escalated', 'pending', 'resolved', 'closed']
 
 export default function TicketDetail() {
   const { id } = useParams()
@@ -66,48 +66,68 @@ export default function TicketDetail() {
     navigate('/tickets')
   }
 
-  if (loading) return <div className="p-8 text-gray-500">Loading…</div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-zoho-muted text-sm">Loading…</div>
+      </div>
+    )
+  }
   if (!ticket) return null
 
   const slaOk = ticket.sla_deadline && new Date(ticket.sla_deadline) > new Date()
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-4xl">
-      <div className="flex items-center gap-3">
-        <Link to="/tickets" className="text-gray-400 hover:text-gray-600"><ArrowLeft className="w-5 h-5" /></Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-mono text-gray-400">{ticket.ticket_number}</span>
+    <div className="space-y-5 animate-fade-in max-w-5xl">
+      {/* Header */}
+      <div className="flex items-start gap-3">
+        <Link to="/tickets" className="text-zoho-muted hover:text-zoho-text transition-colors mt-0.5">
+          <ArrowLeft className="w-5 h-5" />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <span className="text-xs font-mono text-zoho-muted">{ticket.ticket_number}</span>
             <AlertBadge priority={ticket.priority} />
             <StatusIndicator status={ticket.status} />
             {ticket.sla_deadline && (
-              <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${slaOk ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${
+                slaOk ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+              }`}>
                 <Clock className="w-3 h-3" />
-                SLA {slaOk ? formatDistanceToNow(new Date(ticket.sla_deadline), { addSuffix: true }) : 'BREACHED'}
+                SLA {slaOk
+                  ? formatDistanceToNow(new Date(ticket.sla_deadline), { addSuffix: true })
+                  : 'BREACHED'}
               </span>
             )}
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mt-1">{ticket.title}</h1>
+          <h1 className="text-base font-semibold text-zoho-text">{ticket.title}</h1>
         </div>
-        <div className="flex gap-2">
-          <button onClick={runAIDiagnosis} className="btn-secondary" disabled={diagnosing}>
+        <div className="flex gap-2 flex-shrink-0">
+          <button
+            onClick={runAIDiagnosis}
+            className="btn-secondary"
+            disabled={diagnosing}
+          >
             <Bot className="w-4 h-4" />
             {diagnosing ? 'Analysing…' : 'AI Diagnose'}
           </button>
-          <button onClick={deleteTicket} className="btn-danger"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={deleteTicket} className="btn-danger py-2 px-3">
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Main column */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="card p-6">
-            <h2 className="font-semibold mb-3">Description</h2>
-            <p className="text-gray-700 text-sm whitespace-pre-wrap">{ticket.description || 'No description.'}</p>
+          {/* Description */}
+          <div className="card p-5">
+            <h2 className="text-sm font-semibold text-zoho-text mb-3">Description</h2>
+            <p className="text-sm text-zoho-muted whitespace-pre-wrap">{ticket.description || 'No description provided.'}</p>
             {ticket.tags?.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-3">
+              <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-zoho-border">
                 {ticket.tags.map((tag) => (
-                  <span key={tag} className="badge bg-gray-100 text-gray-600">#{tag}</span>
+                  <span key={tag} className="badge bg-gray-100 text-zoho-muted">#{tag}</span>
                 ))}
               </div>
             )}
@@ -115,41 +135,45 @@ export default function TicketDetail() {
 
           {/* AI Diagnosis */}
           {ticket.ai_diagnosis && (
-            <div className="card p-6 border-l-4 border-brand-500">
+            <div className="card p-5 border-l-4 border-brand-500">
               <div className="flex items-center gap-2 mb-3">
                 <Bot className="w-4 h-4 text-brand-500" />
-                <h2 className="font-semibold text-brand-700">AI Diagnosis</h2>
+                <h2 className="text-sm font-semibold text-brand-700">AI Diagnosis</h2>
                 {ticket.ai_confidence_score != null && (
                   <span className="badge bg-brand-50 text-brand-700 ml-auto">
                     {Math.round(ticket.ai_confidence_score * 100)}% confidence
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-700 mb-3">{ticket.ai_diagnosis}</p>
+              <p className="text-sm text-zoho-text mb-3">{ticket.ai_diagnosis}</p>
+
               {ticket.ai_structured?.root_cause && (
-                <>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Root Cause</p>
-                  <p className="text-sm text-gray-800 mb-4">{ticket.ai_structured.root_cause}</p>
-                </>
+                <div className="mb-3">
+                  <p className="text-xs font-semibold text-zoho-muted uppercase tracking-wide mb-1">Root Cause</p>
+                  <p className="text-sm text-zoho-text">{ticket.ai_structured.root_cause}</p>
+                </div>
               )}
+
               {ticket.ai_structured?.fix_steps?.length > 0 && (
-                <>
-                  <p className="text-xs font-medium text-gray-500 mb-2">Fix Steps</p>
+                <div className="mb-3">
+                  <p className="text-xs font-semibold text-zoho-muted uppercase tracking-wide mb-2">Fix Steps</p>
                   <ol className="space-y-1.5">
                     {ticket.ai_structured.fix_steps.map((step, i) => (
-                      <li key={i} className="text-sm text-gray-700">
-                        <span className="font-medium text-gray-500">{i + 1}.</span> {step}
+                      <li key={i} className="text-sm text-zoho-text flex gap-2">
+                        <span className="font-semibold text-zoho-muted flex-shrink-0">{i + 1}.</span>
+                        {step}
                       </li>
                     ))}
                   </ol>
-                </>
+                </div>
               )}
+
               {ticket.ai_cli_commands?.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-xs font-medium text-gray-500 mb-2">CLI Commands</p>
+                <div>
+                  <p className="text-xs font-semibold text-zoho-muted uppercase tracking-wide mb-2">CLI Commands</p>
                   <div className="space-y-1">
                     {ticket.ai_cli_commands.map((cmd, i) => (
-                      <code key={i} className="block text-xs bg-gray-900 text-green-400 rounded px-3 py-1.5 font-mono">
+                      <code key={i} className="block text-xs bg-gray-900 text-green-400 rounded px-3 py-2 font-mono">
                         {cmd}
                       </code>
                     ))}
@@ -159,44 +183,45 @@ export default function TicketDetail() {
             </div>
           )}
 
-          {/* Message thread */}
-          <div className="card p-6">
-            <h2 className="font-semibold mb-4 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" /> Messages ({ticket.messages?.length ?? 0})
+          {/* Messages */}
+          <div className="card p-5">
+            <h2 className="text-sm font-semibold text-zoho-text mb-4 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Messages ({ticket.messages?.length ?? 0})
             </h2>
-            <div className="space-y-4 mb-6">
-              {ticket.messages?.length === 0 && (
-                <p className="text-sm text-gray-400">No messages yet.</p>
+
+            <div className="space-y-4 mb-5">
+              {!ticket.messages?.length && (
+                <p className="text-sm text-zoho-muted">No messages yet.</p>
               )}
               {ticket.messages?.map((m) => (
-                <div key={m.id} className={`flex gap-3 ${m.is_internal ? 'opacity-80' : ''}`}>
+                <div key={m.id} className={`flex gap-3 ${m.is_internal ? 'opacity-75' : ''}`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
-                    m.is_ai_generated ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-600'
+                    m.is_ai_generated ? 'bg-brand-50 text-brand-600' : 'bg-gray-100 text-zoho-muted'
                   }`}>
                     {m.is_ai_generated ? <Bot className="w-4 h-4" /> : (m.sender?.full_name?.[0] ?? '?')}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-sm font-medium">
+                      <span className="text-sm font-medium text-zoho-text">
                         {m.is_ai_generated ? 'AI Assistant' : (m.sender?.full_name ?? 'System')}
                       </span>
                       {m.is_internal && (
-                        <span className="badge bg-yellow-100 text-yellow-700 flex items-center gap-1">
+                        <span className="badge bg-amber-50 text-amber-700 flex items-center gap-1">
                           <Shield className="w-3 h-3" /> internal
                         </span>
                       )}
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-zoho-muted">
                         {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
                       </span>
                     </div>
-                    <div className={`text-sm whitespace-pre-wrap ${
-                      m.is_ai_generated ? 'text-gray-700' : 'text-gray-800'
-                    }`}>{m.message}</div>
+                    <p className="text-sm text-zoho-text whitespace-pre-wrap">{m.message}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <form onSubmit={submitMessage} className="space-y-2">
+
+            <form onSubmit={submitMessage} className="space-y-2 pt-4 border-t border-zoho-border">
               <textarea
                 className="input resize-none h-20"
                 placeholder="Add a message…"
@@ -204,17 +229,17 @@ export default function TicketDetail() {
                 onChange={(e) => setMessage(e.target.value)}
               />
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-zoho-muted cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isInternal}
                     onChange={(e) => setIsInternal(e.target.checked)}
                     className="rounded"
                   />
-                  Internal note (not visible to client)
+                  Internal note
                 </label>
-                <button type="submit" className="btn-primary" disabled={submitting}>
-                  <Send className="w-4 h-4" />
+                <button type="submit" className="btn-primary" disabled={submitting || !message.trim()}>
+                  <Send className="w-3.5 h-3.5" />
                   {submitting ? 'Sending…' : 'Send'}
                 </button>
               </div>
@@ -224,8 +249,8 @@ export default function TicketDetail() {
 
         {/* Sidebar */}
         <div className="space-y-4">
-          <div className="card p-5">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Status</h3>
+          <div className="card p-4">
+            <p className="label mb-2">Status</p>
             <select
               className="input"
               value={ticket.status}
@@ -237,39 +262,29 @@ export default function TicketDetail() {
             </select>
           </div>
 
-          <div className="card p-5 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Category</span>
-              <span className="capitalize">{ticket.category}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Priority</span>
-              <AlertBadge priority={ticket.priority} />
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Created by</span>
-              <span>{ticket.created_by?.full_name ?? '–'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Assigned to</span>
-              <span>{ticket.assigned_engineer?.full_name ?? 'Unassigned'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Created</span>
-              <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
-            </div>
-            {ticket.closed_at && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">Closed</span>
-                <span>{new Date(ticket.closed_at).toLocaleDateString()}</span>
-              </div>
-            )}
+          <div className="card p-4">
+            <p className="label mb-3">Details</p>
+            <dl className="space-y-2 text-sm">
+              {[
+                ['Category', <span className="capitalize">{ticket.category}</span>],
+                ['Priority', <AlertBadge priority={ticket.priority} />],
+                ['Created by', ticket.created_by?.full_name ?? '—'],
+                ['Assigned to', ticket.assigned_engineer?.full_name ?? 'Unassigned'],
+                ['Created', new Date(ticket.created_at).toLocaleDateString()],
+                ...(ticket.closed_at ? [['Closed', new Date(ticket.closed_at).toLocaleDateString()]] : []),
+              ].map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between gap-2">
+                  <dt className="text-zoho-muted flex-shrink-0">{k}</dt>
+                  <dd className="text-right">{v}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
           {ticket.resolution_notes && (
-            <div className="card p-5">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Resolution</h3>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{ticket.resolution_notes}</p>
+            <div className="card p-4">
+              <p className="label mb-2">Resolution</p>
+              <p className="text-sm text-zoho-text whitespace-pre-wrap">{ticket.resolution_notes}</p>
             </div>
           )}
         </div>

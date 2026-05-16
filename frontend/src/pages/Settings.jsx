@@ -2,7 +2,13 @@ import { useState, useEffect } from 'react'
 import { authAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import useAuth from '../hooks/useAuth'
-import { User, Lock, Bell, Users, Plus } from 'lucide-react'
+import { User, Lock, Bell, Users, Plus, Shield } from 'lucide-react'
+
+const TABS = [
+  ['profile', 'Profile', User],
+  ['notifications', 'Notifications', Bell],
+  ['team', 'Team', Users],
+]
 
 export default function Settings() {
   const { user, fetchMe, isSuperadmin } = useAuth()
@@ -20,7 +26,9 @@ export default function Settings() {
   const [savingPwd, setSavingPwd] = useState(false)
   const [savingNotif, setSavingNotif] = useState(false)
   const [inviting, setInviting] = useState(false)
-  const [tab, setTab] = useState('profile') // 'profile' | 'notifications' | 'team'
+  const [tab, setTab] = useState('profile')
+
+  const visibleTabs = TABS.filter(([key]) => key !== 'team' || isSuperadmin?.())
 
   useEffect(() => {
     authAPI.getNotifications()
@@ -63,7 +71,7 @@ export default function Settings() {
     try {
       const { data } = await authAPI.updateNotifications(notifSettings)
       setNotifSettings(data)
-      toast.success('Notification preferences saved')
+      toast.success('Preferences saved')
     } catch { toast.error('Failed to save') }
     finally { setSavingNotif(false) }
   }
@@ -89,70 +97,79 @@ export default function Settings() {
     } catch { toast.error('Failed') }
   }
 
-  const TABS = [
-    ['profile', 'Profile', User],
-    ['notifications', 'Notifications', Bell],
-    ...(isSuperadmin?.() ? [['team', 'Team', Users]] : []),
-  ]
-
   return (
-    <div className="space-y-6 max-w-3xl animate-fade-in">
-      <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+    <div className="space-y-5 max-w-3xl animate-fade-in">
+      <div>
+        <h1 className="page-title">Settings</h1>
+        <p className="page-sub">Manage your account and preferences</p>
+      </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
-        {TABS.map(([key, label, Icon]) => (
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+        {visibleTabs.map(([key, label, Icon]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${
-              tab === key ? 'bg-white shadow text-brand-700' : 'text-gray-600 hover:text-gray-900'
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition ${
+              tab === key ? 'bg-white shadow-sm text-zoho-text' : 'text-zoho-muted hover:text-zoho-text'
             }`}
           >
-            <Icon className="w-4 h-4" /> {label}
+            <Icon className="w-3.5 h-3.5" /> {label}
           </button>
         ))}
       </div>
 
-      {/* ── Profile ── */}
+      {/* Profile tab */}
       {tab === 'profile' && (
-        <div className="space-y-6">
-          <div className="card p-6">
-            <h2 className="font-semibold mb-4 flex items-center gap-2"><User className="w-4 h-4" /> Profile</h2>
+        <div className="space-y-4">
+          <div className="card p-5">
+            <h2 className="text-sm font-semibold text-zoho-text mb-4 flex items-center gap-2">
+              <User className="w-4 h-4 text-zoho-muted" /> Profile
+            </h2>
             <form onSubmit={saveProfile} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Full Name</label>
-                  <input className="input" value={profile.full_name}
-                    onChange={(e) => setProfile((p) => ({ ...p, full_name: e.target.value }))} />
+                  <input
+                    className="input"
+                    value={profile.full_name}
+                    onChange={(e) => setProfile((p) => ({ ...p, full_name: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <label className="label">Email</label>
-                  <input className="input bg-gray-50 text-gray-400" value={user?.email ?? ''} disabled />
+                  <input className="input bg-zoho-body text-zoho-muted" value={user?.email ?? ''} disabled />
                 </div>
                 <div>
                   <label className="label">Phone</label>
-                  <input className="input" value={profile.phone}
+                  <input
+                    className="input"
+                    value={profile.phone}
                     onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
-                    placeholder="+1234567890" />
+                    placeholder="+1234567890"
+                  />
                 </div>
                 <div>
                   <label className="label">Role</label>
-                  <input className="input bg-gray-50 text-gray-400" value={user?.role ?? ''} disabled />
+                  <input className="input bg-zoho-body text-zoho-muted capitalize" value={user?.role ?? ''} disabled />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Telegram Chat ID</label>
-                  <input className="input" value={profile.telegram_chat_id}
+                  <input
+                    className="input"
+                    value={profile.telegram_chat_id}
                     onChange={(e) => setProfile((p) => ({ ...p, telegram_chat_id: e.target.value }))}
-                    placeholder="For Telegram notifications" />
+                    placeholder="For Telegram notifications"
+                  />
                 </div>
                 <div>
                   <label className="label">WhatsApp Number</label>
-                  <input className="input" value={profile.whatsapp_number}
+                  <input
+                    className="input"
+                    value={profile.whatsapp_number}
                     onChange={(e) => setProfile((p) => ({ ...p, whatsapp_number: e.target.value }))}
-                    placeholder="+1234567890" />
+                    placeholder="+1234567890"
+                  />
                 </div>
               </div>
               <button type="submit" className="btn-primary" disabled={saving}>
@@ -161,24 +178,42 @@ export default function Settings() {
             </form>
           </div>
 
-          <div className="card p-6">
-            <h2 className="font-semibold mb-4 flex items-center gap-2"><Lock className="w-4 h-4" /> Change Password</h2>
+          <div className="card p-5">
+            <h2 className="text-sm font-semibold text-zoho-text mb-4 flex items-center gap-2">
+              <Lock className="w-4 h-4 text-zoho-muted" /> Change Password
+            </h2>
             <form onSubmit={changePassword} className="space-y-4">
               <div>
                 <label className="label">Current Password</label>
-                <input className="input" type="password" value={pwd.current_password} required
-                  onChange={(e) => setPwd((p) => ({ ...p, current_password: e.target.value }))} />
+                <input
+                  className="input"
+                  type="password"
+                  value={pwd.current_password}
+                  required
+                  onChange={(e) => setPwd((p) => ({ ...p, current_password: e.target.value }))}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">New Password</label>
-                  <input className="input" type="password" value={pwd.new_password} required minLength={8}
-                    onChange={(e) => setPwd((p) => ({ ...p, new_password: e.target.value }))} />
+                  <input
+                    className="input"
+                    type="password"
+                    value={pwd.new_password}
+                    required
+                    minLength={8}
+                    onChange={(e) => setPwd((p) => ({ ...p, new_password: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <label className="label">Confirm Password</label>
-                  <input className="input" type="password" value={pwd.confirm} required
-                    onChange={(e) => setPwd((p) => ({ ...p, confirm: e.target.value }))} />
+                  <input
+                    className="input"
+                    type="password"
+                    value={pwd.confirm}
+                    required
+                    onChange={(e) => setPwd((p) => ({ ...p, confirm: e.target.value }))}
+                  />
                 </div>
               </div>
               <button type="submit" className="btn-primary" disabled={savingPwd}>
@@ -189,18 +224,20 @@ export default function Settings() {
         </div>
       )}
 
-      {/* ── Notifications ── */}
+      {/* Notifications tab */}
       {tab === 'notifications' && notifSettings && (
-        <div className="card p-6">
-          <h2 className="font-semibold mb-4 flex items-center gap-2"><Bell className="w-4 h-4" /> Notification Preferences</h2>
+        <div className="card p-5">
+          <h2 className="text-sm font-semibold text-zoho-text mb-4 flex items-center gap-2">
+            <Bell className="w-4 h-4 text-zoho-muted" /> Notification Preferences
+          </h2>
           <form onSubmit={saveNotifications} className="space-y-6">
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">Channels</p>
-              <div className="space-y-2">
+              <p className="text-xs font-semibold text-zoho-muted uppercase tracking-wide mb-3">Channels</p>
+              <div className="space-y-3">
                 {[
                   ['email_enabled', 'Email notifications'],
-                  ['telegram_enabled', 'Telegram notifications (requires Telegram Chat ID)'],
-                  ['whatsapp_enabled', 'WhatsApp notifications (requires WhatsApp number)'],
+                  ['telegram_enabled', 'Telegram notifications (requires Telegram Chat ID in Profile)'],
+                  ['whatsapp_enabled', 'WhatsApp notifications (requires WhatsApp number in Profile)'],
                 ].map(([key, label]) => (
                   <label key={key} className="flex items-center gap-3 cursor-pointer">
                     <input
@@ -209,14 +246,14 @@ export default function Settings() {
                       onChange={(e) => setNotifSettings((s) => ({ ...s, [key]: e.target.checked }))}
                       className="rounded"
                     />
-                    <span className="text-sm text-gray-700">{label}</span>
+                    <span className="text-sm text-zoho-text">{label}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">Alert on</p>
+              <p className="text-xs font-semibold text-zoho-muted uppercase tracking-wide mb-3">Alert On</p>
               <div className="grid grid-cols-2 gap-2">
                 {Object.entries(notifSettings.alert_on ?? {}).map(([key, val]) => (
                   <label key={key} className="flex items-center gap-2 cursor-pointer">
@@ -229,7 +266,7 @@ export default function Settings() {
                       }))}
                       className="rounded"
                     />
-                    <span className="text-sm text-gray-600 capitalize">{key.replace(/_/g, ' ')}</span>
+                    <span className="text-sm text-zoho-text capitalize">{key.replace(/_/g, ' ')}</span>
                   </label>
                 ))}
               </div>
@@ -242,28 +279,41 @@ export default function Settings() {
         </div>
       )}
 
-      {/* ── Team (superadmin only) ── */}
+      {/* Team tab (superadmin) */}
       {tab === 'team' && (
-        <div className="space-y-6">
-          {/* Invite form */}
-          <div className="card p-6">
-            <h2 className="font-semibold mb-4 flex items-center gap-2"><Plus className="w-4 h-4" /> Invite Team Member</h2>
+        <div className="space-y-4">
+          <div className="card p-5">
+            <h2 className="text-sm font-semibold text-zoho-text mb-4 flex items-center gap-2">
+              <Plus className="w-4 h-4 text-zoho-muted" /> Invite Team Member
+            </h2>
             <form onSubmit={inviteUser} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Email *</label>
-                  <input className="input" type="email" required value={inviteForm.email}
-                    onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))} />
+                  <input
+                    className="input"
+                    type="email"
+                    required
+                    value={inviteForm.email}
+                    onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <label className="label">Full Name *</label>
-                  <input className="input" required value={inviteForm.full_name}
-                    onChange={(e) => setInviteForm((f) => ({ ...f, full_name: e.target.value }))} />
+                  <input
+                    className="input"
+                    required
+                    value={inviteForm.full_name}
+                    onChange={(e) => setInviteForm((f) => ({ ...f, full_name: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <label className="label">Role</label>
-                  <select className="input" value={inviteForm.role}
-                    onChange={(e) => setInviteForm((f) => ({ ...f, role: e.target.value }))}>
+                  <select
+                    className="input"
+                    value={inviteForm.role}
+                    onChange={(e) => setInviteForm((f) => ({ ...f, role: e.target.value }))}
+                  >
                     <option value="engineer">Engineer</option>
                     <option value="client">Client</option>
                     <option value="superadmin">Superadmin</option>
@@ -271,8 +321,14 @@ export default function Settings() {
                 </div>
                 <div>
                   <label className="label">Temporary Password *</label>
-                  <input className="input" type="password" required minLength={8} value={inviteForm.temporary_password}
-                    onChange={(e) => setInviteForm((f) => ({ ...f, temporary_password: e.target.value }))} />
+                  <input
+                    className="input"
+                    type="password"
+                    required
+                    minLength={8}
+                    value={inviteForm.temporary_password}
+                    onChange={(e) => setInviteForm((f) => ({ ...f, temporary_password: e.target.value }))}
+                  />
                 </div>
               </div>
               <button type="submit" className="btn-primary" disabled={inviting}>
@@ -281,30 +337,31 @@ export default function Settings() {
             </form>
           </div>
 
-          {/* Team list */}
           <div className="card overflow-hidden">
-            <div className="p-4 border-b border-gray-100">
-              <h2 className="font-semibold flex items-center gap-2"><Users className="w-4 h-4" /> Team ({teamUsers.length})</h2>
+            <div className="card-header">
+              <h2 className="text-sm font-semibold text-zoho-text flex items-center gap-2">
+                <Users className="w-4 h-4 text-zoho-muted" /> Team ({teamUsers.length})
+              </h2>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-zoho-border">
               {teamUsers.map((u) => (
-                <div key={u.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-sm font-semibold text-brand-700 flex-shrink-0">
+                <div key={u.id} className="flex items-center gap-3 px-5 py-3">
+                  <div className="w-8 h-8 rounded-full bg-brand-50 flex items-center justify-center text-sm font-semibold text-brand-600 flex-shrink-0">
                     {u.full_name?.[0] ?? '?'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{u.full_name}</p>
-                    <p className="text-xs text-gray-400">{u.email}</p>
+                    <p className="text-sm font-medium text-zoho-text">{u.full_name}</p>
+                    <p className="text-xs text-zoho-muted">{u.email}</p>
                   </div>
                   <span className={`badge capitalize ${
-                    u.role === 'superadmin' ? 'bg-purple-100 text-purple-700' :
-                    u.role === 'engineer'   ? 'bg-blue-100 text-blue-700' :
-                    'bg-gray-100 text-gray-600'
+                    u.role === 'superadmin' ? 'bg-violet-50 text-violet-700' :
+                    u.role === 'engineer' ? 'bg-blue-50 text-blue-700' :
+                    'bg-gray-100 text-zoho-muted'
                   }`}>{u.role}</span>
                   <button
                     onClick={() => toggleUserActive(u.id, u.is_active)}
                     disabled={u.id === user?.id}
-                    className={`text-xs px-2 py-1 rounded-md transition disabled:opacity-30 ${
+                    className={`text-xs px-2.5 py-1 rounded-md transition disabled:opacity-30 ${
                       u.is_active
                         ? 'bg-red-50 text-red-600 hover:bg-red-100'
                         : 'bg-green-50 text-green-600 hover:bg-green-100'
