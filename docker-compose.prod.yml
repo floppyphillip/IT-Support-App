@@ -19,6 +19,8 @@ services:
     environment:
       DEBUG: "false"
     ports: []  # Exposed via nginx only
+    volumes:
+      - backend_logs:/var/log/netsupportai
     deploy:
       resources:
         limits:
@@ -28,7 +30,9 @@ services:
     build:
       target: prod
     restart: always
-    command: celery -A app.workers.celery_app worker --loglevel=warning --concurrency=8
+    command: celery -A app.workers.celery_app worker --loglevel=warning --concurrency=4
+    volumes:
+      - backend_logs:/var/log/netsupportai
     deploy:
       resources:
         limits:
@@ -60,3 +64,4 @@ services:
 
 volumes:
   nginx_logs:
+  backend_logs:
