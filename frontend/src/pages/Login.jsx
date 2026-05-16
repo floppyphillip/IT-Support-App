@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import useAuth from '../hooks/useAuth'
-import { Monitor, Shield } from 'lucide-react'
+import { Monitor, ArrowRight, Shield, Zap, Users } from 'lucide-react'
+
+const FEATURES = [
+  { icon: Zap,    title: 'AI Auto-Triage',      desc: 'Tickets diagnosed and resolved automatically' },
+  { icon: Shield, title: 'SLA Tracking',         desc: 'Real-time breach alerts and escalation' },
+  { icon: Users,  title: 'Multi-role Access',    desc: 'Superadmin, engineer and client portals' },
+]
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' })
@@ -25,61 +31,112 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl mb-4">
-            <Monitor className="w-8 h-8 text-white" />
+    <div className="min-h-screen flex">
+
+      {/* Left panel */}
+      <div className="hidden lg:flex lg:w-1/2 bg-brand-500 flex-col justify-between p-12">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+            <Monitor className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white">NetSupportAI</h1>
-          <p className="text-brand-200 mt-1">AI-powered Remote IT Support</p>
+          <span className="text-white font-bold text-lg">NetSupportAI</span>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Sign in to your account</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="label">Email address</label>
-              <input
-                type="email"
-                className="input"
-                placeholder="you@company.com"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="label">Password</label>
-              <input
-                type="password"
-                className="input"
-                placeholder="••••••••"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-              />
-            </div>
-            <button type="submit" className="btn-primary w-full justify-center py-2.5" disabled={loading}>
-              {loading ? 'Signing in…' : 'Sign in'}
-            </button>
-          </form>
+        <div>
+          <h1 className="text-4xl font-bold text-white leading-tight mb-4">
+            Smarter IT support,<br />powered by AI.
+          </h1>
+          <p className="text-brand-100 text-lg mb-10">
+            Monitor devices, manage tickets, and resolve issues faster with Claude AI.
+          </p>
 
-          <div className="mt-6 pt-6 border-t border-gray-100 flex items-center gap-2 text-xs text-gray-400">
-            <Shield className="w-3.5 h-3.5" />
-            <span>Secured with JWT authentication + bcrypt</span>
+          <div className="space-y-4">
+            {FEATURES.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-white/15 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Icon className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold text-sm">{title}</p>
+                  <p className="text-brand-200 text-sm">{desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <p className="text-center mt-4 text-sm text-brand-200">
-          Client?{' '}
-          <a href="/client-portal" className="text-white underline underline-offset-2">
-            Access the client portal
-          </a>
+        <p className="text-brand-300 text-xs">
+          © {new Date().getFullYear()} NetSupportAI. All rights reserved.
         </p>
+      </div>
+
+      {/* Right panel */}
+      <div className="flex-1 flex items-center justify-center bg-zoho-body p-8">
+        <div className="w-full max-w-sm">
+
+          {/* Mobile logo */}
+          <div className="flex items-center gap-2 mb-8 lg:hidden">
+            <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center">
+              <Monitor className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-zoho-text">NetSupportAI</span>
+          </div>
+
+          <div className="bg-white rounded-xl border border-zoho-border shadow-card p-8">
+            <h2 className="text-xl font-bold text-zoho-text mb-1">Sign in</h2>
+            <p className="text-sm text-zoho-muted mb-6">Enter your credentials to continue</p>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="label">Email address</label>
+                <input
+                  type="email"
+                  className="input"
+                  placeholder="you@company.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="label">Password</label>
+                <input
+                  type="password"
+                  className="input"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn-primary w-full justify-center py-2.5 mt-2"
+                disabled={loading}
+              >
+                {loading ? 'Signing in…' : (
+                  <>Sign in <ArrowRight className="w-4 h-4" /></>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-6 pt-5 border-t border-zoho-border">
+              <p className="text-xs text-zoho-muted text-center">
+                Client?{' '}
+                <a href="/client-portal" className="text-brand-500 hover:text-brand-600 font-medium">
+                  Access the client portal
+                </a>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5 mt-5 text-xs text-gray-400">
+            <Shield className="w-3 h-3" />
+            <span>Secured with JWT + bcrypt</span>
+          </div>
+        </div>
       </div>
     </div>
   )
