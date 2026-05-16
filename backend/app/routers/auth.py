@@ -18,7 +18,7 @@ from app.utils.security import (
 from app.models.audit_log import AuditLog
 from app.models.notification_settings import NotificationSettings
 from app.utils.logger import get_logger
-from app.main import limiter
+from app.utils.limiter import limiter
 from sqlalchemy import select
 
 router = APIRouter()
