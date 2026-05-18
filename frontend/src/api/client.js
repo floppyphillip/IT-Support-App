@@ -63,77 +63,77 @@ api.interceptors.response.use(
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 export const authAPI = {
-  login:           (data) => api.post('/auth/login', data),
-  logout:          ()     => api.post('/auth/logout'),
-  refresh:         ()     => api.post('/auth/refresh', {}),
+  login:           (data) => api.post('/auth/login/', data),
+  logout:          ()     => api.post('/auth/logout/'),
+  refresh:         ()     => api.post('/auth/refresh/', {}),
   me:              ()     => api.get('/auth/me'),
-  updateMe:        (data) => api.put('/auth/me', data),
-  changePassword:  (data) => api.post('/auth/change-password', data),
+  updateMe:        (data) => api.put('/auth/me/', data),
+  changePassword:  (data) => api.post('/auth/change-password/', data),
   listUsers:       ()     => api.get('/auth/users'),
-  updateUser:      (id, d)=> api.put(`/auth/users/${id}`, d),
-  inviteUser:      (data) => api.post('/auth/invite', data),
+  updateUser:      (id, d)=> api.put(`/auth/users/${id}/`, d),
+  inviteUser:      (data) => api.post('/auth/invite/', data),
   getNotifications:()     => api.get('/auth/me/notifications'),
-  updateNotifications:(d) => api.put('/auth/me/notifications', d),
+  updateNotifications:(d) => api.put('/auth/me/notifications/', d),
 }
 
 // ─── Tickets ──────────────────────────────────────────────────────────────────
 export const ticketsAPI = {
   list:        (params) => api.get('/tickets', { params }),
   get:         (id)     => api.get(`/tickets/${id}`),
-  create:      (data)   => api.post('/tickets', data),
-  update:      (id, d)  => api.put(`/tickets/${id}`, d),
-  delete:      (id)     => api.delete(`/tickets/${id}`),
-  addMessage:  (id, d)  => api.post(`/tickets/${id}/messages`, d),
+  create:      (data)   => api.post('/tickets/', data),
+  update:      (id, d)  => api.put(`/tickets/${id}/`, d),
+  delete:      (id)     => api.delete(`/tickets/${id}/`),
+  addMessage:  (id, d)  => api.post(`/tickets/${id}/messages/`, d),
   getMessages: (id)     => api.get(`/tickets/${id}/messages`),
 }
 
 // ─── Devices ──────────────────────────────────────────────────────────────────
 export const devicesAPI = {
-  list:           (params) => api.get('/devices', { params }),
-  get:            (id)     => api.get(`/devices/${id}`),
-  create:         (data)   => api.post('/devices', data),
-  update:         (id, d)  => api.put(`/devices/${id}`, d),
-  delete:         (id)     => api.delete(`/devices/${id}`),
-  ping:           (id)     => api.post(`/devices/${id}/ping`),
-  snmp:           (id)     => api.post(`/devices/${id}/snmp`),
-  getMetrics:     (id, p)  => api.get(`/devices/${id}/metrics`, { params: p }),
-  backupConfig:   (id)     => api.post(`/devices/${id}/backup-config`),
-  getConfigBackups:(id)    => api.get(`/devices/${id}/config-backups`),
-  getConfigBackup:(id, bid)=> api.get(`/devices/${id}/config-backups/${bid}`),
+  list:            (params) => api.get('/devices', { params }),
+  get:             (id)     => api.get(`/devices/${id}`),
+  create:          (data)   => api.post('/devices/', data),
+  update:          (id, d)  => api.put(`/devices/${id}/`, d),
+  delete:          (id)     => api.delete(`/devices/${id}/`),
+  ping:            (id)     => api.post(`/devices/${id}/ping/`),
+  snmp:            (id)     => api.post(`/devices/${id}/snmp/`),
+  getMetrics:      (id, p)  => api.get(`/devices/${id}/metrics`, { params: p }),
+  backupConfig:    (id)     => api.post(`/devices/${id}/backup-config/`),
+  getConfigBackups:(id)     => api.get(`/devices/${id}/config-backups`),
+  getConfigBackup: (id, bid)=> api.get(`/devices/${id}/config-backups/${bid}`),
 }
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 export const clientsAPI = {
   list:   (params) => api.get('/clients', { params }),
   get:    (id)     => api.get(`/clients/${id}`),
-  create: (data)   => api.post('/clients', data),
-  update: (id, d)  => api.put(`/clients/${id}`, d),
-  delete: (id)     => api.delete(`/clients/${id}`),
+  create: (data)   => api.post('/clients/', data),
+  update: (id, d)  => api.put(`/clients/${id}/`, d),
+  delete: (id)     => api.delete(`/clients/${id}/`),
 }
 
 // ─── Alerts ───────────────────────────────────────────────────────────────────
 export const alertsAPI = {
   list:        (params) => api.get('/alerts', { params }),
   get:         (id)     => api.get(`/alerts/${id}`),
-  acknowledge: (id)     => api.post(`/alerts/${id}/acknowledge`),
-  resolve:     (id)     => api.post(`/alerts/${id}/resolve`),
-  delete:      (id)     => api.delete(`/alerts/${id}`),
+  acknowledge: (id)     => api.post(`/alerts/${id}/acknowledge/`),
+  resolve:     (id)     => api.post(`/alerts/${id}/resolve/`),
+  delete:      (id)     => api.delete(`/alerts/${id}/`),
 }
 
 // ─── AI ───────────────────────────────────────────────────────────────────────
 export const aiAPI = {
-  diagnose:       (data) => api.post('/ai/diagnose', data),
-  analyzeConfig:  (data) => api.post('/ai/analyze-config', data),
-  interpretLogs:  (data) => api.post('/ai/interpret-logs', data),
-  classifyTicket: (data) => api.post('/ai/classify-ticket', data),
-  generateReport: (data) => api.post('/ai/generate-report', data),
+  diagnose:       (data) => api.post('/ai/diagnose/', data),
+  analyzeConfig:  (data) => api.post('/ai/analyze-config/', data),
+  interpretLogs:  (data) => api.post('/ai/interpret-logs/', data),
+  classifyTicket: (data) => api.post('/ai/classify-ticket/', data),
+  generateReport: (data) => api.post('/ai/generate-report/', data),
 }
 
 // ─── Remote Access ────────────────────────────────────────────────────────────
 export const remoteAPI = {
   getCommandPalette: () => api.get('/remote/commands/palette'),
-  exec:              (data) => api.post('/remote/exec', data),
-  deviceExec:        (id, d) => api.post(`/remote/devices/${id}/exec`, d),
+  exec:              (data) => api.post('/remote/exec/', data),
+  deviceExec:        (id, d) => api.post(`/remote/devices/${id}/exec/`, d),
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
@@ -145,8 +145,8 @@ export const dashboardAPI = {
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 export const notificationsAPI = {
-  sendAlert: (data) => api.post('/notifications/alert', data),
-  sendEmail: (data) => api.post('/notifications/email', data),
+  sendAlert: (data) => api.post('/notifications/alert/', data),
+  sendEmail: (data) => api.post('/notifications/email/', data),
 }
 
 export default api
