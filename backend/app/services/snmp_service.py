@@ -74,9 +74,8 @@ async def poll_device(
 
 
 async def get_interface_table(ip_address: str, community: str | None = None) -> list[dict[str, Any]]:
-    """Walk the interface table via SNMP."""
+    """Walk the IF-MIB interface table. Returns [{index, name, status, speed_bps}]."""
     community = community or settings.SNMP_COMMUNITY
-
     loop = asyncio.get_event_loop()
 
     def _walk():
@@ -88,31 +87,83 @@ async def get_interface_table(ip_address: str, community: str | None = None) -> 
         except ImportError:
             return []
 
-        engine = SnmpEngine()
-        auth = CommunityData(community, mpModel=1)
+        engine   = SnmpEngine()
+        auth     = CommunityData(community, mpModel=1)
         transport = UdpTransportTarget((ip_address, settings.SNMP_PORT), timeout=5, retries=1)
-        context = ContextData()
+        context  = ContextData()
 
-        interfaces = []
-        for error_indication, error_status, _, var_binds in nextCmd(
+        rows: dict[int, dict] = {}
+
+        for err_ind, err_st, _, var_binds in nextCmd(
             engine, auth, transport, context,
             ObjectType(ObjectIdentity("IF-MIB", "ifDescr")),
             ObjectType(ObjectIdentity("IF-MIB", "ifOperStatus")),
+            ObjectType(ObjectIdentity("IF-MIB", "ifSpeed")),
             lexicographicMode=False,
-            maxRows=100,
+            maxRows=128,
         ):
-            if error_indication or error_status:
+            if err_ind or err_st:
                 break
-            row = {}
             for obj, val in var_binds:
-                row[str(obj).split("::")[-1]] = str(val)
-            if row:
-                interfaces.append(row)
+                oid_str = str(obj)
+                if "::" not in oid_str:
+                    continue
+                col_dot_idx = oid_str.split("::")[-1]   # e.g. "ifDescr.3"
+                dot = col_dot_idx.rfind(".")
+                if dot == -1:
+                    continue
+                col  = col_dot_idx[:dot]                # "ifDescr"
+                try:
+                    idx = int(col_dot_idx[dot + 1:])    # 3
+                except ValueError:
+                    continue
 
-        return interfaces
+                row = rows.setdefault(idx, {"index": idx, "name": "", "status": "unknown", "speed_bps": 0})
+                sval = str(val)
+                if col == "ifDescr":
+                    row["name"] = sval
+                elif col == "ifOperStatus":
+                    row["status"] = "up" if sval in ("up(1)", "1", "up") else "down"
+                elif col == "ifSpeed":
+                    try:
+                        row["speed_bps"] = int(val)
+                    except Exception:
+                        row["speed_bps"] = 0
+
+        return sorted(rows.values(), key=lambda r: r["index"])
 
     try:
         return await loop.run_in_executor(None, _walk)
     except Exception as exc:
         logger.error(f"SNMP interface walk failed for {ip_address}: {exc}")
         return []
+
+
+async def poll_interface_traffic(
+    ip_address: str,
+    community: str | None = None,
+    if_indexes: list[int] | None = None,
+) -> dict[str, Any]:
+    """Poll ifInOctets + ifOutOctets for the given interface indexes.
+
+    Returns {str(ifIndex): {in_octets, out_octets}}.
+    """
+    community  = community or settings.SNMP_COMMUNITY
+    if_indexes = if_indexes or []
+    if not if_indexes:
+        return {}
+
+    oids: dict[str, str] = {}
+    for idx in if_indexes:
+        oids[f"in_{idx}"]  = f"1.3.6.1.2.1.2.2.1.10.{idx}"
+        oids[f"out_{idx}"] = f"1.3.6.1.2.1.2.2.1.16.{idx}"
+
+    raw = await poll_device(ip_address, community=community, oids=oids)
+
+    result: dict[str, Any] = {}
+    for idx in if_indexes:
+        result[str(idx)] = {
+            "in_octets":  raw.get(f"in_{idx}"),
+            "out_octets": raw.get(f"out_{idx}"),
+        }
+    return result

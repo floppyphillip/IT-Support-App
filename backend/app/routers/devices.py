@@ -13,8 +13,9 @@ from app.schemas.device import (
     DeviceCreate, DeviceUpdate, DeviceResponse, DeviceList,
     PingResult, SNMPResult, DeviceMetricResponse, ConfigBackupResponse,
 )
+from pydantic import BaseModel
 from app.services.ping_service import ping_host
-from app.services.snmp_service import poll_device
+from app.services.snmp_service import poll_device, get_interface_table, poll_interface_traffic
 from app.services.ssh_service import backup_device_config
 from app.utils.security import (
     get_current_user_id, require_superadmin_or_engineer,
@@ -162,6 +163,43 @@ async def snmp_poll_device(
         data=result,
         error=result.get("error"),
     )
+
+
+# ─── SNMP interface discovery & live traffic ─────────────────────────────────
+
+@router.get("/{device_id}/snmp/interfaces")
+async def snmp_get_interfaces(
+    device_id: str,
+    db: AsyncSession = Depends(get_db),
+    _user: str = Depends(get_current_user_id),
+):
+    device = await _get_device_or_404(db, device_id)
+    if not device.snmp_enabled:
+        raise HTTPException(status_code=400, detail="SNMP is not enabled on this device")
+    interfaces = await get_interface_table(device.ip_address, community=device.snmp_community)
+    return {"interfaces": interfaces}
+
+
+class TrafficPollRequest(BaseModel):
+    if_indexes: list[int]
+
+
+@router.post("/{device_id}/snmp/traffic")
+async def snmp_poll_traffic(
+    device_id: str,
+    payload: TrafficPollRequest,
+    db: AsyncSession = Depends(get_db),
+    _user: str = Depends(get_current_user_id),
+):
+    device = await _get_device_or_404(db, device_id)
+    if not device.snmp_enabled:
+        raise HTTPException(status_code=400, detail="SNMP is not enabled on this device")
+    traffic = await poll_interface_traffic(
+        ip_address=device.ip_address,
+        community=device.snmp_community,
+        if_indexes=payload.if_indexes,
+    )
+    return {"traffic": traffic, "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 # ─── Config backups ───────────────────────────────────────────────────────────

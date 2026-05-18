@@ -99,6 +99,8 @@ export const devicesAPI = {
   delete:          (id)     => api.delete(`/devices/${id}`),
   ping:            (id, count = 4) => api.post(`/devices/${id}/ping`, null, { params: { count } }),
   snmp:            (id)     => api.post(`/devices/${id}/snmp`),
+  snmpInterfaces:  (id)     => api.get(`/devices/${id}/snmp/interfaces`),
+  snmpTraffic:     (id, d)  => api.post(`/devices/${id}/snmp/traffic`, d),
   getMetrics:      (id, p)  => api.get(`/devices/${id}/metrics`, { params: p }),
   backupConfig:    (id)     => api.post(`/devices/${id}/backup-config`),
   getConfigBackups:(id)     => api.get(`/devices/${id}/config-backups`),
