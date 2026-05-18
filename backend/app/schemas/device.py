@@ -45,6 +45,7 @@ class DeviceUpdate(BaseModel):
     monitoring_enabled: Optional[bool] = None
     snmp_enabled: Optional[bool] = None
     snmp_community: Optional[str] = None
+    snmp_version: Optional[str] = None
     ssh_enabled: Optional[bool] = None
     ssh_port: Optional[int] = None
     ssh_username: Optional[str] = None
@@ -69,6 +70,8 @@ class DeviceResponse(BaseModel):
     client_id: Optional[str] = None
     monitoring_enabled: bool
     snmp_enabled: bool
+    snmp_community: Optional[str] = None
+    snmp_version: Optional[str] = None
     ssh_enabled: bool
     ssh_port: int
     ssh_username: Optional[str] = None
