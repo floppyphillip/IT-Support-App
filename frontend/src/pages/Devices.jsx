@@ -1,10 +1,10 @@
-﻿import { useEffect, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { devicesAPI } from '../api/client'
 import StatusIndicator from '../components/StatusIndicator'
 import { SkeletonCard } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
-import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2 } from 'lucide-react'
+import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 const DEVICE_ICONS = {
@@ -227,13 +227,203 @@ function Toggle({ label, checked, onChange }) {
   )
 }
 
+function PingModal({ device, onClose }) {
+  const [count, setCount]     = useState('4')
+  const [infinite, setInfinite] = useState(false)
+  const [running, setRunning] = useState(false)
+  const [results, setResults] = useState([])
+  const [summary, setSummary] = useState(null)
+  const stopRef      = useRef(false)
+  const bottomRef    = useRef(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [results])
+
+  const buildSummary = (sent, received, latencies) => ({
+    sent, received,
+    loss: sent > 0 ? ((sent - received) / sent * 100).toFixed(0) : '0',
+    min:  latencies.length ? Math.min(...latencies).toFixed(1) : '—',
+    max:  latencies.length ? Math.max(...latencies).toFixed(1) : '—',
+    avg:  latencies.length ? (latencies.reduce((a, b) => a + b, 0) / latencies.length).toFixed(1) : '—',
+  })
+
+  const start = async () => {
+    setResults([])
+    setSummary(null)
+    setRunning(true)
+    stopRef.current = false
+
+    if (infinite) {
+      let sent = 0, received = 0, latencies = []
+      while (!stopRef.current) {
+        try {
+          const { data } = await devicesAPI.ping(device.id, 1)
+          sent++
+          if (data.reachable && data.latency_ms != null) {
+            received++
+            latencies.push(data.latency_ms)
+          }
+          setResults(prev => [...prev, {
+            key: Date.now() + Math.random(),
+            reachable: data.reachable,
+            latency: data.latency_ms,
+            ip: data.ip_address,
+          }])
+          setSummary(buildSummary(sent, received, latencies))
+        } catch {
+          sent++
+          setResults(prev => [...prev, { key: Date.now() + Math.random(), error: true }])
+          setSummary(buildSummary(sent, received, latencies))
+        }
+        if (!stopRef.current) await new Promise(r => setTimeout(r, 1000))
+      }
+    } else {
+      const n = Math.max(1, Math.min(100, parseInt(count) || 4))
+      try {
+        const { data } = await devicesAPI.ping(device.id, n)
+        setResults([{
+          key: Date.now(),
+          reachable: data.reachable,
+          latency: data.latency_ms,
+          ip: data.ip_address,
+          packets_sent: data.packets_sent,
+          packets_received: data.packets_received,
+          loss: data.packet_loss_pct,
+        }])
+        setSummary({
+          sent: data.packets_sent,
+          received: data.packets_received,
+          loss: data.packet_loss_pct?.toFixed(0) ?? '100',
+          avg: data.latency_ms != null ? data.latency_ms.toFixed(1) : '—',
+          min: '—', max: '—',
+        })
+      } catch (err) {
+        const detail = err?.response?.data?.detail
+        setResults([{ key: Date.now(), error: true, msg: detail ?? err.message }])
+      }
+    }
+
+    setRunning(false)
+    stopRef.current = false
+  }
+
+  const stop = () => { stopRef.current = true }
+
+  const lossColor = (loss) => {
+    const n = parseFloat(loss)
+    if (n === 0) return 'text-emerald-400'
+    if (n < 50)  return 'text-amber-400'
+    return 'text-red-400'
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto p-4"
+         style={{ background: 'rgba(0,0,0,0.75)' }}
+         onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
+      <div className="w-full max-w-lg mx-auto my-12 rounded-2xl border overflow-hidden"
+           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+          <div>
+            <p className="font-semibold text-slate-200 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-blue-400" /> Ping Test
+            </p>
+            <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-3)' }}>
+              {device.name} — {device.ip_address}
+            </p>
+          </div>
+          <button onClick={onClose} disabled={running}
+            className="p-1.5 rounded-lg hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-30">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center gap-4 px-5 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>Count</label>
+            <input type="number" min="1" max="100"
+              className="input w-16 text-center font-mono py-1 text-xs"
+              value={count} onChange={e => setCount(e.target.value)}
+              disabled={infinite || running} />
+          </div>
+          <Toggle label="Infinite" checked={infinite} onChange={v => setInfinite(v)} />
+          <div className="ml-auto">
+            {running ? (
+              <button onClick={stop}
+                className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all">
+                <Square className="w-3 h-3" /> Stop
+              </button>
+            ) : (
+              <button onClick={start} className="btn-primary text-xs py-1.5 px-3">
+                <Play className="w-3 h-3" /> Start
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Terminal output */}
+        <div className="h-56 overflow-y-auto p-4 font-mono text-xs leading-relaxed"
+             style={{ background: 'var(--bg)' }}>
+          {results.length === 0 && !running && (
+            <p className="text-slate-600 text-center pt-16">Set count and press Start</p>
+          )}
+          {results.map(r => (
+            <div key={r.key} className={r.error ? 'text-red-400' : r.reachable ? 'text-emerald-400' : 'text-amber-400'}>
+              {r.error
+                ? `Error: ${r.msg ?? 'request failed'}`
+                : r.reachable
+                  ? `Reply from ${r.ip}: time=${r.latency != null ? r.latency.toFixed(1) : '?'}ms`
+                  : `Request timeout for icmp_seq from ${r.ip}`}
+            </div>
+          ))}
+          {running && (
+            <div className="text-blue-400 flex items-center gap-1.5 mt-1">
+              <Loader2 className="w-3 h-3 animate-spin" /> sending…
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Summary */}
+        <div className="border-t px-5 py-3" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+          {summary ? (
+            <div className="grid grid-cols-4 gap-3 text-center">
+              <div>
+                <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Sent</p>
+                <p className="font-mono text-sm font-bold text-slate-200">{summary.sent}</p>
+              </div>
+              <div>
+                <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Received</p>
+                <p className="font-mono text-sm font-bold text-emerald-400">{summary.received}</p>
+              </div>
+              <div>
+                <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Loss</p>
+                <p className={`font-mono text-sm font-bold ${lossColor(summary.loss)}`}>{summary.loss}%</p>
+              </div>
+              <div>
+                <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Avg RTT</p>
+                <p className="font-mono text-sm font-bold text-blue-400">{summary.avg !== '—' ? `${summary.avg}ms` : '—'}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[10px] text-center" style={{ color: 'var(--text-4)' }}>— stats appear after first ping —</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Devices() {
   const [devices, setDevices] = useState([])
-  const [total, setTotal] = useState(0)
+  const [total, setTotal]     = useState(0)
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [pinging, setPinging] = useState(null)
+  const [search, setSearch]   = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  const [pingTarget, setPingTarget] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -250,25 +440,10 @@ export default function Devices() {
   useEffect(() => { load() }, [])
   useEffect(() => { const t = setTimeout(load, 400); return () => clearTimeout(t) }, [search])
 
-  const pingDevice = async (id, e) => {
-    e.preventDefault(); e.stopPropagation()
-    setPinging(id)
-    try {
-      const { data } = await devicesAPI.ping(id)
-      if (data.reachable) toast.success(`Reachable — ${data.latency_ms}ms`)
-      else toast.error('Device unreachable')
-      load()
-    } catch (err) {
-      const detail = err?.response?.data?.detail
-      toast.error(detail ? `Ping failed: ${detail}` : `Ping failed: ${err.message}`)
-      console.error('[Ping]', err.response?.status, err.response?.data ?? err.message)
-    }
-    finally { setPinging(null) }
-  }
-
   return (
     <div className="space-y-4 animate-fade-in">
-      {showAdd && <AddDeviceModal onClose={() => setShowAdd(false)} onCreated={load} />}
+      {showAdd    && <AddDeviceModal onClose={() => setShowAdd(false)} onCreated={load} />}
+      {pingTarget && <PingModal device={pingTarget} onClose={() => { setPingTarget(null); load() }} />}
       <div className="flex items-center justify-between">
         <div><h1 className="page-title">Devices</h1><p className="page-sub">{total} total</p></div>
         <button onClick={() => setShowAdd(true)} className="btn-primary"><Plus className="w-4 h-4" />Add Device</button>
@@ -322,9 +497,8 @@ export default function Devices() {
               </div>
 
               <button className="btn-secondary w-full justify-center text-xs py-1.5"
-                onClick={(e) => pingDevice(d.id, e)} disabled={pinging === d.id}>
-                <Zap className="w-3 h-3" />
-                {pinging === d.id ? 'Pinging…' : 'Ping'}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPingTarget(d) }}>
+                <Zap className="w-3 h-3" /> Ping
               </button>
             </Link>
           ))}
