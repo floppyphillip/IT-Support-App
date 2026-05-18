@@ -4,7 +4,7 @@ import { devicesAPI } from '../api/client'
 import StatusIndicator from '../components/StatusIndicator'
 import { SkeletonCard } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
-import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square } from 'lucide-react'
+import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 const DEVICE_ICONS = {
@@ -23,8 +23,26 @@ const EMPTY_FORM = {
   ssh_enabled: false, ssh_port: 22, ssh_username: '', ssh_password: '',
 }
 
-function AddDeviceModal({ onClose, onCreated }) {
-  const [form, setForm] = useState(EMPTY_FORM)
+function DeviceFormModal({ device, onClose, onSaved }) {
+  const isEdit = !!device
+  const [form, setForm] = useState(isEdit ? {
+    name:               device.name           ?? '',
+    ip_address:         device.ip_address     ?? '',
+    hostname:           device.hostname       ?? '',
+    model:              device.model          ?? '',
+    os_version:         device.os_version     ?? '',
+    location:           device.location       ?? '',
+    device_type:        device.device_type    ?? 'other',
+    vendor:             device.vendor         ?? 'other',
+    monitoring_enabled: device.monitoring_enabled ?? true,
+    snmp_enabled:       device.snmp_enabled   ?? false,
+    snmp_community:     device.snmp_community ?? 'public',
+    snmp_version:       device.snmp_version   ?? '2c',
+    ssh_enabled:        device.ssh_enabled    ?? false,
+    ssh_port:           device.ssh_port       ?? 22,
+    ssh_username:       device.ssh_username   ?? '',
+    ssh_password:       '',  // never pre-fill; blank = keep existing
+  } : EMPTY_FORM)
   const [saving, setSaving] = useState(false)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -48,9 +66,14 @@ function AddDeviceModal({ onClose, onCreated }) {
         ssh_username:   form.ssh_enabled  ? form.ssh_username   || undefined : undefined,
         ssh_password:   form.ssh_enabled  ? form.ssh_password   || undefined : undefined,
       }
-      await devicesAPI.create(payload)
-      toast.success('Device added successfully')
-      onCreated()
+      if (isEdit) {
+        await devicesAPI.update(device.id, payload)
+        toast.success('Device updated')
+      } else {
+        await devicesAPI.create(payload)
+        toast.success('Device added successfully')
+      }
+      onSaved()
       onClose()
     } catch (err) {
       if (!err.response) {
@@ -63,7 +86,7 @@ function AddDeviceModal({ onClose, onCreated }) {
           toast.error(detail ?? `Server error ${err.response.status}`)
         }
       }
-      console.error('[AddDevice]', err.response?.status, err.response?.data ?? err.message)
+      console.error('[DeviceForm]', err.response?.status, err.response?.data ?? err.message)
     } finally {
       setSaving(false)
     }
@@ -79,8 +102,10 @@ function AddDeviceModal({ onClose, onCreated }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
-            <p className="font-semibold text-slate-200">Add Device</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Register a new network device for monitoring</p>
+            <p className="font-semibold text-slate-200">{isEdit ? 'Edit Device' : 'Add Device'}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+              {isEdit ? `Editing ${device.name}` : 'Register a new network device for monitoring'}
+            </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg transition-colors hover:bg-white/5 text-slate-500 hover:text-slate-300">
             <X className="w-4 h-4" />
@@ -203,7 +228,69 @@ function AddDeviceModal({ onClose, onCreated }) {
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t" style={{ borderColor: 'var(--border)' }}>
           <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancel</button>
           <button onClick={submit} className="btn-primary" disabled={saving}>
-            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</> : <><Plus className="w-3.5 h-3.5" />Add Device</>}
+            {saving
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</>
+              : isEdit
+                ? <><Pencil className="w-3.5 h-3.5" />Save Changes</>
+                : <><Plus className="w-3.5 h-3.5" />Add Device</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DeleteConfirmModal({ device, onClose, onDeleted }) {
+  const [deleting, setDeleting] = useState(false)
+
+  const confirm = async () => {
+    setDeleting(true)
+    try {
+      await devicesAPI.delete(device.id)
+      toast.success(`${device.name} deleted`)
+      onDeleted()
+      onClose()
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      toast.error(detail ?? `Delete failed (${err.response?.status ?? 'network error'})`)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style={{ background: 'rgba(0,0,0,0.75)' }}
+         onClick={(e) => { if (e.target === e.currentTarget && !deleting) onClose() }}>
+      <div className="w-full max-w-sm rounded-2xl border overflow-hidden"
+           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
+
+        <div className="px-6 pt-6 pb-5 text-center">
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
+               style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}>
+            <AlertTriangle className="w-5 h-5 text-red-400" />
+          </div>
+          <p className="font-semibold text-slate-200 mb-1">Delete Device</p>
+          <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+            Are you sure you want to delete{' '}
+            <span className="font-mono font-semibold text-slate-200">{device.name}</span>?
+          </p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-4)' }}>
+            This will remove all associated metrics, backups, and alerts. This cannot be undone.
+          </p>
+        </div>
+
+        <div className="flex gap-3 px-6 pb-6">
+          <button onClick={onClose} disabled={deleting} className="btn-secondary flex-1 justify-center">
+            Cancel
+          </button>
+          <button onClick={confirm} disabled={deleting}
+            className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 border border-red-500/20
+                       text-red-400 hover:bg-red-500/20 text-sm font-semibold px-4 py-2 rounded-lg
+                       transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            {deleting
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Deleting…</>
+              : <><Trash2 className="w-3.5 h-3.5" />Delete</>}
           </button>
         </div>
       </div>
@@ -423,6 +510,8 @@ export default function Devices() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  const [editTarget, setEditTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [pingTarget, setPingTarget] = useState(null)
 
   const load = async () => {
@@ -442,8 +531,10 @@ export default function Devices() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {showAdd    && <AddDeviceModal onClose={() => setShowAdd(false)} onCreated={load} />}
-      {pingTarget && <PingModal device={pingTarget} onClose={() => { setPingTarget(null); load() }} />}
+      {showAdd      && <DeviceFormModal onClose={() => setShowAdd(false)} onSaved={load} />}
+      {editTarget   && <DeviceFormModal device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />}
+      {deleteTarget && <DeleteConfirmModal device={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={load} />}
+      {pingTarget   && <PingModal device={pingTarget} onClose={() => { setPingTarget(null); load() }} />}
       <div className="flex items-center justify-between">
         <div><h1 className="page-title">Devices</h1><p className="page-sub">{total} total</p></div>
         <button onClick={() => setShowAdd(true)} className="btn-primary"><Plus className="w-4 h-4" />Add Device</button>
@@ -496,10 +587,24 @@ export default function Devices() {
                 )}
               </div>
 
-              <button className="btn-secondary w-full justify-center text-xs py-1.5"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPingTarget(d) }}>
-                <Zap className="w-3 h-3" /> Ping
-              </button>
+              <div className="flex gap-2">
+                <button className="btn-secondary flex-1 justify-center text-xs py-1.5"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPingTarget(d) }}>
+                  <Zap className="w-3 h-3" /> Ping
+                </button>
+                <button className="btn-secondary justify-center text-xs py-1.5 px-3"
+                  title="Edit device"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditTarget(d) }}>
+                  <Pencil className="w-3 h-3" />
+                </button>
+                <button className="flex items-center justify-center text-xs py-1.5 px-3 rounded-lg
+                                   bg-red-500/10 border border-red-500/20 text-red-400
+                                   hover:bg-red-500/20 transition-all"
+                  title="Delete device"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(d) }}>
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
             </Link>
           ))}
         </div>
