@@ -73,26 +73,25 @@ async def poll_device(
         return {"success": False, "error": str(exc), "ip_address": ip_address}
 
 
-async def get_interface_table(ip_address: str, community: str | None = None) -> list[dict[str, Any]]:
-    """Walk ifDescr/ifOperStatus/ifSpeed using raw numeric OIDs.
+async def get_interface_table(
+    ip_address: str,
+    community: str | None = None,
+    version: str = "2c",
+) -> list[dict[str, Any]]:
+    """Walk ifDescr/ifOperStatus/ifSpeed using three separate column walks.
 
-    Returns [{index, name, status, speed_bps}].
-    Uses raw OIDs to avoid dependency on compiled MIB files.
-    Column identity is determined by position in var_binds, not OID name parsing.
+    Walks each OID column independently and merges by ifIndex.
+    This is more compatible with devices (e.g. MikroTik) that do not align
+    multi-OID responses correctly in a single nextCmd call.
     """
     community = community or settings.SNMP_COMMUNITY
     loop = asyncio.get_event_loop()
 
-    # Raw numeric OIDs — no MIB files required
-    OID_DESCR   = "1.3.6.1.2.1.2.2.1.2"   # ifDescr
-    OID_STATUS  = "1.3.6.1.2.1.2.2.1.8"   # ifOperStatus (1=up, 2=down)
-    OID_SPEED   = "1.3.6.1.2.1.2.2.1.5"   # ifSpeed (bps)
+    OID_DESCR  = "1.3.6.1.2.1.2.2.1.2"  # ifDescr
+    OID_STATUS = "1.3.6.1.2.1.2.2.1.8"  # ifOperStatus
+    OID_SPEED  = "1.3.6.1.2.1.2.2.1.5"  # ifSpeed (bps)
 
     def _extract_index(oid_str: str) -> int | None:
-        """Pull the trailing integer from any OID string representation."""
-        # Works for: "1.3.6.1.2.1.2.2.1.2.3",
-        #            "IF-MIB::ifDescr.3",
-        #            "SNMPv2-SMI::mib-2.2.2.1.2.3"
         last_dot = oid_str.rfind(".")
         if last_dot == -1:
             return None
@@ -111,57 +110,67 @@ async def get_interface_table(ip_address: str, community: str | None = None) -> 
             logger.error("pysnmp not installed")
             return []
 
+        mp_model = 0 if version == "1" else 1
         engine    = SnmpEngine()
-        auth      = CommunityData(community, mpModel=1)
+        auth      = CommunityData(community, mpModel=mp_model)
         transport = UdpTransportTarget(
-            (ip_address, settings.SNMP_PORT), timeout=settings.SNMP_TIMEOUT, retries=1
+            (ip_address, settings.SNMP_PORT),
+            timeout=settings.SNMP_TIMEOUT,
+            retries=1,
         )
         context = ContextData()
+
+        def _walk_column(base_oid: str) -> dict[int, Any]:
+            col: dict[int, Any] = {}
+            try:
+                for err_ind, err_st, _, var_binds in nextCmd(
+                    engine, auth, transport, context,
+                    ObjectType(ObjectIdentity(base_oid)),
+                    lexicographicMode=False,
+                    maxRows=128,
+                ):
+                    if err_ind:
+                        logger.warning(f"SNMP walk ({ip_address}, {base_oid}): {err_ind}")
+                        break
+                    if err_st:
+                        logger.warning(f"SNMP error ({ip_address}, {base_oid}): {err_st}")
+                        break
+                    for obj, val in var_binds:
+                        idx = _extract_index(str(obj))
+                        if idx is not None:
+                            col[idx] = val
+            except Exception as exc:
+                logger.error(f"SNMP column walk exception ({ip_address}, {base_oid}): {exc}")
+            return col
+
+        descr_col  = _walk_column(OID_DESCR)
+        status_col = _walk_column(OID_STATUS)
+        speed_col  = _walk_column(OID_SPEED)
+
+        logger.info(
+            f"SNMP raw columns ({ip_address}): "
+            f"descr={len(descr_col)}, status={len(status_col)}, speed={len(speed_col)}"
+        )
+
         rows: dict[int, dict] = {}
+        for idx, descr_val in descr_col.items():
+            status_raw = status_col.get(idx)
+            speed_raw  = speed_col.get(idx)
 
-        try:
-            for err_ind, err_st, _, var_binds in nextCmd(
-                engine, auth, transport, context,
-                ObjectType(ObjectIdentity(OID_DESCR)),
-                ObjectType(ObjectIdentity(OID_STATUS)),
-                ObjectType(ObjectIdentity(OID_SPEED)),
-                lexicographicMode=False,
-                maxRows=128,
-            ):
-                if err_ind:
-                    logger.warning(f"SNMP walk error ({ip_address}): {err_ind}")
-                    break
-                if err_st:
-                    logger.warning(f"SNMP error status ({ip_address}): {err_st}")
-                    break
-                if len(var_binds) < 3:
-                    continue
+            status_str = str(status_raw).lower() if status_raw is not None else ""
+            is_up = status_str in ("up(1)", "1", "up")
 
-                # Position 0 = ifDescr, 1 = ifOperStatus, 2 = ifSpeed
-                descr_obj,  descr_val  = var_binds[0]
-                status_obj, status_val = var_binds[1]
-                speed_obj,  speed_val  = var_binds[2]
+            try:
+                speed = int(speed_raw) if speed_raw is not None else 0
+            except Exception:
+                speed = 0
 
-                idx = _extract_index(str(descr_obj))
-                if idx is None:
-                    continue
-
-                status_str = str(status_val).lower()
-                is_up = status_str in ("up(1)", "1", "up")
-
-                try:
-                    speed = int(speed_val)
-                except Exception:
-                    speed = 0
-
-                rows[idx] = {
-                    "index":     idx,
-                    "name":      str(descr_val),
-                    "status":    "up" if is_up else "down",
-                    "speed_bps": speed,
-                }
-        except Exception as exc:
-            logger.error(f"SNMP walk exception ({ip_address}): {exc}")
+            rows[idx] = {
+                "index":     idx,
+                "name":      str(descr_val),
+                "status":    "up" if is_up else "down",
+                "speed_bps": speed,
+            }
 
         found = sorted(rows.values(), key=lambda r: r["index"])
         logger.info(f"SNMP interface walk {ip_address}: {len(found)} interfaces found")

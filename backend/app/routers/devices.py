@@ -176,7 +176,11 @@ async def snmp_get_interfaces(
     device = await _get_device_or_404(db, device_id)
     if not device.snmp_enabled:
         raise HTTPException(status_code=400, detail="SNMP is not enabled on this device")
-    interfaces = await get_interface_table(device.ip_address, community=device.snmp_community)
+    interfaces = await get_interface_table(
+        device.ip_address,
+        community=device.snmp_community,
+        version=device.snmp_version or "2c",
+    )
     return {"interfaces": interfaces}
 
 
