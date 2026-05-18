@@ -241,6 +241,9 @@ export default function Devices() {
       const { data } = await devicesAPI.list({ limit: 50, search: search || undefined })
       setDevices(data.items)
       setTotal(data.total)
+    } catch (err) {
+      console.error('[Devices] load failed', err.response?.status, err.message)
+      toast.error('Failed to load devices')
     } finally { setLoading(false) }
   }
 

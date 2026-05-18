@@ -78,7 +78,7 @@ export const authAPI = {
 
 // ─── Tickets ──────────────────────────────────────────────────────────────────
 export const ticketsAPI = {
-  list:        (params) => api.get('/tickets', { params }),
+  list:        (params) => api.get('/tickets/', { params }),
   get:         (id)     => api.get(`/tickets/${id}`),
   create:      (data)   => api.post('/tickets/', data),
   update:      (id, d)  => api.put(`/tickets/${id}/`, d),
@@ -89,7 +89,7 @@ export const ticketsAPI = {
 
 // ─── Devices ──────────────────────────────────────────────────────────────────
 export const devicesAPI = {
-  list:            (params) => api.get('/devices', { params }),
+  list:            (params) => api.get('/devices/', { params }),
   get:             (id)     => api.get(`/devices/${id}`),
   create:          (data)   => api.post('/devices/', data),
   update:          (id, d)  => api.put(`/devices/${id}/`, d),
@@ -104,7 +104,7 @@ export const devicesAPI = {
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 export const clientsAPI = {
-  list:   (params) => api.get('/clients', { params }),
+  list:   (params) => api.get('/clients/', { params }),
   get:    (id)     => api.get(`/clients/${id}`),
   create: (data)   => api.post('/clients/', data),
   update: (id, d)  => api.put(`/clients/${id}/`, d),
@@ -113,7 +113,7 @@ export const clientsAPI = {
 
 // ─── Alerts ───────────────────────────────────────────────────────────────────
 export const alertsAPI = {
-  list:        (params) => api.get('/alerts', { params }),
+  list:        (params) => api.get('/alerts/', { params }),
   get:         (id)     => api.get(`/alerts/${id}`),
   acknowledge: (id)     => api.post(`/alerts/${id}/acknowledge/`),
   resolve:     (id)     => api.post(`/alerts/${id}/resolve/`),
@@ -138,9 +138,9 @@ export const remoteAPI = {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export const dashboardAPI = {
-  stats:          () => api.get('/dashboard/stats'),
-  networkHealth:  () => api.get('/dashboard/network-health'),
-  recentActivity: (limit) => api.get('/dashboard/recent-activity', { params: { limit } }),
+  stats:          () => api.get('/dashboard/stats/'),
+  networkHealth:  () => api.get('/dashboard/network-health/'),
+  recentActivity: (limit) => api.get('/dashboard/recent-activity/', { params: { limit } }),
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
