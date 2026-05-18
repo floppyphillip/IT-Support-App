@@ -258,7 +258,11 @@ export default function Devices() {
       if (data.reachable) toast.success(`Reachable — ${data.latency_ms}ms`)
       else toast.error('Device unreachable')
       load()
-    } catch { toast.error('Ping failed') }
+    } catch (err) {
+      const detail = err?.response?.data?.detail
+      toast.error(detail ? `Ping failed: ${detail}` : `Ping failed: ${err.message}`)
+      console.error('[Ping]', err.response?.status, err.response?.data ?? err.message)
+    }
     finally { setPinging(null) }
   }
 
