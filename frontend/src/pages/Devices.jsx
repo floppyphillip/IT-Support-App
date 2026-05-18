@@ -53,8 +53,17 @@ function AddDeviceModal({ onClose, onCreated }) {
       onCreated()
       onClose()
     } catch (err) {
-      const msg = err?.response?.data?.detail
-      toast.error(Array.isArray(msg) ? msg[0]?.msg ?? 'Failed to add device' : msg ?? 'Failed to add device')
+      if (!err.response) {
+        toast.error('Cannot reach server — make sure the backend is running')
+      } else {
+        const detail = err.response.data?.detail
+        if (Array.isArray(detail)) {
+          toast.error(detail.map(d => d.msg ?? d).join(', '))
+        } else {
+          toast.error(detail ?? `Server error ${err.response.status}`)
+        }
+      }
+      console.error('[AddDevice]', err.response?.status, err.response?.data ?? err.message)
     } finally {
       setSaving(false)
     }
