@@ -1,6 +1,11 @@
 # Production overrides — use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Before first run: build the frontend dist with deploy.sh (nginx serves it as static files)
 
 services:
+  # Disable Vite dev server — nginx serves the built dist instead
+  frontend:
+    profiles: ["dev-only"]
+
   db:
     restart: always
     environment:

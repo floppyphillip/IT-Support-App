@@ -36,6 +36,7 @@ paramiko==3.5.0
 
 # SNMP
 pysnmp==4.4.12
+pyasn1==0.4.8
 
 # Networking / Ping
 icmplib==3.0.4
