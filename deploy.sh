@@ -3,7 +3,7 @@
 # Usage: bash deploy.sh
 set -e
 
-REPO_URL="https://github.com/floppyphillip/IT-Suppot-App.git"
+REPO_URL="https://github.com/floppyphillip/IT-Support-App.git"
 APP_DIR="/opt/netsupportai"
 DOMAIN="techmartinfo.com"
 
