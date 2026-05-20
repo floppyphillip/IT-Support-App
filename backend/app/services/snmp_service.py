@@ -183,6 +183,89 @@ async def get_interface_table(
         return []
 
 
+async def snmp_diagnose(
+    ip_address: str,
+    community: str | None = None,
+    version: str = "2c",
+) -> dict[str, Any]:
+    """Return raw SNMP diagnostic info: basic GET + ifDescr walk raw results."""
+    community = community or settings.SNMP_COMMUNITY
+    loop = asyncio.get_event_loop()
+
+    def _run():
+        out: dict[str, Any] = {
+            "ip_address": ip_address,
+            "community": community,
+            "version": version,
+            "sys_descr": None,
+            "sys_descr_error": None,
+            "if_descr_raw": [],
+            "if_descr_error": None,
+        }
+
+        try:
+            from pysnmp.hlapi import (  # type: ignore[import]
+                CommunityData, ContextData, ObjectIdentity, ObjectType,
+                SnmpEngine, UdpTransportTarget, getCmd, nextCmd,
+            )
+        except ImportError:
+            out["sys_descr_error"] = "pysnmp not installed"
+            return out
+
+        mp_model = 0 if version == "1" else 1
+        engine    = SnmpEngine()
+        auth      = CommunityData(community, mpModel=mp_model)
+        transport = UdpTransportTarget(
+            (ip_address, settings.SNMP_PORT),
+            timeout=settings.SNMP_TIMEOUT,
+            retries=1,
+        )
+        context = ContextData()
+
+        # Step 1: basic GET on sysDescr
+        try:
+            err_ind, err_st, _, var_binds = next(getCmd(
+                engine, auth, transport, context,
+                ObjectType(ObjectIdentity("1.3.6.1.2.1.1.1.0")),
+            ))
+            if err_ind:
+                out["sys_descr_error"] = str(err_ind)
+            elif err_st:
+                out["sys_descr_error"] = f"error-status {err_st}"
+            else:
+                for _, val in var_binds:
+                    out["sys_descr"] = str(val)
+        except Exception as exc:
+            out["sys_descr_error"] = str(exc)
+
+        # Step 2: walk ifDescr and return first 20 raw rows
+        try:
+            rows = []
+            for err_ind, err_st, _, var_binds in nextCmd(
+                engine, auth, transport, context,
+                ObjectType(ObjectIdentity("1.3.6.1.2.1.2.2.1.2")),
+                lexicographicMode=False,
+                maxRows=20,
+            ):
+                if err_ind:
+                    out["if_descr_error"] = str(err_ind)
+                    break
+                if err_st:
+                    out["if_descr_error"] = f"error-status {err_st}"
+                    break
+                for obj, val in var_binds:
+                    rows.append({"oid": str(obj), "value": str(val), "type": type(val).__name__})
+            out["if_descr_raw"] = rows
+        except Exception as exc:
+            out["if_descr_error"] = str(exc)
+
+        logger.info(f"SNMP diagnose {ip_address}: sys_descr={out['sys_descr']!r}, "
+                    f"if_rows={len(out['if_descr_raw'])}, errors={out['sys_descr_error']}/{out['if_descr_error']}")
+        return out
+
+    return await loop.run_in_executor(None, _run)
+
+
 async def poll_interface_traffic(
     ip_address: str,
     community: str | None = None,

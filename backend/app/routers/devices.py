@@ -15,7 +15,7 @@ from app.schemas.device import (
 )
 from pydantic import BaseModel
 from app.services.ping_service import ping_host
-from app.services.snmp_service import poll_device, get_interface_table, poll_interface_traffic
+from app.services.snmp_service import poll_device, get_interface_table, poll_interface_traffic, snmp_diagnose
 from app.services.ssh_service import backup_device_config
 from app.utils.security import (
     get_current_user_id, require_superadmin_or_engineer,
@@ -166,6 +166,20 @@ async def snmp_poll_device(
 
 
 # ─── SNMP interface discovery & live traffic ─────────────────────────────────
+
+@router.get("/{device_id}/snmp/diagnose")
+async def snmp_diagnose_device(
+    device_id: str,
+    db: AsyncSession = Depends(get_db),
+    _user: str = Depends(get_current_user_id),
+):
+    device = await _get_device_or_404(db, device_id)
+    return await snmp_diagnose(
+        ip_address=device.ip_address,
+        community=device.snmp_community,
+        version=device.snmp_version or "2c",
+    )
+
 
 @router.get("/{device_id}/snmp/interfaces")
 async def snmp_get_interfaces(
