@@ -253,7 +253,13 @@ echo -e "${BOLD}==> [5/7] Writing configuration...${RESET}"
 write_env
 write_db_env
 
-echo -e "${BOLD}==> [6/7] Building and starting services...${RESET}"
+echo -e "${BOLD}==> [6/7] Building frontend and starting backend services...${RESET}"
+
+# Patch domain into nginx config files
+sed -i "s/your-domain\.com/$DOMAIN/g" "$APP_DIR/nginx/nginx.conf"
+sed -i "s/your-domain\.com/$DOMAIN/g" "$APP_DIR/nginx/ssl.conf"
+echo "    Nginx config patched for $DOMAIN."
+
 # Build frontend dist
 mkdir -p "$APP_DIR/frontend/dist"
 docker build --target builder -t netsupportai-frontend-build "$APP_DIR/frontend"
@@ -262,16 +268,35 @@ docker cp "$CONTAINER_ID:/app/dist/." "$APP_DIR/frontend/dist/"
 docker rm "$CONTAINER_ID"
 echo "    Frontend built."
 
-# Start all services in production mode
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-echo "    Services started."
+# Start backend services only (no nginx yet — needs SSL certs first)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+    up -d --build db redis backend worker beat flower
+echo "    Backend services started."
 
-echo -e "${BOLD}==> [7/7] Setting up SSL with Certbot...${RESET}"
-apt-get install -y certbot python3-certbot-nginx
-certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos \
-    --email "$ADMIN_EMAIL" --redirect && \
-    echo "    SSL certificate installed." || \
-    echo -e "${YELLOW}    !! Certbot failed — run manually: certbot --nginx -d $DOMAIN${RESET}"
+echo -e "${BOLD}==> [7/7] Setting up SSL and starting nginx...${RESET}"
+apt-get install -y certbot
+
+# Use standalone mode — certbot starts its own HTTP server on port 80
+# nginx is not running yet so port 80 is free
+certbot certonly --standalone \
+    -d "$DOMAIN" \
+    --non-interactive \
+    --agree-tos \
+    --email "$ADMIN_EMAIL" && \
+    echo "    SSL certificate obtained." || {
+        echo -e "${YELLOW}    !! Certbot failed. Check that $DOMAIN points to this server's IP.${RESET}"
+        echo -e "${YELLOW}    !! To retry: certbot certonly --standalone -d $DOMAIN${RESET}"
+        echo -e "${YELLOW}    !! Then restart nginx: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d nginx${RESET}"
+    }
+
+# Now start nginx — certs exist so it will start cleanly
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d nginx
+echo "    Nginx started."
+
+# Set up automatic cert renewal
+echo "0 3 * * * root certbot renew --quiet && docker compose -f $APP_DIR/docker-compose.yml -f $APP_DIR/docker-compose.prod.yml restart nginx" \
+    > /etc/cron.d/certbot-renew
+echo "    Auto-renewal cron job configured."
 
 echo ""
 echo -e "${GREEN}${BOLD}"
