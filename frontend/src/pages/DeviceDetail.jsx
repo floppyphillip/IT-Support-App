@@ -1,25 +1,58 @@
-﻿import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { devicesAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import StatusIndicator from '../components/StatusIndicator'
 import { Skeleton } from '../components/Skeleton'
-import { ArrowLeft, Terminal, RefreshCw, Database, Download, Zap, Cpu, HardDrive,
-         Activity, Wifi, Square, Play, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
-import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  ArrowLeft, Terminal, RefreshCw, Database, Download, Zap, Cpu, HardDrive,
+  Activity, Wifi, Loader2, Plus, X, BarChart2, Gauge, ArrowDown, ArrowUp,
+  ChevronLeft, ChevronRight, Check,
+} from 'lucide-react'
+import {
+  AreaChart, Area, LineChart, Line,
+  ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, ReferenceLine,
+} from 'recharts'
 import { formatDistanceToNow } from 'date-fns'
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+const POLL_INTERVAL = 10_000
+let _sid = 0
+const newSid = () => `s${++_sid}`
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function fmtKbps(kbps) {
+  if (kbps == null || kbps < 0) return '—'
+  if (kbps < 1_000)       return `${kbps.toFixed(1)} kbit/s`
+  if (kbps < 1_000_000)   return `${(kbps / 1_000).toFixed(2)} Mbit/s`
+  return `${(kbps / 1_000_000).toFixed(2)} Gbit/s`
+}
+
+function fmtBps(bps) {
+  if (bps == null || bps < 0) return '—'
+  if (bps < 1_000)            return `${bps.toFixed(0)} bps`
+  if (bps < 1_000_000)        return `${(bps / 1_000).toFixed(1)} Kbps`
+  if (bps < 1_000_000_000)    return `${(bps / 1_000_000).toFixed(2)} Mbps`
+  return `${(bps / 1_000_000_000).toFixed(2)} Gbps`
+}
+
+const CHART_STYLE = {
+  background: '#0b0f1a', border: '1px solid #1a2540',
+  borderRadius: 6, fontSize: 10, color: '#e2e8f0',
+}
+
+// ─── MetricTile ───────────────────────────────────────────────────────────────
 const METRIC_COLORS = {
-  blue:    { bg: 'bg-blue-500/20 text-blue-400' },
-  violet:  { bg: 'bg-violet-500/20 text-violet-400' },
-  emerald: { bg: 'bg-emerald-500/20 text-emerald-400' },
-  amber:   { bg: 'bg-amber-500/20 text-amber-400' },
+  blue:    'bg-blue-500/20 text-blue-400',
+  violet:  'bg-violet-500/20 text-violet-400',
+  emerald: 'bg-emerald-500/20 text-emerald-400',
+  amber:   'bg-amber-500/20 text-amber-400',
 }
 
 function MetricTile({ label, value, icon: Icon, color }) {
-  const c = METRIC_COLORS[color] ?? METRIC_COLORS.blue
+  const cls = METRIC_COLORS[color] ?? METRIC_COLORS.blue
   return (
-    <div className={`rounded-xl p-4 ${c.bg}`} style={{ background: 'rgba(30,40,64,0.6)' }}>
+    <div className={`rounded-xl p-4 ${cls}`} style={{ background: 'rgba(30,40,64,0.6)' }}>
       <div className="flex items-center gap-1.5 mb-2">
         <Icon className="w-3.5 h-3.5 opacity-70" />
         <p className="text-xs font-medium opacity-70">{label}</p>
@@ -29,48 +62,300 @@ function MetricTile({ label, value, icon: Icon, color }) {
   )
 }
 
-const POLL_INTERVAL = 10_000  // ms between traffic polls
-
-function fmtBps(bps) {
-  if (bps == null || bps < 0) return '—'
-  if (bps < 1_000)       return `${bps.toFixed(0)} bps`
-  if (bps < 1_000_000)   return `${(bps / 1_000).toFixed(1)} Kbps`
-  if (bps < 1_000_000_000) return `${(bps / 1_000_000).toFixed(2)} Mbps`
-  return `${(bps / 1_000_000_000).toFixed(2)} Gbps`
+// ─── SparklineChart ───────────────────────────────────────────────────────────
+function SparklineChart({ data, type }) {
+  if (data.length < 2) {
+    return (
+      <div className="h-12 flex items-center justify-center">
+        <span className="text-[10px] text-slate-600">Collecting data…</span>
+      </div>
+    )
+  }
+  return (
+    <ResponsiveContainer width="100%" height={48}>
+      <AreaChart data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+        {type === 'bandwidth' ? (
+          <>
+            <Area type="monotone" dataKey="in_kbps"  stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} dot={false} strokeWidth={1.5} isAnimationActive={false} />
+            <Area type="monotone" dataKey="out_kbps" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} dot={false} strokeWidth={1.5} isAnimationActive={false} />
+          </>
+        ) : (
+          <Area type="monotone" dataKey="latency_ms" stroke="#10b981" fill="#10b981" fillOpacity={0.2} dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
+        )}
+      </AreaChart>
+    </ResponsiveContainer>
+  )
 }
 
-const IF_COLORS = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f97316','#84cc16']
+// ─── SensorTile ───────────────────────────────────────────────────────────────
+function SensorTile({ sensor, onOpen, onRemove }) {
+  const last = sensor.data[sensor.data.length - 1]
+  const isBw = sensor.type === 'bandwidth'
+  const latColor = !last || last.latency_ms == null ? 'text-red-400'
+    : last.latency_ms > 100 ? 'text-amber-400'
+    : 'text-emerald-400'
 
-function SNMPMonitor({ device }) {
-  const [open, setOpen]               = useState(false)
-  const [discovering, setDiscovering] = useState(false)
-  const [interfaces, setInterfaces]   = useState([])
+  return (
+    <div
+      onClick={onOpen}
+      className="relative bg-[#111827] border border-white/[0.07] rounded-xl p-4 cursor-pointer
+                 transition-all duration-150 hover:border-white/[0.14] hover:-translate-y-0.5
+                 hover:shadow-lg hover:shadow-black/30 group"
+    >
+      <button
+        onClick={e => { e.stopPropagation(); onRemove() }}
+        className="absolute top-3 right-3 p-1 rounded text-slate-600 hover:text-red-400
+                   hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+      >
+        <X size={11} />
+      </button>
+
+      {/* Header */}
+      <p className="text-xs font-mono font-semibold text-slate-200 truncate pr-6 mb-1">
+        {sensor.ifName}
+      </p>
+      <div className="flex items-center gap-2 mb-3">
+        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+          isBw
+            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+        }`}>
+          {isBw ? 'Bandwidth' : 'Latency'}
+        </span>
+        {sensor.ifSpeed && (
+          <span className="text-[9px] text-slate-600 font-mono">{fmtBps(sensor.ifSpeed)}</span>
+        )}
+      </div>
+
+      {/* Current value */}
+      {isBw ? (
+        <div className="flex items-center gap-4 mb-3">
+          <div className="flex items-center gap-1">
+            <ArrowDown size={10} className="text-blue-400 flex-shrink-0" />
+            <span className="text-[11px] font-mono text-blue-400 font-semibold">
+              {last ? fmtKbps(last.in_kbps) : '—'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <ArrowUp size={10} className="text-amber-400 flex-shrink-0" />
+            <span className="text-[11px] font-mono text-amber-400 font-semibold">
+              {last ? fmtKbps(last.out_kbps) : '—'}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-3">
+          <span className={`text-xl font-bold font-mono ${latColor}`}>
+            {last
+              ? last.latency_ms != null ? `${last.latency_ms.toFixed(1)} ms` : 'Timeout'
+              : '—'
+            }
+          </span>
+        </div>
+      )}
+
+      {/* Sparkline */}
+      <SparklineChart data={sensor.data} type={sensor.type} />
+
+      {/* Footer */}
+      <div className="flex items-center gap-1.5 mt-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 status-online flex-shrink-0" />
+        <span className="text-[9px] text-slate-500">Live · every {POLL_INTERVAL / 1000}s</span>
+      </div>
+    </div>
+  )
+}
+
+// ─── LegendItem ───────────────────────────────────────────────────────────────
+function LegendItem({ color, label }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-5 h-2 rounded-sm" style={{ background: color, opacity: 0.7 }} />
+      <span className="text-[10px] text-slate-400">{label}</span>
+    </div>
+  )
+}
+
+// ─── FullSensorModal ──────────────────────────────────────────────────────────
+function FullSensorModal({ sensor, onClose }) {
+  if (!sensor) return null
+  const isBw = sensor.type === 'bandwidth'
+  const data = sensor.data
+
+  let maxVal = null, minVal = null
+  data.forEach(pt => {
+    const v = isBw
+      ? (pt.in_kbps ?? 0) + (pt.out_kbps ?? 0)
+      : pt.latency_ms
+    if (v == null) return
+    if (maxVal === null || v > maxVal) maxVal = v
+    if (minVal === null || v < minVal) minVal = v
+  })
+
+  const fmtVal = v =>
+    v == null ? '—' : isBw ? fmtKbps(v) : `${v.toFixed(1)} ms`
+
+  const title = `${sensor.ifName}${sensor.ifSpeed ? ` · ${fmtBps(sensor.ifSpeed)}` : ''}`
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-4xl bg-[#111827] border border-white/[0.07] rounded-2xl overflow-hidden shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Title bar */}
+        <div
+          className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.07]"
+          style={{ background: 'linear-gradient(135deg,#111827 0%,#131c2e 100%)' }}
+        >
+          <div className="flex items-center gap-3">
+            {isBw
+              ? <BarChart2 size={15} className="text-blue-400 flex-shrink-0" />
+              : <Gauge    size={15} className="text-emerald-400 flex-shrink-0" />
+            }
+            <div>
+              <p className="text-sm font-bold text-slate-100 font-mono leading-tight">{title}</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                {isBw ? 'Bandwidth Utilization' : 'Ping Latency (RTT)'}
+                {' · '}{data.length} samples · every {POLL_INTERVAL / 1000}s
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-all flex-shrink-0"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Chart */}
+        <div className="px-5 pt-5 pb-4" style={{ background: '#0d1526' }}>
+          {data.length < 2 ? (
+            <div className="h-64 flex flex-col items-center justify-center text-slate-600">
+              <Loader2 size={24} className="animate-spin mb-3 text-slate-500" />
+              <p className="text-sm">Collecting data… ({data.length} sample{data.length !== 1 ? 's' : ''})</p>
+              <p className="text-xs text-slate-700 mt-1">First reading arrives in ~{POLL_INTERVAL / 1000}s</p>
+            </div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={data} margin={{ top: 20, right: 100, bottom: 0, left: 8 }}>
+                  <defs>
+                    <linearGradient id="gIn" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%"   stopColor="#3b82f6" stopOpacity={0.45} />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.03} />
+                    </linearGradient>
+                    <linearGradient id="gOut" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%"   stopColor="#f59e0b" stopOpacity={0.38} />
+                      <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.03} />
+                    </linearGradient>
+                    <linearGradient id="gLat" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%"   stopColor="#10b981" stopOpacity={0.45} />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0.03} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <XAxis
+                    dataKey="t"
+                    tick={{ fontSize: 9, fill: '#475569' }}
+                    tickLine={false}
+                    axisLine={{ stroke: '#1a2540' }}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tickFormatter={v =>
+                      isBw
+                        ? v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}G`
+                          : v >= 1_000 ? `${(v / 1_000).toFixed(1)}M`
+                          : `${v.toFixed(0)}`
+                        : `${v}`
+                    }
+                    tick={{ fontSize: 9, fill: '#475569' }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={44}
+                  />
+                  <Tooltip
+                    formatter={(v, name) => {
+                      if (isBw) return [fmtKbps(v), name === 'in_kbps' ? 'Traffic In' : 'Traffic Out']
+                      return [v != null ? `${v.toFixed(1)} ms` : 'Timeout', 'RTT']
+                    }}
+                    labelStyle={{ color: '#64748b', fontSize: 10 }}
+                    contentStyle={CHART_STYLE}
+                  />
+                  {maxVal != null && (
+                    <ReferenceLine
+                      y={maxVal}
+                      stroke="rgba(255,255,255,0.18)"
+                      strokeDasharray="4 3"
+                      label={{ value: `Max: ${fmtVal(maxVal)}`, position: 'right', fontSize: 9, fill: '#94a3b8' }}
+                    />
+                  )}
+                  {minVal != null && minVal !== maxVal && (
+                    <ReferenceLine
+                      y={minVal}
+                      stroke="rgba(255,255,255,0.09)"
+                      strokeDasharray="4 3"
+                      label={{ value: `Min: ${fmtVal(minVal)}`, position: 'right', fontSize: 9, fill: '#64748b' }}
+                    />
+                  )}
+                  {isBw ? (
+                    <>
+                      <Area type="monotone" dataKey="in_kbps"  name="in_kbps"  stroke="#3b82f6" fill="url(#gIn)"  dot={false} strokeWidth={2} isAnimationActive={false} connectNulls />
+                      <Area type="monotone" dataKey="out_kbps" name="out_kbps" stroke="#f59e0b" fill="url(#gOut)" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls />
+                    </>
+                  ) : (
+                    <Area type="monotone" dataKey="latency_ms" name="latency_ms" stroke="#10b981" fill="url(#gLat)" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
+                  )}
+                </AreaChart>
+              </ResponsiveContainer>
+
+              {/* Legend */}
+              <div className="flex items-center gap-6 mt-4 pt-3 border-t border-white/[0.04]">
+                {isBw ? (
+                  <>
+                    <LegendItem color="#3b82f6" label="Traffic In (kbit/s)" />
+                    <LegendItem color="#f59e0b" label="Traffic Out (kbit/s)" />
+                  </>
+                ) : (
+                  <LegendItem color="#10b981" label="RTT (ms)" />
+                )}
+                <div className="ml-auto flex items-center gap-4 text-[10px] font-mono text-slate-600">
+                  {maxVal != null && <span>Max: <span className="text-slate-400">{fmtVal(maxVal)}</span></span>}
+                  {minVal != null && <span>Min: <span className="text-slate-400">{fmtVal(minVal)}</span></span>}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── SensorWizard ─────────────────────────────────────────────────────────────
+function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfaces, setCachedInterfaces }) {
+  const [step, setStep]               = useState(1)
+  const [type, setType]               = useState(null)
   const [selected, setSelected]       = useState(new Set())
-  const [modes, setModes]             = useState({})   // {ifIndex: 'bandwidth'|'latency'}
-  const [monitoring, setMonitoring]   = useState(false)
-  const [chartData, setChartData]     = useState({})   // {ifIdx: [{t, ...}]}
-  const stopRef  = useRef(false)
-  const timerRef = useRef(null)
-  const prevBwRef = useRef(null)      // previous bandwidth reading for delta calc
+  const [discovering, setDiscovering] = useState(false)
 
-  const TTStyle = { background: '#0b0f1a', border: '1px solid #1a2540', borderRadius: 6, fontSize: 10, color: '#e2e8f0' }
-
-  const getMode = (idx) => modes[idx] ?? 'bandwidth'
-  const setMode = (idx, mode) => {
-    if (monitoring) return
-    setModes(prev => ({ ...prev, [idx]: mode }))
-  }
+  useEffect(() => {
+    if (open) { setStep(1); setType(null); setSelected(new Set()) }
+  }, [open])
 
   const discover = async () => {
     setDiscovering(true)
-    setInterfaces([])
+    setCachedInterfaces([])
     setSelected(new Set())
-    setChartData({})
-    prevBwRef.current = null
     try {
-      const { data } = await devicesAPI.snmpInterfaces(device.id)
-      setInterfaces(data.interfaces)
-      if (data.interfaces.length === 0) toast('No interfaces found via SNMP', { icon: 'ℹ️' })
+      const { data } = await devicesAPI.snmpInterfaces(deviceId)
+      setCachedInterfaces(data.interfaces)
+      if (!data.interfaces.length) toast('No interfaces found via SNMP', { icon: 'ℹ️' })
     } catch (err) {
       toast.error(err.response?.data?.detail ?? 'Discovery failed')
     } finally {
@@ -78,306 +363,438 @@ function SNMPMonitor({ device }) {
     }
   }
 
-  const toggleSelect = (idx) => {
-    if (monitoring) return
+  const toggleSelect = idx =>
     setSelected(prev => {
       const next = new Set(prev)
       next.has(idx) ? next.delete(idx) : next.add(idx)
       return next
     })
+
+  const handleNext = async () => {
+    if (step === 1) {
+      setStep(2)
+      if (!cachedInterfaces.length && !discovering) discover()
+    } else if (step === 2) {
+      if (!selected.size) return toast.error('Select at least one interface')
+      setStep(3)
+    }
   }
 
-  const pollOnce = async () => {
-    const t = new Date().toLocaleTimeString()
-    const bwIndexes  = [...selected].filter(idx => getMode(idx) === 'bandwidth')
-    const latIndexes = [...selected].filter(idx => getMode(idx) === 'latency')
+  const handleAdd = () => {
+    const sensors = [...selected].map(ifIndex => {
+      const iface = cachedInterfaces.find(i => i.index === ifIndex)
+      return {
+        id: newSid(),
+        type,
+        ifIndex,
+        ifName: iface?.name ?? `ifIndex ${ifIndex}`,
+        ifSpeed: iface?.speed_bps ?? null,
+        data: [],
+      }
+    })
+    onAdd(sensors)
+    onClose()
+  }
 
-    // ── Bandwidth: SNMP traffic counters ──────────────────────────────────────
-    if (bwIndexes.length > 0) {
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="w-full max-w-xl bg-[#111827] border border-white/[0.07] rounded-2xl overflow-hidden shadow-2xl">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
+          <div>
+            <h2 className="text-sm font-bold text-slate-100">Add New Sensor</h2>
+            <p className="text-[10px] text-slate-500 mt-0.5">Step {step} of 3</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-all">
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Progress bar */}
+        <div className="flex items-center gap-1.5 px-5 pt-4">
+          {[1, 2, 3].map(n => (
+            <div key={n} className={`h-1 rounded-full flex-1 transition-all duration-300 ${n <= step ? 'bg-blue-500' : 'bg-white/[0.07]'}`} />
+          ))}
+        </div>
+
+        {/* Body */}
+        <div className="p-5">
+
+          {/* Step 1 — choose type */}
+          {step === 1 && (
+            <div>
+              <p className="text-xs text-slate-400 mb-4">What would you like to monitor?</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  {
+                    key: 'bandwidth',
+                    icon: BarChart2,
+                    label: 'Bandwidth',
+                    desc: 'Monitor traffic utilization on SNMP interfaces. Shows in/out kbit/s.',
+                    activeColor: 'border-blue-500/40 bg-blue-500/[0.07]',
+                    iconBg: 'bg-blue-500/20',
+                    iconCls: 'text-blue-400',
+                    checkCls: 'text-blue-400',
+                  },
+                  {
+                    key: 'latency',
+                    icon: Gauge,
+                    label: 'Ping Latency',
+                    desc: 'Monitor ICMP ping RTT to this device. Shows response time in ms.',
+                    activeColor: 'border-emerald-500/40 bg-emerald-500/[0.07]',
+                    iconBg: 'bg-emerald-500/20',
+                    iconCls: 'text-emerald-400',
+                    checkCls: 'text-emerald-400',
+                  },
+                ].map(opt => {
+                  const active = type === opt.key
+                  return (
+                    <button
+                      key={opt.key}
+                      onClick={() => setType(opt.key)}
+                      className={`flex flex-col items-start gap-3 p-4 rounded-xl border transition-all duration-150 text-left ${
+                        active ? opt.activeColor : 'border-white/[0.07] bg-[#1a2236] hover:border-white/[0.14]'
+                      }`}
+                    >
+                      <div className={`p-2 rounded-lg ${active ? opt.iconBg : 'bg-white/[0.05]'}`}>
+                        <opt.icon size={18} className={active ? opt.iconCls : 'text-slate-500'} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-slate-200">{opt.label}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{opt.desc}</p>
+                      </div>
+                      {active && <Check size={13} className={`self-end ${opt.checkCls}`} />}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Step 2 — select interfaces */}
+          {step === 2 && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs text-slate-400">
+                  {type === 'latency'
+                    ? 'Select label interfaces (sensor pings device IP)'
+                    : 'Select interfaces to monitor'}
+                </p>
+                <button
+                  onClick={discover}
+                  disabled={discovering}
+                  className="flex items-center gap-1.5 text-[10px] text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-40"
+                >
+                  {discovering ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                  {discovering ? 'Discovering…' : 'Re-discover'}
+                </button>
+              </div>
+
+              {type === 'latency' && deviceIp && (
+                <div className="flex items-start gap-2 p-2.5 rounded-lg mb-3 bg-emerald-500/[0.05] border border-emerald-500/20">
+                  <Gauge size={11} className="text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-emerald-300/70 leading-relaxed">
+                    RTT is measured by pinging <code className="font-mono">{deviceIp}</code>. Interface names below are used as sensor labels only.
+                  </p>
+                </div>
+              )}
+
+              {discovering && !cachedInterfaces.length ? (
+                <div className="space-y-2">
+                  {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-10 rounded-lg" />)}
+                </div>
+              ) : cachedInterfaces.length === 0 ? (
+                <div className="text-center py-10 text-slate-600">
+                  <Wifi size={28} className="mx-auto mb-2 opacity-30" />
+                  <p className="text-xs">No interfaces discovered yet</p>
+                  <button onClick={discover} className="text-xs text-blue-400 hover:underline mt-2 block mx-auto">Discover now</button>
+                </div>
+              ) : (
+                <div className="rounded-xl overflow-hidden border border-white/[0.07]" style={{ maxHeight: 260, overflowY: 'auto' }}>
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0" style={{ background: '#0d1526' }}>
+                      <tr className="border-b border-white/[0.07]">
+                        <th className="px-3 py-2 w-8" />
+                        <th className="text-left px-3 py-2 text-[9px] uppercase tracking-wider text-slate-500">Idx</th>
+                        <th className="text-left px-3 py-2 text-[9px] uppercase tracking-wider text-slate-500">Name</th>
+                        <th className="text-left px-3 py-2 text-[9px] uppercase tracking-wider text-slate-500">Status</th>
+                        <th className="text-left px-3 py-2 text-[9px] uppercase tracking-wider text-slate-500">Speed</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.04]">
+                      {cachedInterfaces.map(iface => {
+                        const isSelected = selected.has(iface.index)
+                        return (
+                          <tr
+                            key={iface.index}
+                            onClick={() => toggleSelect(iface.index)}
+                            className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-500/[0.06]' : 'hover:bg-white/[0.02]'}`}
+                          >
+                            <td className="px-3 py-2.5">
+                              <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-white/20'}`}>
+                                {isSelected && <Check size={10} className="text-white" />}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 font-mono text-slate-400">{iface.index}</td>
+                            <td className="px-3 py-2.5 font-mono text-slate-200">{iface.name || '—'}</td>
+                            <td className="px-3 py-2.5">
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                iface.status === 'up'
+                                  ? 'bg-emerald-500/10 text-emerald-400'
+                                  : 'bg-red-500/10 text-red-400'
+                              }`}>{iface.status}</span>
+                            </td>
+                            <td className="px-3 py-2.5 font-mono text-slate-500 text-[10px]">
+                              {iface.speed_bps ? fmtBps(iface.speed_bps) : '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {selected.size > 0 && (
+                <p className="text-[10px] text-slate-500 mt-2">
+                  {selected.size} interface{selected.size !== 1 ? 's' : ''} selected → {selected.size} sensor{selected.size !== 1 ? 's' : ''} will be created
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Step 3 — review */}
+          {step === 3 && (
+            <div>
+              <p className="text-xs text-slate-400 mb-4">
+                Adding <span className="text-slate-200 font-semibold">{selected.size}</span>{' '}
+                {type === 'bandwidth' ? 'Bandwidth' : 'Latency'} sensor{selected.size !== 1 ? 's' : ''}:
+              </p>
+              <div className="space-y-2 mb-4" style={{ maxHeight: 240, overflowY: 'auto' }}>
+                {[...selected].map(ifIndex => {
+                  const iface = cachedInterfaces.find(i => i.index === ifIndex)
+                  return (
+                    <div key={ifIndex} className="flex items-center gap-3 p-3 rounded-lg bg-[#1a2236] border border-white/[0.07]">
+                      <div className={`p-1.5 rounded flex-shrink-0 ${type === 'bandwidth' ? 'bg-blue-500/20' : 'bg-emerald-500/20'}`}>
+                        {type === 'bandwidth'
+                          ? <BarChart2 size={12} className="text-blue-400" />
+                          : <Gauge    size={12} className="text-emerald-400" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-mono font-semibold text-slate-200 truncate">
+                          {iface?.name ?? `ifIndex ${ifIndex}`}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          ifIndex {ifIndex}{iface?.speed_bps ? ` · ${fmtBps(iface.speed_bps)}` : ''}
+                        </p>
+                      </div>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0 ${
+                        iface?.status === 'up'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : 'bg-red-500/10 text-red-400 border-red-500/20'
+                      }`}>{iface?.status ?? '—'}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-slate-600">
+                Sensors begin polling immediately. First data point arrives in ~{POLL_INTERVAL / 1000}s.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-5 py-4 border-t border-white/[0.07]">
+          <button
+            onClick={step === 1 ? onClose : () => setStep(s => s - 1)}
+            className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            {step > 1 && <ChevronLeft size={14} />}
+            {step === 1 ? 'Cancel' : 'Back'}
+          </button>
+
+          {step < 3 ? (
+            <button
+              onClick={handleNext}
+              disabled={step === 1 && !type}
+              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next <ChevronRight size={14} />
+            </button>
+          ) : (
+            <button
+              onClick={handleAdd}
+              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+            >
+              <Plus size={14} /> Add Sensor{selected.size !== 1 ? 's' : ''}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── SNMPMonitor ──────────────────────────────────────────────────────────────
+function SNMPMonitor({ device }) {
+  const [sensors, setSensors]               = useState([])
+  const [wizardOpen, setWizardOpen]         = useState(false)
+  const [fullViewId, setFullViewId]         = useState(null)
+  const [cachedInterfaces, setCachedInterfaces] = useState([])
+
+  const stopRef    = useRef(false)
+  const timerRef   = useRef(null)
+  const prevBwRef  = useRef(null)
+  const sensorsRef = useRef(sensors)
+  useEffect(() => { sensorsRef.current = sensors }, [sensors])
+
+  const isPolling = sensors.length > 0
+
+  const pollAll = async () => {
+    const cur = sensorsRef.current
+    const t   = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+    const bwSensors  = cur.filter(s => s.type === 'bandwidth')
+    const latSensors = cur.filter(s => s.type === 'latency')
+
+    if (bwSensors.length) {
       try {
-        const { data } = await devicesAPI.snmpTraffic(device.id, { if_indexes: bwIndexes })
+        const { data } = await devicesAPI.snmpTraffic(device.id, { if_indexes: bwSensors.map(s => s.ifIndex) })
         const now     = new Date(data.timestamp).getTime()
         const traffic = data.traffic
         const prev    = prevBwRef.current
-
         if (prev) {
           const elapsed = (now - prev.ts) / 1000
           if (elapsed > 0) {
-            setChartData(old => {
-              const next = { ...old }
-              bwIndexes.forEach(idx => {
-                const key = String(idx)
-                const cur = traffic[key]
-                const p   = prev.traffic[key]
-                if (!cur || !p || cur.in_octets == null || p.in_octets == null) return
-                const in_bps  = Math.max(0, (cur.in_octets  - p.in_octets)  * 8 / elapsed)
-                const out_bps = Math.max(0, (cur.out_octets - p.out_octets) * 8 / elapsed)
-                next[key] = [...(next[key] ?? []), { t, in_bps, out_bps }].slice(-30)
-              })
-              return next
-            })
+            setSensors(old => old.map(sensor => {
+              if (sensor.type !== 'bandwidth') return sensor
+              const key = String(sensor.ifIndex)
+              const c = traffic[key], p = prev.traffic[key]
+              if (!c || !p || c.in_octets == null || p.in_octets == null) return sensor
+              const in_kbps  = Math.max(0, (c.in_octets  - p.in_octets)  * 8 / elapsed / 1000)
+              const out_kbps = Math.max(0, (c.out_octets - p.out_octets) * 8 / elapsed / 1000)
+              return { ...sensor, data: [...sensor.data, { t, in_kbps, out_kbps }].slice(-120) }
+            }))
           }
         }
         prevBwRef.current = { ts: now, traffic }
-      } catch (err) {
-        console.error('[BW poll]', err.message)
-      }
+      } catch (err) { console.error('[BW]', err.message) }
     }
 
-    // ── Latency: ICMP ping ────────────────────────────────────────────────────
-    if (latIndexes.length > 0) {
+    if (latSensors.length) {
       try {
-        const { data } = await devicesAPI.ping(device.id, 1)
+        const { data }   = await devicesAPI.ping(device.id)
         const latency_ms = data.reachable && data.latency_ms != null ? data.latency_ms : null
-        setChartData(old => {
-          const next = { ...old }
-          latIndexes.forEach(idx => {
-            const key = String(idx)
-            next[key] = [...(next[key] ?? []), { t, latency_ms }].slice(-30)
-          })
-          return next
-        })
-      } catch (err) {
-        console.error('[Latency poll]', err.message)
-      }
+        setSensors(old => old.map(sensor => {
+          if (sensor.type !== 'latency') return sensor
+          return { ...sensor, data: [...sensor.data, { t, latency_ms }].slice(-120) }
+        }))
+      } catch (err) { console.error('[Latency]', err.message) }
     }
   }
 
-  const startMonitor = () => {
-    if (!selected.size) return toast.error('Select at least one interface')
-    stopRef.current  = false
-    prevBwRef.current = null
-    setMonitoring(true)
-    setChartData({})
-
+  useEffect(() => {
+    if (!isPolling) {
+      stopRef.current = true
+      clearTimeout(timerRef.current)
+      return
+    }
+    stopRef.current = false
     const loop = async () => {
-      if (stopRef.current) { setMonitoring(false); return }
-      await pollOnce()
+      if (stopRef.current) return
+      await pollAll()
       if (!stopRef.current) timerRef.current = setTimeout(loop, POLL_INTERVAL)
     }
     loop()
-  }
-
-  const stopMonitor = () => {
-    stopRef.current = true
-    clearTimeout(timerRef.current)
-    setMonitoring(false)
-  }
+    return () => { stopRef.current = true; clearTimeout(timerRef.current) }
+  }, [isPolling, device.id])
 
   useEffect(() => () => { stopRef.current = true; clearTimeout(timerRef.current) }, [])
 
   if (!device.snmp_enabled) return null
 
-  const selectedArr = [...selected]
+  const fullViewSensor = sensors.find(s => s.id === fullViewId) ?? null
 
   return (
-    <div className="card p-5">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-          <Wifi className="w-4 h-4 text-emerald-400" /> SNMP Interface Monitor
-        </h2>
-        <button onClick={() => setOpen(o => !o)} className="text-slate-500 hover:text-slate-300 transition-colors">
-          {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
-      </div>
-
-      {open && (
-        <>
-          {/* Controls */}
-          <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <button onClick={discover} disabled={discovering || monitoring} className="btn-secondary text-xs py-1.5 px-3">
-              {discovering
-                ? <><Loader2 className="w-3 h-3 animate-spin" /> Discovering…</>
-                : <><RefreshCw className="w-3 h-3" /> Discover Interfaces</>}
-            </button>
-            {interfaces.length > 0 && !monitoring && (
-              <button onClick={startMonitor} disabled={!selected.size} className="btn-primary text-xs py-1.5 px-3">
-                <Play className="w-3 h-3" /> Start Monitoring
-              </button>
-            )}
-            {monitoring && (
-              <button onClick={stopMonitor}
-                className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all">
-                <Square className="w-3 h-3" /> Stop
-              </button>
-            )}
-            {monitoring && (
-              <span className="text-xs text-emerald-400 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 status-online" />
-                Live — polling every {POLL_INTERVAL / 1000}s
-              </span>
+    <>
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+              <Wifi className="w-4 h-4 text-emerald-400" /> SNMP Sensors
+            </h2>
+            {sensors.length > 0 && (
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                {sensors.length} active · click any tile to view full graph
+              </p>
             )}
           </div>
+          <button
+            onClick={() => setWizardOpen(true)}
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Plus size={13} /> Add Sensor
+          </button>
+        </div>
 
-          {/* Interface table */}
-          {interfaces.length > 0 && (
-            <div className="mb-5 rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
-                    <th className="px-3 py-2 w-8"></th>
-                    <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500">Index</th>
-                    <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500">Name</th>
-                    <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500">Status</th>
-                    <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500">Speed</th>
-                    <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500">Monitor Mode</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y" style={{ divideColor: 'var(--border)' }}>
-                  {interfaces.map((iface) => {
-                    const mode = getMode(iface.index)
-                    const isSelected = selected.has(iface.index)
-                    return (
-                      <tr key={iface.index}
-                        className="transition-colors cursor-pointer hover:bg-white/[0.02]"
-                        onClick={() => toggleSelect(iface.index)}>
-                        <td className="px-3 py-2">
-                          <input type="checkbox" readOnly checked={isSelected}
-                            disabled={monitoring} className="accent-blue-500 cursor-pointer" />
-                        </td>
-                        <td className="px-3 py-2 font-mono text-slate-400">{iface.index}</td>
-                        <td className="px-3 py-2 font-mono text-slate-200">{iface.name || '—'}</td>
-                        <td className="px-3 py-2">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            iface.status === 'up'
-                              ? 'bg-emerald-500/10 text-emerald-400'
-                              : 'bg-red-500/10 text-red-400'
-                          }`}>{iface.status}</span>
-                        </td>
-                        <td className="px-3 py-2 font-mono text-slate-400">
-                          {iface.speed_bps ? fmtBps(iface.speed_bps) : '—'}
-                        </td>
-                        <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
-                          <div className="flex gap-1">
-                            <button
-                              disabled={monitoring}
-                              onClick={() => setMode(iface.index, 'bandwidth')}
-                              className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all ${
-                                mode === 'bandwidth'
-                                  ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                                  : 'text-slate-600 border-transparent hover:text-slate-400'
-                              }`}>
-                              Bandwidth
-                            </button>
-                            <button
-                              disabled={monitoring}
-                              onClick={() => setMode(iface.index, 'latency')}
-                              className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all ${
-                                mode === 'latency'
-                                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                                  : 'text-slate-600 border-transparent hover:text-slate-400'
-                              }`}>
-                              Latency
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+        {sensors.length === 0 ? (
+          <div className="text-center py-12">
+            <BarChart2 size={36} className="mx-auto mb-3 text-slate-600 opacity-40" />
+            <p className="text-sm font-medium text-slate-400">No sensors configured</p>
+            <p className="text-xs text-slate-600 mt-1 mb-4">Add a sensor to start live monitoring</p>
+            <button
+              onClick={() => setWizardOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              <Plus size={12} /> Add your first sensor
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {sensors.map(sensor => (
+              <SensorTile
+                key={sensor.id}
+                sensor={sensor}
+                onOpen={() => setFullViewId(sensor.id)}
+                onRemove={() => {
+                  setSensors(prev => prev.filter(s => s.id !== sensor.id))
+                  if (fullViewId === sensor.id) setFullViewId(null)
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
-          {/* Charts */}
-          {selectedArr.length > 0 && Object.keys(chartData).length > 0 && (
-            <div className="space-y-4">
-              {selectedArr.map((idx, ci) => {
-                const key    = String(idx)
-                const series = chartData[key] ?? []
-                const iface  = interfaces.find(i => i.index === idx)
-                const mode   = getMode(idx)
-                const color  = IF_COLORS[ci % IF_COLORS.length]
-                const lastPt = series[series.length - 1]
-                const isBw   = mode === 'bandwidth'
+      <SensorWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onAdd={newSensors => setSensors(prev => [...prev, ...newSensors])}
+        deviceId={device.id}
+        deviceIp={device.ip_address}
+        cachedInterfaces={cachedInterfaces}
+        setCachedInterfaces={setCachedInterfaces}
+      />
 
-                return (
-                  <div key={idx} className="rounded-xl p-4 border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
-                    {/* Chart header */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
-                        <p className="text-xs font-mono font-semibold text-slate-200">
-                          {iface?.name ?? `ifIndex ${idx}`}
-                        </p>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
-                          isBw
-                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                        }`}>
-                          {isBw ? 'Bandwidth' : 'Latency'}
-                        </span>
-                      </div>
-                      {lastPt && isBw && (
-                        <div className="flex items-center gap-4 text-[10px] font-mono">
-                          <span className="text-blue-400">↓ {fmtBps(lastPt.in_bps)}</span>
-                          <span className="text-emerald-400">↑ {fmtBps(lastPt.out_bps)}</span>
-                        </div>
-                      )}
-                      {lastPt && !isBw && (
-                        <div className="text-[10px] font-mono">
-                          <span className={lastPt.latency_ms == null ? 'text-red-400' :
-                            lastPt.latency_ms > 100 ? 'text-red-400' :
-                            lastPt.latency_ms > 50  ? 'text-amber-400' : 'text-emerald-400'}>
-                            {lastPt.latency_ms != null ? `${lastPt.latency_ms.toFixed(1)} ms` : 'Timeout'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Chart body */}
-                    {series.length < 2 ? (
-                      <div className="h-20 flex items-center justify-center text-xs text-slate-600">
-                        <Loader2 className="w-3 h-3 animate-spin mr-2" /> Collecting data…
-                      </div>
-                    ) : isBw ? (
-                      <ResponsiveContainer width="100%" height={80}>
-                        <LineChart data={series} margin={{ top: 2, right: 4, bottom: 0, left: 0 }}>
-                          <XAxis dataKey="t" tick={{ fontSize: 9, fill: '#475569' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                          <YAxis tickFormatter={v => fmtBps(v)} tick={{ fontSize: 9, fill: '#475569' }} tickLine={false} axisLine={false} width={54} />
-                          <Tooltip formatter={(v, name) => [fmtBps(v), name === 'in_bps' ? 'In' : 'Out']} contentStyle={TTStyle} />
-                          <Line type="monotone" dataKey="in_bps"  stroke="#3b82f6" dot={false} strokeWidth={1.5} isAnimationActive={false} />
-                          <Line type="monotone" dataKey="out_bps" stroke="#10b981" dot={false} strokeWidth={1.5} isAnimationActive={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <ResponsiveContainer width="100%" height={80}>
-                        <LineChart data={series} margin={{ top: 2, right: 4, bottom: 0, left: 0 }}>
-                          <XAxis dataKey="t" tick={{ fontSize: 9, fill: '#475569' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                          <YAxis tickFormatter={v => `${v}ms`} tick={{ fontSize: 9, fill: '#475569' }} tickLine={false} axisLine={false} width={40} />
-                          <Tooltip formatter={(v) => [v != null ? `${v.toFixed(1)} ms` : 'Timeout', 'RTT']} contentStyle={TTStyle} />
-                          <Line type="monotone" dataKey="latency_ms" stroke="#f59e0b" dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {interfaces.length === 0 && !discovering && (
-            <p className="text-xs text-slate-600 text-center py-6">
-              Click "Discover Interfaces" to query the device via SNMP
-            </p>
-          )}
-        </>
-      )}
-    </div>
+      <FullSensorModal sensor={fullViewSensor} onClose={() => setFullViewId(null)} />
+    </>
   )
 }
 
+// ─── DeviceDetail ─────────────────────────────────────────────────────────────
 export default function DeviceDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [device, setDevice] = useState(null)
+  const [device, setDevice]   = useState(null)
   const [metrics, setMetrics] = useState([])
   const [backups, setBackups] = useState([])
   const [loading, setLoading] = useState(true)
-  const [pinging, setPinging] = useState(false)
+  const [pinging, setPinging]       = useState(false)
   const [snmpPolling, setSnmpPolling] = useState(false)
-  const [backingUp, setBackingUp] = useState(false)
+  const [backingUp, setBackingUp]   = useState(false)
 
   const load = async () => {
     try {
@@ -397,7 +814,9 @@ export default function DeviceDetail() {
     setPinging(true)
     try {
       const { data } = await devicesAPI.ping(id)
-      toast[data.reachable ? 'success' : 'error'](data.reachable ? `Reachable — ${data.latency_ms?.toFixed(1)}ms` : 'Unreachable')
+      toast[data.reachable ? 'success' : 'error'](
+        data.reachable ? `Reachable — ${data.latency_ms?.toFixed(1)}ms` : 'Unreachable'
+      )
       await load()
     } catch { toast.error('Ping failed') }
     finally { setPinging(false) }
@@ -421,9 +840,11 @@ export default function DeviceDetail() {
     try {
       const { data } = await devicesAPI.getConfigBackup(id, backupId)
       const blob = new Blob([data.config_text], { type: 'text/plain' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url; a.download = `${device.name}-config-${backupId.slice(0, 8)}.txt`; a.click()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url
+      a.download = `${device.name}-config-${backupId.slice(0, 8)}.txt`
+      a.click()
       URL.revokeObjectURL(url)
     } catch { toast.error('Download failed') }
   }
@@ -435,7 +856,10 @@ export default function DeviceDetail() {
       <div className="space-y-4 max-w-5xl">
         <Skeleton className="h-8 w-56" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 space-y-4"><Skeleton className="h-48 w-full" /><Skeleton className="h-40 w-full" /></div>
+          <div className="lg:col-span-2 space-y-4">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
           <Skeleton className="h-72 w-full" />
         </div>
       </div>
@@ -444,14 +868,18 @@ export default function DeviceDetail() {
   if (!device) return null
 
   const latencyData = metrics.map((m, i) => ({ i, v: m.latency_ms }))
-  const cpuData = metrics.map((m, i) => ({ i, v: m.cpu_percent }))
+  const cpuData     = metrics.map((m, i) => ({ i, v: m.cpu_percent }))
 
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="flex items-start gap-3">
-        <Link to="/devices" className="p-2 text-slate-500 hover:text-slate-200 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0"
-          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#162033'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+        <Link
+          to="/devices"
+          className="p-2 text-slate-500 hover:text-slate-200 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0"
+          style={{ background: 'transparent' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#162033'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="flex-1 min-w-0">
@@ -463,12 +891,25 @@ export default function DeviceDetail() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap flex-shrink-0">
-          <button onClick={ping} className="btn-secondary" disabled={pinging}><Zap className="w-4 h-4" />{pinging ? 'Pinging…' : 'Ping'}</button>
-          {device.snmp_enabled && <button onClick={pollSnmp} className="btn-secondary" disabled={snmpPolling}><RefreshCw className={`w-4 h-4 ${snmpPolling ? 'animate-spin' : ''}`} />SNMP</button>}
+          <button onClick={ping} className="btn-secondary" disabled={pinging}>
+            <Zap className="w-4 h-4" />{pinging ? 'Pinging…' : 'Ping'}
+          </button>
+          {device.snmp_enabled && (
+            <button onClick={pollSnmp} className="btn-secondary" disabled={snmpPolling}>
+              <RefreshCw className={`w-4 h-4 ${snmpPolling ? 'animate-spin' : ''}`} />SNMP
+            </button>
+          )}
           {device.ssh_enabled && (
             <>
-              <button onClick={triggerBackup} className="btn-secondary" disabled={backingUp}><Database className="w-4 h-4" />{backingUp ? 'Backing up…' : 'Backup'}</button>
-              <Link to={`/remote-access?host=${device.management_ip || device.ip_address}&user=${device.ssh_username || 'admin'}`} className="btn-primary"><Terminal className="w-4 h-4" />SSH</Link>
+              <button onClick={triggerBackup} className="btn-secondary" disabled={backingUp}>
+                <Database className="w-4 h-4" />{backingUp ? 'Backing up…' : 'Backup'}
+              </button>
+              <Link
+                to={`/remote-access?host=${device.management_ip || device.ip_address}&user=${device.ssh_username || 'admin'}`}
+                className="btn-primary"
+              >
+                <Terminal className="w-4 h-4" />SSH
+              </Link>
             </>
           )}
         </div>
@@ -480,9 +921,9 @@ export default function DeviceDetail() {
             <h2 className="text-sm font-semibold text-slate-200 mb-4">Live Metrics</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
               <MetricTile label="Latency" value={device.last_ping_ms != null ? `${device.last_ping_ms.toFixed(1)}ms` : '—'} icon={Activity} color="blue" />
-              <MetricTile label="CPU" value={device.cpu_usage != null ? `${device.cpu_usage.toFixed(1)}%` : '—'} icon={Cpu} color="violet" />
-              <MetricTile label="Memory" value={device.memory_usage != null ? `${device.memory_usage.toFixed(1)}%` : '—'} icon={HardDrive} color="emerald" />
-              <MetricTile label="Disk" value={device.disk_usage != null ? `${device.disk_usage.toFixed(1)}%` : '—'} icon={Database} color="amber" />
+              <MetricTile label="CPU"     value={device.cpu_usage    != null ? `${device.cpu_usage.toFixed(1)}%`    : '—'} icon={Cpu}      color="violet" />
+              <MetricTile label="Memory"  value={device.memory_usage != null ? `${device.memory_usage.toFixed(1)}%` : '—'} icon={HardDrive} color="emerald" />
+              <MetricTile label="Disk"    value={device.disk_usage   != null ? `${device.disk_usage.toFixed(1)}%`   : '—'} icon={Database}  color="amber" />
             </div>
             {metrics.length > 1 && (
               <div className="grid grid-cols-2 gap-4 pt-4" style={{ borderTop: '1px solid #1a2540' }}>
@@ -491,17 +932,17 @@ export default function DeviceDetail() {
                   <ResponsiveContainer width="100%" height={60}>
                     <LineChart data={latencyData}>
                       <Line type="monotone" dataKey="v" stroke="#3b82f6" dot={false} strokeWidth={2} />
-                      <Tooltip formatter={(v) => [`${v?.toFixed(1)}ms`, 'Latency']} labelFormatter={() => ''} contentStyle={TTStyle} />
+                      <Tooltip formatter={v => [`${v?.toFixed(1)}ms`, 'Latency']} labelFormatter={() => ''} contentStyle={TTStyle} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-                {cpuData.some((d) => d.v != null) && (
+                {cpuData.some(d => d.v != null) && (
                   <div>
                     <p className="text-xs text-slate-500 mb-2">CPU % — last {metrics.length} polls</p>
                     <ResponsiveContainer width="100%" height={60}>
                       <LineChart data={cpuData}>
                         <Line type="monotone" dataKey="v" stroke="#8b5cf6" dot={false} strokeWidth={2} />
-                        <Tooltip formatter={(v) => [`${v?.toFixed(1)}%`, 'CPU']} labelFormatter={() => ''} contentStyle={TTStyle} />
+                        <Tooltip formatter={v => [`${v?.toFixed(1)}%`, 'CPU']} labelFormatter={() => ''} contentStyle={TTStyle} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -520,14 +961,19 @@ export default function DeviceDetail() {
               <p className="text-sm text-slate-500">No backups yet. Click "Backup" to create one.</p>
             ) : (
               <div className="space-y-2">
-                {backups.map((b) => (
+                {backups.map(b => (
                   <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: '#162033' }}>
                     <Database className="w-4 h-4 text-slate-500 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-200">{new Date(b.backed_up_at).toLocaleString()}</p>
-                      <p className="text-xs text-slate-500">{formatDistanceToNow(new Date(b.backed_up_at), { addSuffix: true })}{b.notes && ` · ${b.notes}`}</p>
+                      <p className="text-xs text-slate-500">
+                        {formatDistanceToNow(new Date(b.backed_up_at), { addSuffix: true })}
+                        {b.notes && ` · ${b.notes}`}
+                      </p>
                     </div>
-                    <button onClick={() => downloadBackup(b.id)} className="btn-secondary text-xs py-1.5"><Download className="w-3 h-3" />Download</button>
+                    <button onClick={() => downloadBackup(b.id)} className="btn-secondary text-xs py-1.5">
+                      <Download className="w-3 h-3" />Download
+                    </button>
                   </div>
                 ))}
               </div>
@@ -539,12 +985,18 @@ export default function DeviceDetail() {
           <p className="label mb-3">Device Info</p>
           <dl className="space-y-2.5 text-sm">
             {[
-              ['Vendor', device.vendor], ['Type', device.device_type?.replace('_', ' ')],
-              ['OS', device.os_version], ['Model', device.model], ['Serial', device.serial_number],
-              ['Location', device.location], ['MAC', device.mac_address],
-              ['SNMP', device.snmp_enabled ? `v${device.snmp_version ?? '2c'}` : 'Disabled'],
-              ['SSH', device.ssh_enabled ? `Port ${device.ssh_port}` : 'Disabled'],
-              ['Last seen', device.last_seen ? formatDistanceToNow(new Date(device.last_seen), { addSuffix: true }) : 'Never'],
+              ['Vendor',   device.vendor],
+              ['Type',     device.device_type?.replace('_', ' ')],
+              ['OS',       device.os_version],
+              ['Model',    device.model],
+              ['Serial',   device.serial_number],
+              ['Location', device.location],
+              ['MAC',      device.mac_address],
+              ['SNMP',     device.snmp_enabled ? `v${device.snmp_version ?? '2c'}` : 'Disabled'],
+              ['SSH',      device.ssh_enabled  ? `Port ${device.ssh_port}`          : 'Disabled'],
+              ['Last seen', device.last_seen
+                ? formatDistanceToNow(new Date(device.last_seen), { addSuffix: true })
+                : 'Never'],
             ].filter(([, v]) => v != null).map(([k, v]) => (
               <div key={k} className="flex justify-between gap-2">
                 <dt className="text-slate-500 capitalize flex-shrink-0">{k}</dt>
