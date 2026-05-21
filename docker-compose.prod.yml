@@ -66,9 +66,15 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    networks:
+      - app_net
     depends_on:
       - backend
 
 volumes:
   nginx_logs:
   backend_logs:
+
+networks:
+  app_net:
+    driver: bridge

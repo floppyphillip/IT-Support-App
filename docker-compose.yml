@@ -11,6 +11,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    networks:
+      - app_net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U netsupport -d netsupportai"]
       interval: 10s
@@ -26,6 +28,8 @@ services:
       - redis_data:/data
     ports:
       - "6379:6379"
+    networks:
+      - app_net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -44,6 +48,8 @@ services:
       - logs:/var/log/netsupportai
     ports:
       - "8000:8000"
+    networks:
+      - app_net
     depends_on:
       db:
         condition: service_healthy
@@ -61,6 +67,8 @@ services:
     volumes:
       - ./backend:/app
       - logs:/var/log/netsupportai
+    networks:
+      - app_net
     depends_on:
       - backend
       - redis
@@ -75,6 +83,8 @@ services:
     env_file: ./backend/.env
     volumes:
       - ./backend:/app
+    networks:
+      - app_net
     depends_on:
       - redis
 
@@ -88,6 +98,8 @@ services:
     env_file: ./backend/.env
     ports:
       - "5555:5555"
+    networks:
+      - app_net
     depends_on:
       - redis
 
@@ -103,6 +115,8 @@ services:
       - /app/node_modules
     ports:
       - "5173:5173"
+    networks:
+      - app_net
     environment:
       VITE_API_URL: http://localhost:8000
 
@@ -110,3 +124,7 @@ volumes:
   postgres_data:
   redis_data:
   logs:
+
+networks:
+  app_net:
+    driver: bridge
