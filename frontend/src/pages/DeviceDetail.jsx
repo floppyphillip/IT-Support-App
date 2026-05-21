@@ -42,24 +42,31 @@ function fmtBps(bps) {
 const IF_COLORS = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f97316','#84cc16']
 
 function SNMPMonitor({ device }) {
-  const [open, setOpen]             = useState(false)
+  const [open, setOpen]               = useState(false)
   const [discovering, setDiscovering] = useState(false)
-  const [interfaces, setInterfaces] = useState([])
-  const [selected, setSelected]     = useState(new Set())
-  const [monitoring, setMonitoring] = useState(false)
-  const [chartData, setChartData]   = useState({})   // {ifIdx: [{t, in_bps, out_bps}]}
-  const [lastReading, setLastReading] = useState(null)
-  const stopRef   = useRef(false)
-  const timerRef  = useRef(null)
+  const [interfaces, setInterfaces]   = useState([])
+  const [selected, setSelected]       = useState(new Set())
+  const [modes, setModes]             = useState({})   // {ifIndex: 'bandwidth'|'latency'}
+  const [monitoring, setMonitoring]   = useState(false)
+  const [chartData, setChartData]     = useState({})   // {ifIdx: [{t, ...}]}
+  const stopRef  = useRef(false)
+  const timerRef = useRef(null)
+  const prevBwRef = useRef(null)      // previous bandwidth reading for delta calc
 
   const TTStyle = { background: '#0b0f1a', border: '1px solid #1a2540', borderRadius: 6, fontSize: 10, color: '#e2e8f0' }
+
+  const getMode = (idx) => modes[idx] ?? 'bandwidth'
+  const setMode = (idx, mode) => {
+    if (monitoring) return
+    setModes(prev => ({ ...prev, [idx]: mode }))
+  }
 
   const discover = async () => {
     setDiscovering(true)
     setInterfaces([])
     setSelected(new Set())
     setChartData({})
-    setLastReading(null)
+    prevBwRef.current = null
     try {
       const { data } = await devicesAPI.snmpInterfaces(device.id)
       setInterfaces(data.interfaces)
@@ -72,6 +79,7 @@ function SNMPMonitor({ device }) {
   }
 
   const toggleSelect = (idx) => {
+    if (monitoring) return
     setSelected(prev => {
       const next = new Set(prev)
       next.has(idx) ? next.delete(idx) : next.add(idx)
@@ -79,54 +87,72 @@ function SNMPMonitor({ device }) {
     })
   }
 
-  const pollOnce = async (prev) => {
-    const indexes = [...selected]
-    if (!indexes.length) return prev
+  const pollOnce = async () => {
+    const t = new Date().toLocaleTimeString()
+    const bwIndexes  = [...selected].filter(idx => getMode(idx) === 'bandwidth')
+    const latIndexes = [...selected].filter(idx => getMode(idx) === 'latency')
 
-    const { data } = await devicesAPI.snmpTraffic(device.id, { if_indexes: indexes })
-    const now = new Date(data.timestamp).getTime()
-    const traffic = data.traffic  // {str(idx): {in_octets, out_octets}}
+    // ── Bandwidth: SNMP traffic counters ──────────────────────────────────────
+    if (bwIndexes.length > 0) {
+      try {
+        const { data } = await devicesAPI.snmpTraffic(device.id, { if_indexes: bwIndexes })
+        const now     = new Date(data.timestamp).getTime()
+        const traffic = data.traffic
+        const prev    = prevBwRef.current
 
-    if (prev) {
-      const elapsed = (now - prev.ts) / 1000
-      if (elapsed > 0) {
-        setChartData(old => {
-          const next = { ...old }
-          indexes.forEach(idx => {
-            const key    = String(idx)
-            const cur    = traffic[key]
-            const p      = prev.traffic[key]
-            if (!cur || !p || cur.in_octets == null || p.in_octets == null) return
-            const in_bps  = Math.max(0, (cur.in_octets  - p.in_octets)  * 8 / elapsed)
-            const out_bps = Math.max(0, (cur.out_octets - p.out_octets) * 8 / elapsed)
-            const point   = { t: new Date(now).toLocaleTimeString(), in_bps, out_bps }
-            const series  = [...(next[key] ?? []), point].slice(-30)
-            next[key] = series
-          })
-          return next
-        })
+        if (prev) {
+          const elapsed = (now - prev.ts) / 1000
+          if (elapsed > 0) {
+            setChartData(old => {
+              const next = { ...old }
+              bwIndexes.forEach(idx => {
+                const key = String(idx)
+                const cur = traffic[key]
+                const p   = prev.traffic[key]
+                if (!cur || !p || cur.in_octets == null || p.in_octets == null) return
+                const in_bps  = Math.max(0, (cur.in_octets  - p.in_octets)  * 8 / elapsed)
+                const out_bps = Math.max(0, (cur.out_octets - p.out_octets) * 8 / elapsed)
+                next[key] = [...(next[key] ?? []), { t, in_bps, out_bps }].slice(-30)
+              })
+              return next
+            })
+          }
+        }
+        prevBwRef.current = { ts: now, traffic }
+      } catch (err) {
+        console.error('[BW poll]', err.message)
       }
     }
 
-    return { ts: now, traffic }
+    // ── Latency: ICMP ping ────────────────────────────────────────────────────
+    if (latIndexes.length > 0) {
+      try {
+        const { data } = await devicesAPI.ping(device.id, 1)
+        const latency_ms = data.reachable && data.latency_ms != null ? data.latency_ms : null
+        setChartData(old => {
+          const next = { ...old }
+          latIndexes.forEach(idx => {
+            const key = String(idx)
+            next[key] = [...(next[key] ?? []), { t, latency_ms }].slice(-30)
+          })
+          return next
+        })
+      } catch (err) {
+        console.error('[Latency poll]', err.message)
+      }
+    }
   }
 
-  const startMonitor = async () => {
+  const startMonitor = () => {
     if (!selected.size) return toast.error('Select at least one interface')
-    stopRef.current = false
+    stopRef.current  = false
+    prevBwRef.current = null
     setMonitoring(true)
     setChartData({})
-    setLastReading(null)
 
-    let prev = null
     const loop = async () => {
       if (stopRef.current) { setMonitoring(false); return }
-      try {
-        prev = await pollOnce(prev)
-        setLastReading(prev)
-      } catch (err) {
-        console.error('[SNMP traffic]', err.message)
-      }
+      await pollOnce()
       if (!stopRef.current) timerRef.current = setTimeout(loop, POLL_INTERVAL)
     }
     loop()
@@ -146,7 +172,7 @@ function SNMPMonitor({ device }) {
 
   return (
     <div className="card p-5">
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
           <Wifi className="w-4 h-4 text-emerald-400" /> SNMP Interface Monitor
@@ -158,17 +184,15 @@ function SNMPMonitor({ device }) {
 
       {open && (
         <>
-          {/* Discover + Start/Stop controls */}
+          {/* Controls */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <button onClick={discover} disabled={discovering || monitoring}
-              className="btn-secondary text-xs py-1.5 px-3">
+            <button onClick={discover} disabled={discovering || monitoring} className="btn-secondary text-xs py-1.5 px-3">
               {discovering
                 ? <><Loader2 className="w-3 h-3 animate-spin" /> Discovering…</>
                 : <><RefreshCw className="w-3 h-3" /> Discover Interfaces</>}
             </button>
             {interfaces.length > 0 && !monitoring && (
-              <button onClick={startMonitor} disabled={!selected.size}
-                className="btn-primary text-xs py-1.5 px-3">
+              <button onClick={startMonitor} disabled={!selected.size} className="btn-primary text-xs py-1.5 px-3">
                 <Play className="w-3 h-3" /> Start Monitoring
               </button>
             )}
@@ -186,78 +210,128 @@ function SNMPMonitor({ device }) {
             )}
           </div>
 
-          {/* Interface checklist */}
+          {/* Interface table */}
           {interfaces.length > 0 && (
             <div className="mb-5 rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
-                    <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 w-8"></th>
+                    <th className="px-3 py-2 w-8"></th>
                     <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500">Index</th>
                     <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500">Name</th>
                     <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500">Status</th>
                     <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500">Speed</th>
+                    <th className="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500">Monitor Mode</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y" style={{ divideColor: 'var(--border)' }}>
-                  {interfaces.map((iface) => (
-                    <tr key={iface.index}
-                      className="transition-colors cursor-pointer hover:bg-white/[0.02]"
-                      onClick={() => !monitoring && toggleSelect(iface.index)}>
-                      <td className="px-3 py-2">
-                        <input type="checkbox" readOnly checked={selected.has(iface.index)}
-                          disabled={monitoring}
-                          className="accent-blue-500 cursor-pointer" />
-                      </td>
-                      <td className="px-3 py-2 font-mono text-slate-400">{iface.index}</td>
-                      <td className="px-3 py-2 font-mono text-slate-200">{iface.name || '—'}</td>
-                      <td className="px-3 py-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          iface.status === 'up'
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : 'bg-red-500/10 text-red-400'
-                        }`}>{iface.status}</span>
-                      </td>
-                      <td className="px-3 py-2 font-mono text-slate-400">
-                        {iface.speed_bps ? fmtBps(iface.speed_bps) : '—'}
-                      </td>
-                    </tr>
-                  ))}
+                  {interfaces.map((iface) => {
+                    const mode = getMode(iface.index)
+                    const isSelected = selected.has(iface.index)
+                    return (
+                      <tr key={iface.index}
+                        className="transition-colors cursor-pointer hover:bg-white/[0.02]"
+                        onClick={() => toggleSelect(iface.index)}>
+                        <td className="px-3 py-2">
+                          <input type="checkbox" readOnly checked={isSelected}
+                            disabled={monitoring} className="accent-blue-500 cursor-pointer" />
+                        </td>
+                        <td className="px-3 py-2 font-mono text-slate-400">{iface.index}</td>
+                        <td className="px-3 py-2 font-mono text-slate-200">{iface.name || '—'}</td>
+                        <td className="px-3 py-2">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            iface.status === 'up'
+                              ? 'bg-emerald-500/10 text-emerald-400'
+                              : 'bg-red-500/10 text-red-400'
+                          }`}>{iface.status}</span>
+                        </td>
+                        <td className="px-3 py-2 font-mono text-slate-400">
+                          {iface.speed_bps ? fmtBps(iface.speed_bps) : '—'}
+                        </td>
+                        <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
+                          <div className="flex gap-1">
+                            <button
+                              disabled={monitoring}
+                              onClick={() => setMode(iface.index, 'bandwidth')}
+                              className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all ${
+                                mode === 'bandwidth'
+                                  ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                                  : 'text-slate-600 border-transparent hover:text-slate-400'
+                              }`}>
+                              Bandwidth
+                            </button>
+                            <button
+                              disabled={monitoring}
+                              onClick={() => setMode(iface.index, 'latency')}
+                              className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all ${
+                                mode === 'latency'
+                                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                                  : 'text-slate-600 border-transparent hover:text-slate-400'
+                              }`}>
+                              Latency
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
           )}
 
-          {/* Live charts — one per selected interface */}
+          {/* Charts */}
           {selectedArr.length > 0 && Object.keys(chartData).length > 0 && (
             <div className="space-y-4">
               {selectedArr.map((idx, ci) => {
                 const key    = String(idx)
                 const series = chartData[key] ?? []
                 const iface  = interfaces.find(i => i.index === idx)
+                const mode   = getMode(idx)
                 const color  = IF_COLORS[ci % IF_COLORS.length]
                 const lastPt = series[series.length - 1]
+                const isBw   = mode === 'bandwidth'
+
                 return (
                   <div key={idx} className="rounded-xl p-4 border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+                    {/* Chart header */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
                         <p className="text-xs font-mono font-semibold text-slate-200">
                           {iface?.name ?? `ifIndex ${idx}`}
                         </p>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+                          isBw
+                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}>
+                          {isBw ? 'Bandwidth' : 'Latency'}
+                        </span>
                       </div>
-                      {lastPt && (
+                      {lastPt && isBw && (
                         <div className="flex items-center gap-4 text-[10px] font-mono">
                           <span className="text-blue-400">↓ {fmtBps(lastPt.in_bps)}</span>
                           <span className="text-emerald-400">↑ {fmtBps(lastPt.out_bps)}</span>
                         </div>
                       )}
+                      {lastPt && !isBw && (
+                        <div className="text-[10px] font-mono">
+                          <span className={lastPt.latency_ms == null ? 'text-red-400' :
+                            lastPt.latency_ms > 100 ? 'text-red-400' :
+                            lastPt.latency_ms > 50  ? 'text-amber-400' : 'text-emerald-400'}>
+                            {lastPt.latency_ms != null ? `${lastPt.latency_ms.toFixed(1)} ms` : 'Timeout'}
+                          </span>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Chart body */}
                     {series.length < 2 ? (
                       <div className="h-20 flex items-center justify-center text-xs text-slate-600">
                         <Loader2 className="w-3 h-3 animate-spin mr-2" /> Collecting data…
                       </div>
-                    ) : (
+                    ) : isBw ? (
                       <ResponsiveContainer width="100%" height={80}>
                         <LineChart data={series} margin={{ top: 2, right: 4, bottom: 0, left: 0 }}>
                           <XAxis dataKey="t" tick={{ fontSize: 9, fill: '#475569' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
@@ -265,6 +339,15 @@ function SNMPMonitor({ device }) {
                           <Tooltip formatter={(v, name) => [fmtBps(v), name === 'in_bps' ? 'In' : 'Out']} contentStyle={TTStyle} />
                           <Line type="monotone" dataKey="in_bps"  stroke="#3b82f6" dot={false} strokeWidth={1.5} isAnimationActive={false} />
                           <Line type="monotone" dataKey="out_bps" stroke="#10b981" dot={false} strokeWidth={1.5} isAnimationActive={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={80}>
+                        <LineChart data={series} margin={{ top: 2, right: 4, bottom: 0, left: 0 }}>
+                          <XAxis dataKey="t" tick={{ fontSize: 9, fill: '#475569' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                          <YAxis tickFormatter={v => `${v}ms`} tick={{ fontSize: 9, fill: '#475569' }} tickLine={false} axisLine={false} width={40} />
+                          <Tooltip formatter={(v) => [v != null ? `${v.toFixed(1)} ms` : 'Timeout', 'RTT']} contentStyle={TTStyle} />
+                          <Line type="monotone" dataKey="latency_ms" stroke="#f59e0b" dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
                         </LineChart>
                       </ResponsiveContainer>
                     )}
