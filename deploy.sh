@@ -22,10 +22,10 @@ prompt() {
     local secret="$4"
 
     if [ "$secret" = "secret" ]; then
-        read -rsp "  ${label}${default:+ [$default]}: " value
+        read -rsp "  ${label}${default:+ [$default]}: " value </dev/tty
         echo
     else
-        read -rp "  ${label}${default:+ [$default]}: " value
+        read -rp "  ${label}${default:+ [$default]}: " value </dev/tty
     fi
     eval "$var_name='${value:-$default}'"
 }
@@ -110,7 +110,7 @@ echo "    SMTP:        ${SMTP_USER:-not configured}"
 echo "    Twilio:      ${TWILIO_SID:-not configured}"
 echo "    Telegram:    ${TELEGRAM_TOKEN:+configured}${TELEGRAM_TOKEN:-not configured}"
 echo ""
-read -rp "  Proceed with installation? [Y/n]: " CONFIRM
+read -rp "  Proceed with installation? [Y/n]: " CONFIRM </dev/tty
 if [[ "${CONFIRM,,}" == "n" ]]; then
     echo "  Aborted."
     exit 0
