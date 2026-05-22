@@ -41,14 +41,14 @@ export default function Login() {
           <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
             <Monitor className="w-4 h-4 text-white" />
           </div>
-          <span style={{ color: 'var(--text-1)', fontSize: 14, fontWeight: 700 }}>NetSupportAI</span>
+          <span style={{ color: 'var(--text-1)', fontSize: 21, fontWeight: 700 }}>NetSupportAI</span>
         </div>
 
         <div>
-          <h1 style={{ color: 'var(--text-1)', fontSize: 30, fontWeight: 700, lineHeight: 'var(--lh-small)', marginBottom: 12 }}>
+          <h1 style={{ color: 'var(--text-1)', fontSize: 45, fontWeight: 700, lineHeight: 'var(--lh-small)', marginBottom: 12 }}>
             Smarter IT support,<br />powered by AI.
           </h1>
-          <p style={{ color: 'var(--text-4)', fontSize: 13, lineHeight: 'var(--lh-large)', marginBottom: 32 }}>
+          <p style={{ color: 'var(--text-4)', fontSize: 19, lineHeight: 'var(--lh-large)', marginBottom: 32 }}>
             Monitor devices, manage tickets, and resolve issues faster with Claude AI.
           </p>
           <div className="space-y-4">
@@ -59,15 +59,15 @@ export default function Login() {
                   <Icon className="w-3.5 h-3.5" style={{ color: 'var(--blue-text)' }} />
                 </div>
                 <div>
-                  <p style={{ color: 'var(--text-1)', fontSize: 12, fontWeight: 600, lineHeight: 'var(--lh-small)' }}>{title}</p>
-                  <p style={{ color: 'var(--text-4)', fontSize: 11, lineHeight: 'var(--lh-large)' }}>{desc}</p>
+                  <p style={{ color: 'var(--text-1)', fontSize: 18, fontWeight: 600, lineHeight: 'var(--lh-small)' }}>{title}</p>
+                  <p style={{ color: 'var(--text-4)', fontSize: 17, lineHeight: 'var(--lh-large)' }}>{desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <p style={{ color: 'var(--text-4)', fontSize: 10 }}>© {new Date().getFullYear()} NetSupportAI. All rights reserved.</p>
+        <p style={{ color: 'var(--text-4)', fontSize: 15 }}>© {new Date().getFullYear()} NetSupportAI. All rights reserved.</p>
       </div>
 
       {/* Right panel */}
@@ -77,12 +77,12 @@ export default function Login() {
             <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
               <Monitor className="w-4 h-4 text-white" />
             </div>
-            <span style={{ color: 'var(--text-1)', fontSize: 14, fontWeight: 700 }}>NetSupportAI</span>
+            <span style={{ color: 'var(--text-1)', fontSize: 21, fontWeight: 700 }}>NetSupportAI</span>
           </div>
 
           <div className="card p-7">
-            <h2 style={{ color: 'var(--text-1)', fontSize: 18, fontWeight: 700, lineHeight: 'var(--lh-small)', marginBottom: 4 }}>Sign in</h2>
-            <p style={{ color: 'var(--text-4)', fontSize: 11, marginBottom: 24 }}>Enter your credentials to continue</p>
+            <h2 style={{ color: 'var(--text-1)', fontSize: 27, fontWeight: 700, lineHeight: 'var(--lh-small)', marginBottom: 4 }}>Sign in</h2>
+            <p style={{ color: 'var(--text-4)', fontSize: 17, marginBottom: 24 }}>Enter your credentials to continue</p>
 
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
@@ -101,14 +101,14 @@ export default function Login() {
             </form>
 
             <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
-              <p style={{ color: 'var(--text-4)', fontSize: 11, textAlign: 'center' }}>
+              <p style={{ color: 'var(--text-4)', fontSize: 17, textAlign: 'center' }}>
                 Client?{' '}
                 <a href="/client-portal" style={{ color: 'var(--blue-text)', fontWeight: 500 }}>Access the client portal</a>
               </p>
             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-1.5 mt-4" style={{ color: 'var(--text-4)', fontSize: 10 }}>
+          <div className="flex items-center justify-center gap-1.5 mt-4" style={{ color: 'var(--text-4)', fontSize: 15 }}>
             <Shield className="w-3 h-3" /><span>Secured with JWT + bcrypt</span>
           </div>
         </div>

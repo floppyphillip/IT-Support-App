@@ -33,7 +33,7 @@ function XTermPane({ session }) {
           white: '#e2e8f0', brightWhite: '#f8fafc',
         },
         fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-        fontSize: 13,
+        fontSize: 20,
         lineHeight: 1.5,
         cursorBlink: true,
         cursorStyle: 'block',

@@ -54,12 +54,12 @@ const ACTION_COLORS = {
 }
 
 const TTStyle = {
-  background: 'var(--surface-2, #10151f)',
-  border: '1px solid var(--border, rgba(255,255,255,0.06))',
+  background: 'var(--surface-2, #f8fafc)',
+  border: '1px solid var(--border, rgba(0,0,0,0.09))',
   borderRadius: 8,
-  fontSize: 11,
-  color: '#c8d3e8',
-  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+  fontSize: 17,
+  color: '#374151',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
 }
 
 export default function Dashboard() {
@@ -112,7 +112,7 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span style={{ color: 'var(--text-4)', fontSize: 11 }}>Live</span>
+          <span style={{ color: 'var(--text-4)', fontSize: 17 }}>Live</span>
         </div>
       </div>
 
@@ -137,10 +137,10 @@ export default function Dashboard() {
           <div className="lg:col-span-3 card p-4">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p style={{ color: 'var(--text-1)', fontSize: 13, fontWeight: 600 }}>Tickets This Week</p>
-                <p style={{ color: 'var(--text-4)', fontSize: 11, marginTop: 1 }}>Mon – Sun · grouped by status</p>
+                <p style={{ color: 'var(--text-1)', fontSize: 19, fontWeight: 600 }}>Tickets This Week</p>
+                <p style={{ color: 'var(--text-4)', fontSize: 17, marginTop: 1 }}>Mon – Sun · grouped by status</p>
               </div>
-              <div className="flex items-center gap-3" style={{ fontSize: 10, color: 'var(--text-4)' }}>
+              <div className="flex items-center gap-3" style={{ fontSize: 15, color: 'var(--text-4)' }}>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm inline-block" style={{ background: '#3b82f6' }} />Open</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm inline-block" style={{ background: '#10b981' }} />Resolved</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm inline-block" style={{ background: '#8b5cf6' }} />AI-fixed</span>
@@ -148,8 +148,8 @@ export default function Dashboard() {
             </div>
             <ResponsiveContainer width="100%" height={170}>
               <BarChart data={weekData} barGap={2} barCategoryGap="38%">
-                <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--text-4, #4a5568)' }} axisLine={false} tickLine={false} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-4, #4a5568)' }} axisLine={false} tickLine={false} width={20} />
+                <XAxis dataKey="day" tick={{ fontSize: 15, fill: 'var(--text-4, #4a5568)' }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 15, fill: 'var(--text-4, #4a5568)' }} axisLine={false} tickLine={false} width={20} />
                 <Tooltip contentStyle={TTStyle} cursor={{ fill: 'rgba(59,130,246,0.05)' }} />
                 <Bar dataKey="open"     fill="#3b82f6" radius={[3,3,0,0]} name="Open" />
                 <Bar dataKey="resolved" fill="#10b981" radius={[3,3,0,0]} name="Resolved" />
@@ -161,7 +161,7 @@ export default function Dashboard() {
           {/* Live activity */}
           <div className="lg:col-span-2 card flex flex-col overflow-hidden">
             <div className="card-header flex-shrink-0">
-              <span className="flex items-center gap-1.5" style={{ color: 'var(--text-1)', fontSize: 13, fontWeight: 600 }}>
+              <span className="flex items-center gap-1.5" style={{ color: 'var(--text-1)', fontSize: 19, fontWeight: 600 }}>
                 <Activity className="w-3.5 h-3.5" style={{ color: 'var(--blue-text)' }} />
                 Live Activity
               </span>
@@ -169,7 +169,7 @@ export default function Dashboard() {
             </div>
             <div className="flex-1 overflow-y-auto divide-y" style={{ borderColor: 'var(--border)' }}>
               {activity.length === 0 ? (
-                <div className="py-8 text-center" style={{ color: 'var(--text-4)', fontSize: 11 }}>No recent activity</div>
+                <div className="py-8 text-center" style={{ color: 'var(--text-4)', fontSize: 17 }}>No recent activity</div>
               ) : activity.map((log) => {
                 const ac = ACTION_COLORS[log.action] ?? { bg: 'rgba(59,130,246,0.10)', dot: '#3b82f6' }
                 return (
@@ -180,15 +180,15 @@ export default function Dashboard() {
                       <span className="w-1.5 h-1.5 rounded-full" style={{ background: ac.dot }} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="truncate" style={{ color: 'var(--text-2)', fontSize: 11, fontWeight: 500 }}>
+                      <p className="truncate" style={{ color: 'var(--text-2)', fontSize: 17, fontWeight: 500 }}>
                         {log.action?.replace(/_/g, ' ')}
                         {' '}<span style={{ color: 'var(--text-4)' }}>{log.resource_type}</span>
                       </p>
                       {log.resource_name && (
-                        <p className="truncate" style={{ color: 'var(--text-4)', fontSize: 10, marginTop: 1 }}>{log.resource_name}</p>
+                        <p className="truncate" style={{ color: 'var(--text-4)', fontSize: 15, marginTop: 1 }}>{log.resource_name}</p>
                       )}
                     </div>
-                    <span className="flex-shrink-0" style={{ color: 'var(--text-4)', fontSize: 10 }}>
+                    <span className="flex-shrink-0" style={{ color: 'var(--text-4)', fontSize: 15 }}>
                       {formatDistanceToNow(new Date(log.created_at), { addSuffix: false })}
                     </span>
                   </div>
@@ -203,21 +203,21 @@ export default function Dashboard() {
       {!loading && (
         <div className="card overflow-hidden">
           <div className="card-header">
-            <span className="flex items-center gap-1.5" style={{ color: 'var(--text-1)', fontSize: 13, fontWeight: 600 }}>
-              <AlertTriangle className="w-3.5 h-3.5" style={{ color: '#f87171' }} />
+            <span className="flex items-center gap-1.5" style={{ color: 'var(--text-1)', fontSize: 19, fontWeight: 600 }}>
+              <AlertTriangle className="w-3.5 h-3.5" style={{ color: '#ef4444' }} />
               Critical &amp; High Priority
             </span>
             <Link
               to="/tickets?status=open"
               className="flex items-center gap-1 transition-all duration-150 hover:gap-1.5"
-              style={{ color: 'var(--blue-text)', fontSize: 11, fontWeight: 500 }}
+              style={{ color: 'var(--blue-text)', fontSize: 17, fontWeight: 500 }}
             >
               View all <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
           {criticalTickets.length === 0 ? (
-            <div className="py-8 text-center" style={{ color: 'var(--text-4)', fontSize: 11 }}>
+            <div className="py-8 text-center" style={{ color: 'var(--text-4)', fontSize: 17 }}>
               No critical or high priority tickets
             </div>
           ) : (
@@ -235,8 +235,8 @@ export default function Dashboard() {
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="truncate font-medium" style={{ color: 'var(--text-1)', fontSize: 12 }}>{t.title}</p>
-                      <p className="mt-0.5" style={{ color: 'var(--text-4)', fontSize: 10 }}>
+                      <p className="truncate font-medium" style={{ color: 'var(--text-1)', fontSize: 18 }}>{t.title}</p>
+                      <p className="mt-0.5" style={{ color: 'var(--text-4)', fontSize: 15 }}>
                         <span className="font-mono">{t.ticket_number}</span>
                         {t.client?.name && <> · {t.client.name}</>}
                         {t.category && <> · {t.category}</>}
@@ -248,10 +248,10 @@ export default function Dashboard() {
                       <span
                         className="flex items-center gap-1 px-2 py-0.5 rounded-md font-medium flex-shrink-0"
                         style={{
-                          background: slaBreached ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.04)',
-                          color: slaBreached ? '#f87171' : 'var(--text-4)',
-                          border: `1px solid ${slaBreached ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
-                          fontSize: 10,
+                          background: slaBreached ? 'rgba(239,68,68,0.10)' : 'var(--surface-2)',
+                          color: slaBreached ? '#dc2626' : 'var(--text-4)',
+                          border: `1px solid ${slaBreached ? 'rgba(239,68,68,0.22)' : 'var(--border)'}`,
+                          fontSize: 15,
                         }}
                       >
                         <Clock3 className="w-3 h-3" />

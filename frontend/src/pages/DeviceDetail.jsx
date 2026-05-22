@@ -37,8 +37,8 @@ function fmtBps(bps) {
 }
 
 const CHART_STYLE = {
-  background: '#0b0f1a', border: '1px solid #1a2540',
-  borderRadius: 6, fontSize: 10, color: '#e2e8f0',
+  background: '#f9fafb', border: '1px solid #e5e7eb',
+  borderRadius: 6, fontSize: 15, color: '#374151',
 }
 
 // ─── MetricTile ───────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ const METRIC_COLORS = {
 function MetricTile({ label, value, icon: Icon, color }) {
   const cls = METRIC_COLORS[color] ?? METRIC_COLORS.blue
   return (
-    <div className={`rounded-xl p-4 ${cls}`} style={{ background: 'rgba(30,40,64,0.6)' }}>
+    <div className={`rounded-xl p-4 ${cls}`} style={{ background: 'rgba(243,244,246,0.9)' }}>
       <div className="flex items-center gap-1.5 mb-2">
         <Icon className="w-3.5 h-3.5 opacity-70" />
         <p className="text-xs font-medium opacity-70">{label}</p>
@@ -67,7 +67,7 @@ function SparklineChart({ data, type }) {
   if (data.length < 2) {
     return (
       <div className="h-12 flex items-center justify-center">
-        <span className="text-[10px] text-slate-600">Collecting data…</span>
+        <span className="text-[15px] text-gray-400">Collecting data…</span>
       </div>
     )
   }
@@ -98,24 +98,24 @@ function SensorTile({ sensor, onOpen, onRemove }) {
   return (
     <div
       onClick={onOpen}
-      className="relative bg-[#111827] border border-white/[0.07] rounded-xl p-4 cursor-pointer
-                 transition-all duration-150 hover:border-white/[0.14] hover:-translate-y-0.5
-                 hover:shadow-lg hover:shadow-black/30 group"
+      className="relative bg-white border border-gray-200 rounded-xl p-4 cursor-pointer
+                 transition-all duration-150 hover:border-gray-300 hover:-translate-y-0.5
+                 hover:shadow-lg hover:shadow-black/10 group"
     >
       <button
         onClick={e => { e.stopPropagation(); onRemove() }}
-        className="absolute top-3 right-3 p-1 rounded text-slate-600 hover:text-red-400
+        className="absolute top-3 right-3 p-1 rounded text-gray-400 hover:text-red-400
                    hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
       >
         <X size={11} />
       </button>
 
       {/* Header */}
-      <p className="text-xs font-mono font-semibold text-slate-200 truncate pr-6 mb-1">
+      <p className="text-xs font-mono font-semibold text-gray-900 truncate pr-6 mb-1">
         {sensor.ifName}
       </p>
       <div className="flex items-center gap-2 mb-3">
-        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+        <span className={`text-[13px] font-bold px-1.5 py-0.5 rounded border ${
           isBw
             ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
             : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
@@ -123,7 +123,7 @@ function SensorTile({ sensor, onOpen, onRemove }) {
           {isBw ? 'Bandwidth' : 'Latency'}
         </span>
         {sensor.ifSpeed && (
-          <span className="text-[9px] text-slate-600 font-mono">{fmtBps(sensor.ifSpeed)}</span>
+          <span className="text-[13px] text-gray-400 font-mono">{fmtBps(sensor.ifSpeed)}</span>
         )}
       </div>
 
@@ -132,13 +132,13 @@ function SensorTile({ sensor, onOpen, onRemove }) {
         <div className="flex items-center gap-4 mb-3">
           <div className="flex items-center gap-1">
             <ArrowDown size={10} className="text-blue-400 flex-shrink-0" />
-            <span className="text-[11px] font-mono text-blue-400 font-semibold">
+            <span className="text-[17px] font-mono text-blue-400 font-semibold">
               {last ? fmtKbps(last.in_kbps) : '—'}
             </span>
           </div>
           <div className="flex items-center gap-1">
             <ArrowUp size={10} className="text-amber-400 flex-shrink-0" />
-            <span className="text-[11px] font-mono text-amber-400 font-semibold">
+            <span className="text-[17px] font-mono text-amber-400 font-semibold">
               {last ? fmtKbps(last.out_kbps) : '—'}
             </span>
           </div>
@@ -160,7 +160,7 @@ function SensorTile({ sensor, onOpen, onRemove }) {
       {/* Footer */}
       <div className="flex items-center gap-1.5 mt-2">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 status-online flex-shrink-0" />
-        <span className="text-[9px] text-slate-500">Live · every {POLL_INTERVAL / 1000}s</span>
+        <span className="text-[13px] text-gray-400">Live · every {POLL_INTERVAL / 1000}s</span>
       </div>
     </div>
   )
@@ -171,7 +171,7 @@ function LegendItem({ color, label }) {
   return (
     <div className="flex items-center gap-2">
       <div className="w-5 h-2 rounded-sm" style={{ background: color, opacity: 0.7 }} />
-      <span className="text-[10px] text-slate-400">{label}</span>
+      <span className="text-[15px] text-gray-500">{label}</span>
     </div>
   )
 }
@@ -203,13 +203,13 @@ function FullSensorModal({ sensor, onClose }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-4xl bg-[#111827] border border-white/[0.07] rounded-2xl overflow-hidden shadow-2xl"
+        className="w-full max-w-4xl bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {/* Title bar */}
         <div
-          className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.07]"
-          style={{ background: 'linear-gradient(135deg,#111827 0%,#131c2e 100%)' }}
+          className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200"
+          style={{ background: 'linear-gradient(135deg,#ffffff 0%,#f9fafb 100%)' }}
         >
           <div className="flex items-center gap-3">
             {isBw
@@ -217,8 +217,8 @@ function FullSensorModal({ sensor, onClose }) {
               : <Gauge    size={15} className="text-emerald-400 flex-shrink-0" />
             }
             <div>
-              <p className="text-sm font-bold text-slate-100 font-mono leading-tight">{title}</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">
+              <p className="text-sm font-bold text-gray-900 font-mono leading-tight">{title}</p>
+              <p className="text-[15px] text-gray-400 mt-0.5">
                 {isBw ? 'Bandwidth Utilization' : 'Ping Latency (RTT)'}
                 {' · '}{data.length} samples · every {POLL_INTERVAL / 1000}s
               </p>
@@ -226,19 +226,19 @@ function FullSensorModal({ sensor, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-all flex-shrink-0"
+            className="p-2 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-all flex-shrink-0"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Chart */}
-        <div className="px-5 pt-5 pb-4" style={{ background: '#0d1526' }}>
+        <div className="px-5 pt-5 pb-4" style={{ background: '#f9fafb' }}>
           {data.length < 2 ? (
-            <div className="h-64 flex flex-col items-center justify-center text-slate-600">
-              <Loader2 size={24} className="animate-spin mb-3 text-slate-500" />
+            <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+              <Loader2 size={24} className="animate-spin mb-3 text-gray-400" />
               <p className="text-sm">Collecting data… ({data.length} sample{data.length !== 1 ? 's' : ''})</p>
-              <p className="text-xs text-slate-700 mt-1">First reading arrives in ~{POLL_INTERVAL / 1000}s</p>
+              <p className="text-xs text-gray-400 mt-1">First reading arrives in ~{POLL_INTERVAL / 1000}s</p>
             </div>
           ) : (
             <>
@@ -258,12 +258,12 @@ function FullSensorModal({ sensor, onClose }) {
                       <stop offset="100%" stopColor="#10b981" stopOpacity={0.03} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.07)" vertical={false} />
                   <XAxis
                     dataKey="t"
-                    tick={{ fontSize: 9, fill: '#475569' }}
+                    tick={{ fontSize: 13, fill: '#6b7280' }}
                     tickLine={false}
-                    axisLine={{ stroke: '#1a2540' }}
+                    axisLine={{ stroke: '#e5e7eb' }}
                     interval="preserveStartEnd"
                   />
                   <YAxis
@@ -274,7 +274,7 @@ function FullSensorModal({ sensor, onClose }) {
                           : `${v.toFixed(0)}`
                         : `${v}`
                     }
-                    tick={{ fontSize: 9, fill: '#475569' }}
+                    tick={{ fontSize: 13, fill: '#6b7280' }}
                     tickLine={false}
                     axisLine={false}
                     width={44}
@@ -284,23 +284,23 @@ function FullSensorModal({ sensor, onClose }) {
                       if (isBw) return [fmtKbps(v), name === 'in_kbps' ? 'Traffic In' : 'Traffic Out']
                       return [v != null ? `${v.toFixed(1)} ms` : 'Timeout', 'RTT']
                     }}
-                    labelStyle={{ color: '#64748b', fontSize: 10 }}
+                    labelStyle={{ color: '#6b7280', fontSize: 15 }}
                     contentStyle={CHART_STYLE}
                   />
                   {maxVal != null && (
                     <ReferenceLine
                       y={maxVal}
-                      stroke="rgba(255,255,255,0.18)"
+                      stroke="rgba(0,0,0,0.20)"
                       strokeDasharray="4 3"
-                      label={{ value: `Max: ${fmtVal(maxVal)}`, position: 'right', fontSize: 9, fill: '#94a3b8' }}
+                      label={{ value: `Max: ${fmtVal(maxVal)}`, position: 'right', fontSize: 13, fill: '#6b7280' }}
                     />
                   )}
                   {minVal != null && minVal !== maxVal && (
                     <ReferenceLine
                       y={minVal}
-                      stroke="rgba(255,255,255,0.09)"
+                      stroke="rgba(0,0,0,0.12)"
                       strokeDasharray="4 3"
-                      label={{ value: `Min: ${fmtVal(minVal)}`, position: 'right', fontSize: 9, fill: '#64748b' }}
+                      label={{ value: `Min: ${fmtVal(minVal)}`, position: 'right', fontSize: 13, fill: '#9ca3af' }}
                     />
                   )}
                   {isBw ? (
@@ -315,7 +315,7 @@ function FullSensorModal({ sensor, onClose }) {
               </ResponsiveContainer>
 
               {/* Legend */}
-              <div className="flex items-center gap-6 mt-4 pt-3 border-t border-white/[0.04]">
+              <div className="flex items-center gap-6 mt-4 pt-3 border-t border-gray-100">
                 {isBw ? (
                   <>
                     <LegendItem color="#3b82f6" label="Traffic In (kbit/s)" />
@@ -324,9 +324,9 @@ function FullSensorModal({ sensor, onClose }) {
                 ) : (
                   <LegendItem color="#10b981" label="RTT (ms)" />
                 )}
-                <div className="ml-auto flex items-center gap-4 text-[10px] font-mono text-slate-600">
-                  {maxVal != null && <span>Max: <span className="text-slate-400">{fmtVal(maxVal)}</span></span>}
-                  {minVal != null && <span>Min: <span className="text-slate-400">{fmtVal(minVal)}</span></span>}
+                <div className="ml-auto flex items-center gap-4 text-[15px] font-mono text-gray-400">
+                  {maxVal != null && <span>Max: <span className="text-gray-500">{fmtVal(maxVal)}</span></span>}
+                  {minVal != null && <span>Min: <span className="text-gray-500">{fmtVal(minVal)}</span></span>}
                 </div>
               </div>
             </>
@@ -400,15 +400,15 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="w-full max-w-xl bg-[#111827] border border-white/[0.07] rounded-2xl overflow-hidden shadow-2xl">
+      <div className="w-full max-w-xl bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div>
-            <h2 className="text-sm font-bold text-slate-100">Add New Sensor</h2>
-            <p className="text-[10px] text-slate-500 mt-0.5">Step {step} of 3</p>
+            <h2 className="text-sm font-bold text-gray-900">Add New Sensor</h2>
+            <p className="text-[15px] text-gray-400 mt-0.5">Step {step} of 3</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-all">
+          <button onClick={onClose} className="p-2 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-all">
             <X size={15} />
           </button>
         </div>
@@ -416,7 +416,7 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
         {/* Progress bar */}
         <div className="flex items-center gap-1.5 px-5 pt-4">
           {[1, 2, 3].map(n => (
-            <div key={n} className={`h-1 rounded-full flex-1 transition-all duration-300 ${n <= step ? 'bg-blue-500' : 'bg-white/[0.07]'}`} />
+            <div key={n} className={`h-1 rounded-full flex-1 transition-all duration-300 ${n <= step ? 'bg-blue-500' : 'bg-gray-200'}`} />
           ))}
         </div>
 
@@ -426,7 +426,7 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
           {/* Step 1 — choose type */}
           {step === 1 && (
             <div>
-              <p className="text-xs text-slate-400 mb-4">What would you like to monitor?</p>
+              <p className="text-xs text-gray-500 mb-4">What would you like to monitor?</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   {
@@ -456,15 +456,15 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
                       key={opt.key}
                       onClick={() => setType(opt.key)}
                       className={`flex flex-col items-start gap-3 p-4 rounded-xl border transition-all duration-150 text-left ${
-                        active ? opt.activeColor : 'border-white/[0.07] bg-[#1a2236] hover:border-white/[0.14]'
+                        active ? opt.activeColor : 'border-gray-200 bg-gray-50 hover:border-gray-300'
                       }`}
                     >
-                      <div className={`p-2 rounded-lg ${active ? opt.iconBg : 'bg-white/[0.05]'}`}>
-                        <opt.icon size={18} className={active ? opt.iconCls : 'text-slate-500'} />
+                      <div className={`p-2 rounded-lg ${active ? opt.iconBg : 'bg-gray-100'}`}>
+                        <opt.icon size={18} className={active ? opt.iconCls : 'text-gray-400'} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-slate-200">{opt.label}</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{opt.desc}</p>
+                        <p className="text-sm font-semibold text-gray-900">{opt.label}</p>
+                        <p className="text-[17px] text-gray-400 mt-0.5 leading-relaxed">{opt.desc}</p>
                       </div>
                       {active && <Check size={13} className={`self-end ${opt.checkCls}`} />}
                     </button>
@@ -478,7 +478,7 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
           {step === 2 && (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-gray-500">
                   {type === 'latency'
                     ? 'Select label interfaces (sensor pings device IP)'
                     : 'Select interfaces to monitor'}
@@ -486,7 +486,7 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
                 <button
                   onClick={discover}
                   disabled={discovering}
-                  className="flex items-center gap-1.5 text-[10px] text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-40"
+                  className="flex items-center gap-1.5 text-[15px] text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-40"
                 >
                   {discovering ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
                   {discovering ? 'Discovering…' : 'Re-discover'}
@@ -496,7 +496,7 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
               {type === 'latency' && deviceIp && (
                 <div className="flex items-start gap-2 p-2.5 rounded-lg mb-3 bg-emerald-500/[0.05] border border-emerald-500/20">
                   <Gauge size={11} className="text-emerald-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-emerald-300/70 leading-relaxed">
+                  <p className="text-[15px] text-emerald-300/70 leading-relaxed">
                     RTT is measured by pinging <code className="font-mono">{deviceIp}</code>. Interface names below are used as sensor labels only.
                   </p>
                 </div>
@@ -507,47 +507,47 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
                   {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-10 rounded-lg" />)}
                 </div>
               ) : cachedInterfaces.length === 0 ? (
-                <div className="text-center py-10 text-slate-600">
+                <div className="text-center py-10 text-gray-400">
                   <Wifi size={28} className="mx-auto mb-2 opacity-30" />
                   <p className="text-xs">No interfaces discovered yet</p>
                   <button onClick={discover} className="text-xs text-blue-400 hover:underline mt-2 block mx-auto">Discover now</button>
                 </div>
               ) : (
-                <div className="rounded-xl overflow-hidden border border-white/[0.07]" style={{ maxHeight: 260, overflowY: 'auto' }}>
+                <div className="rounded-xl overflow-hidden border border-gray-200" style={{ maxHeight: 260, overflowY: 'auto' }}>
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0" style={{ background: '#0d1526' }}>
-                      <tr className="border-b border-white/[0.07]">
+                    <thead className="sticky top-0" style={{ background: '#f9fafb' }}>
+                      <tr className="border-b border-gray-200">
                         <th className="px-3 py-2 w-8" />
-                        <th className="text-left px-3 py-2 text-[9px] uppercase tracking-wider text-slate-500">Idx</th>
-                        <th className="text-left px-3 py-2 text-[9px] uppercase tracking-wider text-slate-500">Name</th>
-                        <th className="text-left px-3 py-2 text-[9px] uppercase tracking-wider text-slate-500">Status</th>
-                        <th className="text-left px-3 py-2 text-[9px] uppercase tracking-wider text-slate-500">Speed</th>
+                        <th className="text-left px-3 py-2 text-[13px] uppercase tracking-wider text-gray-400">Idx</th>
+                        <th className="text-left px-3 py-2 text-[13px] uppercase tracking-wider text-gray-400">Name</th>
+                        <th className="text-left px-3 py-2 text-[13px] uppercase tracking-wider text-gray-400">Status</th>
+                        <th className="text-left px-3 py-2 text-[13px] uppercase tracking-wider text-gray-400">Speed</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/[0.04]">
+                    <tbody className="divide-y divide-gray-100">
                       {cachedInterfaces.map(iface => {
                         const isSelected = selected.has(iface.index)
                         return (
                           <tr
                             key={iface.index}
                             onClick={() => toggleSelect(iface.index)}
-                            className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-500/[0.06]' : 'hover:bg-white/[0.02]'}`}
+                            className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-500/[0.06]' : 'hover:bg-gray-50'}`}
                           >
                             <td className="px-3 py-2.5">
-                              <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-white/20'}`}>
+                              <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
                                 {isSelected && <Check size={10} className="text-white" />}
                               </div>
                             </td>
-                            <td className="px-3 py-2.5 font-mono text-slate-400">{iface.index}</td>
-                            <td className="px-3 py-2.5 font-mono text-slate-200">{iface.name || '—'}</td>
+                            <td className="px-3 py-2.5 font-mono text-gray-500">{iface.index}</td>
+                            <td className="px-3 py-2.5 font-mono text-gray-900">{iface.name || '—'}</td>
                             <td className="px-3 py-2.5">
-                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                              <span className={`text-[13px] font-bold px-1.5 py-0.5 rounded-full ${
                                 iface.status === 'up'
                                   ? 'bg-emerald-500/10 text-emerald-400'
                                   : 'bg-red-500/10 text-red-400'
                               }`}>{iface.status}</span>
                             </td>
-                            <td className="px-3 py-2.5 font-mono text-slate-500 text-[10px]">
+                            <td className="px-3 py-2.5 font-mono text-gray-400 text-[15px]">
                               {iface.speed_bps ? fmtBps(iface.speed_bps) : '—'}
                             </td>
                           </tr>
@@ -558,7 +558,7 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
                 </div>
               )}
               {selected.size > 0 && (
-                <p className="text-[10px] text-slate-500 mt-2">
+                <p className="text-[15px] text-gray-400 mt-2">
                   {selected.size} interface{selected.size !== 1 ? 's' : ''} selected → {selected.size} sensor{selected.size !== 1 ? 's' : ''} will be created
                 </p>
               )}
@@ -568,15 +568,15 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
           {/* Step 3 — review */}
           {step === 3 && (
             <div>
-              <p className="text-xs text-slate-400 mb-4">
-                Adding <span className="text-slate-200 font-semibold">{selected.size}</span>{' '}
+              <p className="text-xs text-gray-500 mb-4">
+                Adding <span className="text-gray-900 font-semibold">{selected.size}</span>{' '}
                 {type === 'bandwidth' ? 'Bandwidth' : 'Latency'} sensor{selected.size !== 1 ? 's' : ''}:
               </p>
               <div className="space-y-2 mb-4" style={{ maxHeight: 240, overflowY: 'auto' }}>
                 {[...selected].map(ifIndex => {
                   const iface = cachedInterfaces.find(i => i.index === ifIndex)
                   return (
-                    <div key={ifIndex} className="flex items-center gap-3 p-3 rounded-lg bg-[#1a2236] border border-white/[0.07]">
+                    <div key={ifIndex} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
                       <div className={`p-1.5 rounded flex-shrink-0 ${type === 'bandwidth' ? 'bg-blue-500/20' : 'bg-emerald-500/20'}`}>
                         {type === 'bandwidth'
                           ? <BarChart2 size={12} className="text-blue-400" />
@@ -584,14 +584,14 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
                         }
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-mono font-semibold text-slate-200 truncate">
+                        <p className="text-xs font-mono font-semibold text-gray-900 truncate">
                           {iface?.name ?? `ifIndex ${ifIndex}`}
                         </p>
-                        <p className="text-[10px] text-slate-500">
+                        <p className="text-[15px] text-gray-400">
                           ifIndex {ifIndex}{iface?.speed_bps ? ` · ${fmtBps(iface.speed_bps)}` : ''}
                         </p>
                       </div>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0 ${
+                      <span className={`text-[13px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0 ${
                         iface?.status === 'up'
                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                           : 'bg-red-500/10 text-red-400 border-red-500/20'
@@ -600,7 +600,7 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
                   )
                 })}
               </div>
-              <p className="text-[10px] text-slate-600">
+              <p className="text-[15px] text-gray-400">
                 Sensors begin polling immediately. First data point arrives in ~{POLL_INTERVAL / 1000}s.
               </p>
             </div>
@@ -608,10 +608,10 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-5 py-4 border-t border-white/[0.07]">
+        <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200">
           <button
             onClick={step === 1 ? onClose : () => setStep(s => s - 1)}
-            className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors"
           >
             {step > 1 && <ChevronLeft size={14} />}
             {step === 1 ? 'Cancel' : 'Back'}
@@ -723,11 +723,11 @@ function SNMPMonitor({ device }) {
       <div className="card p-5">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
               <Wifi className="w-4 h-4 text-emerald-400" /> SNMP Sensors
             </h2>
             {sensors.length > 0 && (
-              <p className="text-[10px] text-slate-500 mt-0.5">
+              <p className="text-[15px] text-gray-400 mt-0.5">
                 {sensors.length} active · click any tile to view full graph
               </p>
             )}
@@ -742,9 +742,9 @@ function SNMPMonitor({ device }) {
 
         {sensors.length === 0 ? (
           <div className="text-center py-12">
-            <BarChart2 size={36} className="mx-auto mb-3 text-slate-600 opacity-40" />
-            <p className="text-sm font-medium text-slate-400">No sensors configured</p>
-            <p className="text-xs text-slate-600 mt-1 mb-4">Add a sensor to start live monitoring</p>
+            <BarChart2 size={36} className="mx-auto mb-3 text-gray-400 opacity-40" />
+            <p className="text-sm font-medium text-gray-500">No sensors configured</p>
+            <p className="text-xs text-gray-400 mt-1 mb-4">Add a sensor to start live monitoring</p>
             <button
               onClick={() => setWizardOpen(true)}
               className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
@@ -849,7 +849,7 @@ export default function DeviceDetail() {
     } catch { toast.error('Download failed') }
   }
 
-  const TTStyle = { background: '#0e1525', border: '1px solid #1a2540', borderRadius: 6, fontSize: 11, color: '#e2e8f0' }
+  const TTStyle = { background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 17, color: '#374151' }
 
   if (loading) {
     return (
@@ -875,9 +875,9 @@ export default function DeviceDetail() {
       <div className="flex items-start gap-3">
         <Link
           to="/devices"
-          className="p-2 text-slate-500 hover:text-slate-200 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0"
+          className="p-2 text-gray-400 hover:text-gray-900 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0"
           style={{ background: 'transparent' }}
-          onMouseEnter={e => e.currentTarget.style.background = '#162033'}
+          onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
           <ArrowLeft className="w-5 h-5" />
@@ -885,9 +885,9 @@ export default function DeviceDetail() {
         <div className="flex-1 min-w-0">
           <h1 className="page-title">{device.name}</h1>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
-            <code className="text-sm text-slate-500 font-mono">{device.ip_address}</code>
+            <code className="text-sm text-gray-400 font-mono">{device.ip_address}</code>
             <StatusIndicator status={device.status} />
-            <span className="text-xs text-slate-500 capitalize">{device.vendor} · {device.device_type?.replace('_', ' ')}</span>
+            <span className="text-xs text-gray-400 capitalize">{device.vendor} · {device.device_type?.replace('_', ' ')}</span>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap flex-shrink-0">
@@ -918,7 +918,7 @@ export default function DeviceDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-4">
           <div className="card p-5">
-            <h2 className="text-sm font-semibold text-slate-200 mb-4">Live Metrics</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Live Metrics</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
               <MetricTile label="Latency" value={device.last_ping_ms != null ? `${device.last_ping_ms.toFixed(1)}ms` : '—'} icon={Activity} color="blue" />
               <MetricTile label="CPU"     value={device.cpu_usage    != null ? `${device.cpu_usage.toFixed(1)}%`    : '—'} icon={Cpu}      color="violet" />
@@ -926,9 +926,9 @@ export default function DeviceDetail() {
               <MetricTile label="Disk"    value={device.disk_usage   != null ? `${device.disk_usage.toFixed(1)}%`   : '—'} icon={Database}  color="amber" />
             </div>
             {metrics.length > 1 && (
-              <div className="grid grid-cols-2 gap-4 pt-4" style={{ borderTop: '1px solid #1a2540' }}>
+              <div className="grid grid-cols-2 gap-4 pt-4" style={{ borderTop: '1px solid #e5e7eb' }}>
                 <div>
-                  <p className="text-xs text-slate-500 mb-2">Latency (ms) — last {metrics.length} polls</p>
+                  <p className="text-xs text-gray-400 mb-2">Latency (ms) — last {metrics.length} polls</p>
                   <ResponsiveContainer width="100%" height={60}>
                     <LineChart data={latencyData}>
                       <Line type="monotone" dataKey="v" stroke="#3b82f6" dot={false} strokeWidth={2} />
@@ -938,7 +938,7 @@ export default function DeviceDetail() {
                 </div>
                 {cpuData.some(d => d.v != null) && (
                   <div>
-                    <p className="text-xs text-slate-500 mb-2">CPU % — last {metrics.length} polls</p>
+                    <p className="text-xs text-gray-400 mb-2">CPU % — last {metrics.length} polls</p>
                     <ResponsiveContainer width="100%" height={60}>
                       <LineChart data={cpuData}>
                         <Line type="monotone" dataKey="v" stroke="#8b5cf6" dot={false} strokeWidth={2} />
@@ -954,19 +954,19 @@ export default function DeviceDetail() {
           <SNMPMonitor device={device} />
 
           <div className="card p-5">
-            <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
-              <Database className="w-4 h-4 text-slate-500" />Config Backups ({backups.length})
+            <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Database className="w-4 h-4 text-gray-400" />Config Backups ({backups.length})
             </h2>
             {backups.length === 0 ? (
-              <p className="text-sm text-slate-500">No backups yet. Click "Backup" to create one.</p>
+              <p className="text-sm text-gray-400">No backups yet. Click "Backup" to create one.</p>
             ) : (
               <div className="space-y-2">
                 {backups.map(b => (
-                  <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: '#162033' }}>
-                    <Database className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                  <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: '#f3f4f6' }}>
+                    <Database className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-200">{new Date(b.backed_up_at).toLocaleString()}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-sm font-medium text-gray-900">{new Date(b.backed_up_at).toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">
                         {formatDistanceToNow(new Date(b.backed_up_at), { addSuffix: true })}
                         {b.notes && ` · ${b.notes}`}
                       </p>
@@ -999,8 +999,8 @@ export default function DeviceDetail() {
                 : 'Never'],
             ].filter(([, v]) => v != null).map(([k, v]) => (
               <div key={k} className="flex justify-between gap-2">
-                <dt className="text-slate-500 capitalize flex-shrink-0">{k}</dt>
-                <dd className="text-right text-slate-300 capitalize truncate">{v}</dd>
+                <dt className="text-gray-400 capitalize flex-shrink-0">{k}</dt>
+                <dd className="text-right text-gray-700 capitalize truncate">{v}</dd>
               </div>
             ))}
           </dl>

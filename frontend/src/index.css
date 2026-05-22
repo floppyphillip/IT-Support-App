@@ -4,37 +4,37 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Dashboard X Design Tokens ── */
+/* ── Design Tokens ── */
 :root {
-  /* Backgrounds — ultra-dark blue-black */
-  --bg:        #07090f;
-  --surface:   #0c1018;
-  --surface-2: #10151f;
-  --hover:     #141a27;
-  --active:    #182030;
+  /* Backgrounds */
+  --bg:        #ffffff;
+  --surface:   #ffffff;
+  --surface-2: #f8fafc;
+  --hover:     #f1f5f9;
+  --active:    #e2e8f0;
 
-  /* Borders — nearly invisible */
-  --border:        rgba(255, 255, 255, 0.055);
-  --border-mid:    rgba(255, 255, 255, 0.10);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  /* Borders */
+  --border:        rgba(0, 0, 0, 0.09);
+  --border-mid:    rgba(0, 0, 0, 0.14);
+  --border-strong: rgba(0, 0, 0, 0.22);
 
   /* Sidebar */
-  --sidebar:    #070910;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar:        #f8fafc;
+  --sidebar-border: rgba(0, 0, 0, 0.09);
 
   /* Accent */
   --blue:       #3b82f6;
-  --blue-dim:   rgba(59, 130, 246, 0.12);
-  --blue-glow:  rgba(59, 130, 246, 0.22);
-  --blue-text:  #60a5fa;
+  --blue-dim:   rgba(59, 130, 246, 0.10);
+  --blue-glow:  rgba(59, 130, 246, 0.18);
+  --blue-text:  #2563eb;
 
   /* Typography */
-  --text-1: #f0f4ff;
-  --text-2: #c8d3e8;
-  --text-3: #7a8ba8;
-  --text-4: #4a5568;
+  --text-1: #111827;
+  --text-2: #374151;
+  --text-3: #6b7280;
+  --text-4: #9ca3af;
 
-  /* Line heights — Dashboard X spec */
+  /* Line heights */
   --lh-small:   1.115em;
   --lh-regular: 1.25em;
   --lh-large:   1.5em;
@@ -43,13 +43,13 @@
 @layer base {
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html { font-size: 12px; }
+  html { font-size: 18px; }
 
   body {
     background: var(--bg);
     color: var(--text-2);
     font-family: 'Inter Tight', system-ui, sans-serif;
-    font-size: 12px;
+    font-size: 18px;
     font-weight: 400;
     line-height: var(--lh-large);
     -webkit-font-smoothing: antialiased;
@@ -84,7 +84,7 @@
            transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
     background: var(--blue);
     color: #fff;
-    font-size: 12px;
+    font-size: 18px;
     line-height: var(--lh-regular);
   }
   .btn-primary:hover { background: #2563eb; }
@@ -95,7 +95,7 @@
     background: var(--surface-2);
     border: 1px solid var(--border-mid);
     color: var(--text-2);
-    font-size: 12px;
+    font-size: 18px;
     line-height: var(--lh-regular);
   }
   .btn-secondary:hover {
@@ -107,18 +107,18 @@
   .btn-danger {
     @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium
            transition-all duration-150;
-    background: rgba(239, 68, 68, 0.15);
-    border: 1px solid rgba(239, 68, 68, 0.25);
-    color: #f87171;
-    font-size: 12px;
+    background: rgba(239, 68, 68, 0.10);
+    border: 1px solid rgba(239, 68, 68, 0.22);
+    color: #dc2626;
+    font-size: 18px;
   }
-  .btn-danger:hover { background: rgba(239, 68, 68, 0.22); }
+  .btn-danger:hover { background: rgba(239, 68, 68, 0.16); }
 
   .btn-ghost {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
            transition-all duration-150;
     color: var(--text-3);
-    font-size: 12px;
+    font-size: 18px;
   }
   .btn-ghost:hover { background: var(--hover); color: var(--text-1); }
 
@@ -128,7 +128,7 @@
     background: var(--surface);
     border: 1px solid var(--border-mid);
     color: var(--text-1);
-    font-size: 12px;
+    font-size: 18px;
     line-height: var(--lh-regular);
   }
   .input::placeholder { color: var(--text-4); }
@@ -143,14 +143,14 @@
   .label {
     @apply block font-semibold uppercase tracking-wider mb-1;
     color: var(--text-4);
-    font-size: 10px;
+    font-size: 15px;
     letter-spacing: 0.06em;
   }
 
   /* ── Badges ── */
   .badge {
     @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md font-medium;
-    font-size: 10px;
+    font-size: 15px;
     line-height: var(--lh-small);
   }
 
@@ -160,13 +160,13 @@
     color: var(--text-4);
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    font-size: 10px;
+    font-size: 15px;
     letter-spacing: 0.06em;
   }
   .td {
     @apply px-4 py-2.5;
     color: var(--text-2);
-    font-size: 12px;
+    font-size: 18px;
   }
   .tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
   .tr:hover { background: var(--hover); }
@@ -174,22 +174,22 @@
   /* ── Page headings ── */
   .page-title {
     color: var(--text-1);
-    font-size: 16px;
+    font-size: 24px;
     font-weight: 600;
     line-height: var(--lh-small);
   }
   .page-sub {
     color: var(--text-4);
-    font-size: 11px;
+    font-size: 17px;
     margin-top: 2px;
     line-height: var(--lh-regular);
   }
 
   /* ── Terminal / Code ── */
-  .terminal  { @apply bg-[#07090f] text-emerald-400 font-mono rounded-xl p-4; font-size: 11px; }
+  .terminal  { @apply bg-gray-100 text-emerald-700 font-mono rounded-xl p-4; font-size: 17px; }
   .cli-block {
-    @apply bg-[#07090f] text-emerald-400 font-mono rounded-lg px-3 py-2 block;
-    font-size: 11px;
+    @apply bg-gray-100 text-emerald-700 font-mono rounded-lg px-3 py-2 block;
+    font-size: 17px;
     border: 1px solid var(--border);
   }
 
@@ -237,8 +237,8 @@
 /* ── Scrollbar ── */
 ::-webkit-scrollbar       { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
 
 /* ── xterm.js ── */
 .xterm { height: 100%; }
@@ -247,14 +247,14 @@
 /* ── Recharts ── */
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line { stroke: var(--border); }
-.recharts-text { fill: var(--text-4); font-size: 11px; }
+.recharts-text { fill: var(--text-4); font-size: 17px; }
 
 /* ── Status dot ── */
 .dot-online  { background: #10b981; animation: pulse-ring 2s ease-in-out infinite; border-radius: 50%; }
 .dot-offline { background: #ef4444; border-radius: 50%; }
 .dot-degraded{ background: #f59e0b; border-radius: 50%; }
 
-/* ── Glow line — decorative top accent on active cards ── */
+/* ── Glow line ── */
 .glow-top::before {
   content: '';
   position: absolute;

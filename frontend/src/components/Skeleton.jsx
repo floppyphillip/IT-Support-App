@@ -16,13 +16,13 @@ export function SkeletonCard({ rows = 3 }) {
 export function SkeletonTable({ rows = 5, cols = 4 }) {
   return (
     <div className="card overflow-hidden">
-      <div className="flex gap-4 px-4 py-3" style={{ background: '#090d18', borderBottom: '1px solid #1a2540' }}>
+      <div className="flex gap-4 px-4 py-3" style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
         {Array.from({ length: cols }).map((_, i) => (
           <Skeleton key={i} className="h-3 flex-1" />
         ))}
       </div>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex gap-4 px-4 py-3.5" style={{ borderBottom: '1px solid #1a2540' }}>
+        <div key={i} className="flex gap-4 px-4 py-3.5" style={{ borderBottom: '1px solid #e5e7eb' }}>
           {Array.from({ length: cols }).map((_, j) => (
             <Skeleton key={j} className={`h-3 flex-1 ${j === 1 ? 'flex-[2]' : ''}`} />
           ))}

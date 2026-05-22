@@ -102,12 +102,12 @@ function DeviceFormModal({ device, onClose, onSaved }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
-            <p className="font-semibold text-slate-200">{isEdit ? 'Edit Device' : 'Add Device'}</p>
+            <p className="font-semibold text-gray-900">{isEdit ? 'Edit Device' : 'Add Device'}</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
               {isEdit ? `Editing ${device.name}` : 'Register a new network device for monitoring'}
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg transition-colors hover:bg-white/5 text-slate-500 hover:text-slate-300">
+          <button onClick={onClose} className="p-1.5 rounded-lg transition-colors hover:bg-gray-100 text-gray-400 hover:text-gray-700">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -117,51 +117,51 @@ function DeviceFormModal({ device, onClose, onSaved }) {
 
           {/* Basic Info */}
           <section>
-            <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-4)' }}>Basic Information</p>
+            <p className="text-[15px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-4)' }}>Basic Information</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>
+                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>
                   Device Name <span className="text-red-400">*</span>
                 </label>
                 <input className="input w-full" placeholder="core-router-01"
                   value={form.name} onChange={(e) => set('name', e.target.value)} />
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>
+                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>
                   IP Address <span className="text-red-400">*</span>
                 </label>
                 <input className="input w-full font-mono" placeholder="192.168.1.1"
                   value={form.ip_address} onChange={(e) => set('ip_address', e.target.value)} />
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Hostname</label>
+                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Hostname</label>
                 <input className="input w-full font-mono" placeholder="router.local"
                   value={form.hostname} onChange={(e) => set('hostname', e.target.value)} />
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Location</label>
+                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Location</label>
                 <input className="input w-full" placeholder="Server Room A"
                   value={form.location} onChange={(e) => set('location', e.target.value)} />
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Device Type</label>
+                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Device Type</label>
                 <select className="input w-full" value={form.device_type} onChange={(e) => set('device_type', e.target.value)}>
                   {DEVICE_TYPES.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Vendor</label>
+                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Vendor</label>
                 <select className="input w-full" value={form.vendor} onChange={(e) => set('vendor', e.target.value)}>
                   {VENDORS.map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Model</label>
+                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Model</label>
                 <input className="input w-full" placeholder="ISR 4431"
                   value={form.model} onChange={(e) => set('model', e.target.value)} />
               </div>
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>OS / Firmware Version</label>
+                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>OS / Firmware Version</label>
                 <input className="input w-full font-mono" placeholder="IOS 15.7"
                   value={form.os_version} onChange={(e) => set('os_version', e.target.value)} />
               </div>
@@ -170,7 +170,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
 
           {/* Monitoring */}
           <section className="border-t pt-5" style={{ borderColor: 'var(--border)' }}>
-            <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-4)' }}>Monitoring</p>
+            <p className="text-[15px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-4)' }}>Monitoring</p>
             <Toggle label="Enable monitoring (ICMP ping)" checked={form.monitoring_enabled}
               onChange={(v) => set('monitoring_enabled', v)} />
           </section>
@@ -182,12 +182,12 @@ function DeviceFormModal({ device, onClose, onSaved }) {
             {form.snmp_enabled && (
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Community String</label>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Community String</label>
                   <input className="input w-full font-mono" placeholder="public"
                     value={form.snmp_community} onChange={(e) => set('snmp_community', e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>SNMP Version</label>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>SNMP Version</label>
                   <select className="input w-full" value={form.snmp_version} onChange={(e) => set('snmp_version', e.target.value)}>
                     <option value="1">v1</option>
                     <option value="2c">v2c</option>
@@ -205,17 +205,17 @@ function DeviceFormModal({ device, onClose, onSaved }) {
             {form.ssh_enabled && (
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>SSH Port</label>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>SSH Port</label>
                   <input className="input w-full font-mono" type="number" placeholder="22"
                     value={form.ssh_port} onChange={(e) => set('ssh_port', e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Username</label>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Username</label>
                   <input className="input w-full font-mono" placeholder="admin"
                     value={form.ssh_username} onChange={(e) => set('ssh_username', e.target.value)} />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Password</label>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Password</label>
                   <input className="input w-full font-mono" type="password" placeholder="Encrypted at rest"
                     value={form.ssh_password} onChange={(e) => set('ssh_password', e.target.value)} />
                 </div>
@@ -270,10 +270,10 @@ function DeleteConfirmModal({ device, onClose, onDeleted }) {
                style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}>
             <AlertTriangle className="w-5 h-5 text-red-400" />
           </div>
-          <p className="font-semibold text-slate-200 mb-1">Delete Device</p>
+          <p className="font-semibold text-gray-900 mb-1">Delete Device</p>
           <p className="text-sm" style={{ color: 'var(--text-3)' }}>
             Are you sure you want to delete{' '}
-            <span className="font-mono font-semibold text-slate-200">{device.name}</span>?
+            <span className="font-mono font-semibold text-gray-900">{device.name}</span>?
           </p>
           <p className="text-xs mt-1" style={{ color: 'var(--text-4)' }}>
             This will remove all associated metrics, backups, and alerts. This cannot be undone.
@@ -414,7 +414,7 @@ function PingModal({ device, onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
-            <p className="font-semibold text-slate-200 flex items-center gap-2">
+            <p className="font-semibold text-gray-900 flex items-center gap-2">
               <Zap className="w-4 h-4 text-blue-400" /> Ping Test
             </p>
             <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-3)' }}>
@@ -422,7 +422,7 @@ function PingModal({ device, onClose }) {
             </p>
           </div>
           <button onClick={onClose} disabled={running}
-            className="p-1.5 rounded-lg hover:bg-white/5 text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-30">
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors disabled:opacity-30">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -430,7 +430,7 @@ function PingModal({ device, onClose }) {
         {/* Controls */}
         <div className="flex items-center gap-4 px-5 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
           <div className="flex items-center gap-2">
-            <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>Count</label>
+            <label className="text-[15px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>Count</label>
             <input type="number" min="1" max="100"
               className="input w-16 text-center font-mono py-1 text-xs"
               value={count} onChange={e => setCount(e.target.value)}
@@ -455,7 +455,7 @@ function PingModal({ device, onClose }) {
         <div className="h-56 overflow-y-auto p-4 font-mono text-xs leading-relaxed"
              style={{ background: 'var(--bg)' }}>
           {results.length === 0 && !running && (
-            <p className="text-slate-600 text-center pt-16">Set count and press Start</p>
+            <p className="text-gray-400 text-center pt-16">Set count and press Start</p>
           )}
           {results.map(r => (
             <div key={r.key} className={r.error ? 'text-red-400' : r.reachable ? 'text-emerald-400' : 'text-amber-400'}>
@@ -479,24 +479,24 @@ function PingModal({ device, onClose }) {
           {summary ? (
             <div className="grid grid-cols-4 gap-3 text-center">
               <div>
-                <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Sent</p>
-                <p className="font-mono text-sm font-bold text-slate-200">{summary.sent}</p>
+                <p className="text-[13px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Sent</p>
+                <p className="font-mono text-sm font-bold text-gray-900">{summary.sent}</p>
               </div>
               <div>
-                <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Received</p>
+                <p className="text-[13px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Received</p>
                 <p className="font-mono text-sm font-bold text-emerald-400">{summary.received}</p>
               </div>
               <div>
-                <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Loss</p>
+                <p className="text-[13px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Loss</p>
                 <p className={`font-mono text-sm font-bold ${lossColor(summary.loss)}`}>{summary.loss}%</p>
               </div>
               <div>
-                <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Avg RTT</p>
+                <p className="text-[13px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Avg RTT</p>
                 <p className="font-mono text-sm font-bold text-blue-400">{summary.avg !== '—' ? `${summary.avg}ms` : '—'}</p>
               </div>
             </div>
           ) : (
-            <p className="text-[10px] text-center" style={{ color: 'var(--text-4)' }}>— stats appear after first ping —</p>
+            <p className="text-[15px] text-center" style={{ color: 'var(--text-4)' }}>— stats appear after first ping —</p>
           )}
         </div>
       </div>
@@ -541,7 +541,7 @@ export default function Devices() {
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
         <input className="input pl-9 w-52" placeholder="Search devices…" value={search}
           onChange={(e) => setSearch(e.target.value)} />
       </div>
@@ -557,22 +557,22 @@ export default function Devices() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {devices.map((d) => (
-            <Link key={d.id} to={`/devices/${d.id}`} className="card p-5 hover:shadow-lg hover:bg-[#162033] transition-all duration-200 group">
+            <Link key={d.id} to={`/devices/${d.id}`} className="card p-5 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                    style={{ background: '#162033' }}>
+                    style={{ background: '#f3f4f6' }}>
                     {DEVICE_ICONS[d.device_type] ?? '📦'}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-200 group-hover:text-blue-400 transition-all duration-200">{d.name}</p>
-                    <p className="text-xs font-mono text-slate-500">{d.ip_address}</p>
+                    <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-400 transition-all duration-200">{d.name}</p>
+                    <p className="text-xs font-mono text-gray-400">{d.ip_address}</p>
                   </div>
                 </div>
                 <StatusIndicator status={d.status} dot />
               </div>
 
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-slate-500 mb-4">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-gray-400 mb-4">
                 {d.last_ping_ms != null && (
                   <span className="flex items-center gap-1"><Activity className="w-3 h-3 text-blue-400" />{d.last_ping_ms}ms</span>
                 )}

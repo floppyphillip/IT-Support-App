@@ -66,7 +66,7 @@ export default function Sidebar() {
             <Monitor className="w-3.5 h-3.5 text-white" />
           </div>
           {!collapsed && (
-            <span style={{ color: 'var(--text-1)', fontSize: 13, fontWeight: 600, lineHeight: 'var(--lh-small)' }}>
+            <span style={{ color: 'var(--text-1)', fontSize: 19, fontWeight: 600, lineHeight: 'var(--lh-small)' }}>
               NetSupportAI
             </span>
           )}
@@ -79,7 +79,7 @@ export default function Sidebar() {
               {!collapsed && (
                 <p
                   className="px-2 mb-1 uppercase tracking-widest"
-                  style={{ color: 'var(--text-4)', fontSize: 9, letterSpacing: '0.08em' }}
+                  style={{ color: 'var(--text-4)', fontSize: 13, letterSpacing: '0.08em' }}
                 >
                   {g.label}
                 </p>
@@ -109,7 +109,7 @@ export default function Sidebar() {
                         )}
                         <Icon className="w-3.5 h-3.5 flex-shrink-0" />
                         {!collapsed && (
-                          <span style={{ fontSize: 12, fontWeight: 500, lineHeight: 'var(--lh-regular)' }}>
+                          <span style={{ fontSize: 18, fontWeight: 500, lineHeight: 'var(--lh-regular)' }}>
                             {label}
                           </span>
                         )}
@@ -143,17 +143,17 @@ export default function Sidebar() {
           >
             <div
               className="w-6 h-6 rounded-full flex items-center justify-center text-white flex-shrink-0"
-              style={{ background: 'var(--blue)', fontSize: 10, fontWeight: 700 }}
+              style={{ background: 'var(--blue)', fontSize: 15, fontWeight: 700 }}
             >
               {user?.full_name?.[0] ?? '?'}
             </div>
             {!collapsed && (
               <>
                 <div className="flex-1 min-w-0">
-                  <p style={{ color: 'var(--text-1)', fontSize: 11, fontWeight: 600, lineHeight: 'var(--lh-small)' }} className="truncate">
+                  <p style={{ color: 'var(--text-1)', fontSize: 17, fontWeight: 600, lineHeight: 'var(--lh-small)' }} className="truncate">
                     {user?.full_name}
                   </p>
-                  <p style={{ color: 'var(--text-4)', fontSize: 10, lineHeight: 'var(--lh-small)' }} className="truncate capitalize">
+                  <p style={{ color: 'var(--text-4)', fontSize: 15, lineHeight: 'var(--lh-small)' }} className="truncate capitalize">
                     {user?.role?.replace('_', ' ')}
                   </p>
                 </div>
@@ -187,7 +187,7 @@ export default function Sidebar() {
                 isActive ? 'text-blue-400' : 'text-[var(--text-4)]'
               }`
             }
-            style={{ fontSize: 9 }}
+            style={{ fontSize: 13 }}
           >
             <Icon className="w-4 h-4" />
             {label}

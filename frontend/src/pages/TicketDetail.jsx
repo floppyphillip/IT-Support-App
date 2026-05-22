@@ -74,14 +74,14 @@ export default function TicketDetail() {
   return (
     <div className="space-y-5 animate-fade-in max-w-5xl">
       <div className="flex items-start gap-3">
-        <Link to="/tickets" className="p-2 text-slate-500 hover:text-slate-200 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0"
-          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#162033'}
+        <Link to="/tickets" className="p-2 text-gray-400 hover:text-gray-900 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0"
+          style={{ background: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="text-xs font-mono text-slate-500">{ticket.ticket_number}</span>
+            <span className="text-xs font-mono text-gray-400">{ticket.ticket_number}</span>
             <AlertBadge priority={ticket.priority} />
             <StatusIndicator status={ticket.status} />
             {ticket.sla_deadline && (
@@ -91,7 +91,7 @@ export default function TicketDetail() {
               </span>
             )}
           </div>
-          <h1 className="text-base font-semibold text-slate-100">{ticket.title}</h1>
+          <h1 className="text-base font-semibold text-gray-900">{ticket.title}</h1>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <button onClick={runAI} className="btn-secondary" disabled={diagnosing}>
@@ -104,11 +104,11 @@ export default function TicketDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-4">
           <div className="card p-5">
-            <h2 className="text-sm font-semibold text-slate-200 mb-3">Description</h2>
-            <p className="text-sm text-slate-400 whitespace-pre-wrap leading-relaxed">{ticket.description || 'No description provided.'}</p>
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Description</h2>
+            <p className="text-sm text-gray-500 whitespace-pre-wrap leading-relaxed">{ticket.description || 'No description provided.'}</p>
             {ticket.tags?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3 pt-3" style={{ borderTop: '1px solid #1a2540' }}>
-                {ticket.tags.map((tag) => <span key={tag} className="badge bg-slate-700/50 text-slate-400 border border-slate-600/50">#{tag}</span>)}
+              <div className="flex flex-wrap gap-1.5 mt-3 pt-3" style={{ borderTop: '1px solid #e5e7eb' }}>
+                {ticket.tags.map((tag) => <span key={tag} className="badge bg-gray-100 text-gray-500 border border-gray-300">#{tag}</span>)}
               </div>
             )}
           </div>
@@ -124,17 +124,17 @@ export default function TicketDetail() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-slate-300 mb-3 leading-relaxed">{ticket.ai_diagnosis}</p>
+              <p className="text-sm text-gray-700 mb-3 leading-relaxed">{ticket.ai_diagnosis}</p>
               {ticket.ai_structured?.root_cause && (
-                <div className="mb-3"><p className="label">Root Cause</p><p className="text-sm text-slate-400">{ticket.ai_structured.root_cause}</p></div>
+                <div className="mb-3"><p className="label">Root Cause</p><p className="text-sm text-gray-500">{ticket.ai_structured.root_cause}</p></div>
               )}
               {ticket.ai_structured?.fix_steps?.length > 0 && (
                 <div className="mb-3">
                   <p className="label">Fix Steps</p>
                   <ol className="space-y-1.5">
                     {ticket.ai_structured.fix_steps.map((step, i) => (
-                      <li key={i} className="text-sm text-slate-400 flex gap-2">
-                        <span className="font-semibold text-slate-500 flex-shrink-0">{i + 1}.</span>{step}
+                      <li key={i} className="text-sm text-gray-500 flex gap-2">
+                        <span className="font-semibold text-gray-400 flex-shrink-0">{i + 1}.</span>{step}
                       </li>
                     ))}
                   </ol>
@@ -147,35 +147,35 @@ export default function TicketDetail() {
           )}
 
           <div className="card p-5">
-            <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-slate-500" />Messages ({ticket.messages?.length ?? 0})
+            <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-gray-400" />Messages ({ticket.messages?.length ?? 0})
             </h2>
             <div className="space-y-4 mb-5">
-              {!ticket.messages?.length && <p className="text-sm text-slate-500">No messages yet.</p>}
+              {!ticket.messages?.length && <p className="text-sm text-gray-400">No messages yet.</p>}
               {ticket.messages?.map((m) => (
                 <div key={m.id} className={`flex gap-3 ${m.is_internal ? 'opacity-60' : ''}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${m.is_ai_generated ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-300'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${m.is_ai_generated ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-100 text-gray-700'}`}>
                     {m.is_ai_generated ? <Bot className="w-4 h-4" /> : (m.sender?.full_name?.[0] ?? '?')}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-sm font-medium text-slate-200">{m.is_ai_generated ? 'AI Assistant' : (m.sender?.full_name ?? 'System')}</span>
+                      <span className="text-sm font-medium text-gray-900">{m.is_ai_generated ? 'AI Assistant' : (m.sender?.full_name ?? 'System')}</span>
                       {m.is_internal && (
                         <span className="badge bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1">
                           <Shield className="w-3 h-3" />internal
                         </span>
                       )}
-                      <span className="text-xs text-slate-500">{formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}</span>
+                      <span className="text-xs text-gray-400">{formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}</span>
                     </div>
-                    <p className="text-sm text-slate-400 whitespace-pre-wrap leading-relaxed">{m.message}</p>
+                    <p className="text-sm text-gray-500 whitespace-pre-wrap leading-relaxed">{m.message}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <form onSubmit={submitMessage} className="space-y-2 pt-4" style={{ borderTop: '1px solid #1a2540' }}>
+            <form onSubmit={submitMessage} className="space-y-2 pt-4" style={{ borderTop: '1px solid #e5e7eb' }}>
               <textarea className="input resize-none h-20" placeholder="Add a message…" value={message} onChange={(e) => setMessage(e.target.value)} />
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
                   <input type="checkbox" checked={isInternal} onChange={(e) => setIsInternal(e.target.checked)} className="rounded" />
                   Internal note
                 </label>
@@ -206,8 +206,8 @@ export default function TicketDetail() {
                 ...(ticket.closed_at ? [['Closed', new Date(ticket.closed_at).toLocaleDateString()]] : []),
               ].map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between gap-2">
-                  <dt className="text-slate-500 flex-shrink-0">{k}</dt>
-                  <dd className="text-right text-slate-300">{v}</dd>
+                  <dt className="text-gray-400 flex-shrink-0">{k}</dt>
+                  <dd className="text-right text-gray-700">{v}</dd>
                 </div>
               ))}
             </dl>
@@ -215,7 +215,7 @@ export default function TicketDetail() {
           {ticket.resolution_notes && (
             <div className="card p-4">
               <p className="label mb-2">Resolution</p>
-              <p className="text-sm text-slate-400 whitespace-pre-wrap leading-relaxed">{ticket.resolution_notes}</p>
+              <p className="text-sm text-gray-500 whitespace-pre-wrap leading-relaxed">{ticket.resolution_notes}</p>
             </div>
           )}
         </div>

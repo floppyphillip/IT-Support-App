@@ -21,7 +21,7 @@ export default function StatsCard({ title, value, icon, color = 'blue', sub, tre
         <div className="flex items-center justify-between mb-3">
           <p
             className="uppercase tracking-widest font-semibold"
-            style={{ color: 'var(--text-4)', fontSize: 9, letterSpacing: '0.08em' }}
+            style={{ color: 'var(--text-4)', fontSize: 13, letterSpacing: '0.08em' }}
           >
             {title}
           </p>
@@ -35,13 +35,13 @@ export default function StatsCard({ title, value, icon, color = 'blue', sub, tre
 
         <p
           className="font-bold tracking-tight"
-          style={{ color: c.text, fontSize: 26, lineHeight: 'var(--lh-small)' }}
+          style={{ color: c.text, fontSize: 39, lineHeight: 'var(--lh-small)' }}
         >
           {value}
         </p>
 
         {sub && (
-          <p className="mt-1.5 flex items-center gap-1" style={{ color: 'var(--text-4)', fontSize: 11 }}>
+          <p className="mt-1.5 flex items-center gap-1" style={{ color: 'var(--text-4)', fontSize: 17 }}>
             {trend === 'up'   && <span style={{ color: '#34d399' }}>↑</span>}
             {trend === 'down' && <span style={{ color: '#f87171' }}>↓</span>}
             {sub}

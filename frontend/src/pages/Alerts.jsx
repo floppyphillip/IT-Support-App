@@ -62,13 +62,13 @@ export default function Alerts() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: '#090d18' }}>
+      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: '#f9fafb' }}>
         {TABS.map(([v, l]) => (
           <button key={v} onClick={() => setFilter(v)}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-              filter === v ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
+              filter === v ? 'text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
             }`}
-            style={filter === v ? { background: '#0e1525' } : {}}>
+            style={filter === v ? { background: '#e2e8f0' } : {}}>
             {l}
           </button>
         ))}
@@ -94,13 +94,13 @@ export default function Alerts() {
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${s.dot}`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                      <span className="text-sm font-semibold text-slate-200">{a.title}</span>
+                      <span className="text-sm font-semibold text-gray-900">{a.title}</span>
                       <span className={`badge border ${s.badge}`}>{a.severity}</span>
-                      {a.is_acknowledged && <span className="badge bg-slate-700/50 text-slate-400 border border-slate-600/50">ack'd</span>}
+                      {a.is_acknowledged && <span className="badge bg-slate-700/50 text-gray-500 border border-slate-600/50">ack'd</span>}
                       {a.is_resolved && <span className="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">resolved</span>}
                     </div>
-                    <p className="text-sm text-slate-400">{a.message}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                    <p className="text-sm text-gray-500">{a.message}</p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
                       <span className="capitalize">{a.alert_type.replace(/_/g, ' ')}</span>
                       {a.metric_value != null && <span>Value: {a.metric_value}</span>}
                       <span>{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</span>

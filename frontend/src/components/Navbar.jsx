@@ -39,7 +39,7 @@ export default function Navbar() {
               background: 'var(--bg)',
               border: '1px solid var(--border-mid)',
               color: 'var(--text-2)',
-              fontSize: 11,
+              fontSize: 17,
             }}
             onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--blue-dim)'; }}
             onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-mid)'; e.currentTarget.style.boxShadow = 'none'; }}
@@ -67,7 +67,7 @@ export default function Navbar() {
         {alertCount > 0 && (
           <span
             className="absolute top-0.5 right-0.5 w-3 h-3 text-white rounded-full flex items-center justify-center font-bold"
-            style={{ background: '#ef4444', fontSize: 8 }}
+            style={{ background: '#ef4444', fontSize: 12 }}
           >
             {alertCount > 9 ? '9+' : alertCount}
           </span>
@@ -81,15 +81,15 @@ export default function Navbar() {
       <div className="flex items-center gap-2">
         <div
           className="w-6 h-6 rounded-full flex items-center justify-center text-white flex-shrink-0"
-          style={{ background: 'var(--blue)', fontSize: 10, fontWeight: 700 }}
+          style={{ background: 'var(--blue)', fontSize: 15, fontWeight: 700 }}
         >
           {user?.full_name?.[0] ?? '?'}
         </div>
         <div className="hidden sm:block">
-          <p style={{ color: 'var(--text-1)', fontSize: 11, fontWeight: 600, lineHeight: 'var(--lh-small)' }}>
+          <p style={{ color: 'var(--text-1)', fontSize: 17, fontWeight: 600, lineHeight: 'var(--lh-small)' }}>
             {user?.full_name}
           </p>
-          <p style={{ color: 'var(--text-4)', fontSize: 10, lineHeight: 'var(--lh-small)' }} className="capitalize">
+          <p style={{ color: 'var(--text-4)', fontSize: 15, lineHeight: 'var(--lh-small)' }} className="capitalize">
             {user?.role?.replace('_', ' ')}
           </p>
         </div>

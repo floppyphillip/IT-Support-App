@@ -71,13 +71,13 @@ export default function Settings() {
       <div><h1 className="page-title">Settings</h1><p className="page-sub">Manage your account and preferences</p></div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: '#090d18' }}>
+      <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: '#f9fafb' }}>
         {TABS.map(([key, label, Icon]) => (
           <button key={key} onClick={() => setTab(key)}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-              tab === key ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
+              tab === key ? 'text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
             }`}
-            style={tab === key ? { background: '#0e1525' } : {}}>
+            style={tab === key ? { background: '#e2e8f0' } : {}}>
             <Icon className="w-3.5 h-3.5" />{label}
           </button>
         ))}
@@ -86,7 +86,7 @@ export default function Settings() {
       {tab === 'profile' && (
         <div className="space-y-4">
           <div className="card p-5">
-            <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2"><User className="w-4 h-4 text-slate-500" />Profile</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2"><User className="w-4 h-4 text-gray-400" />Profile</h2>
             <form onSubmit={saveProfile} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="label">Full Name</label><input className="input" value={profile.full_name} onChange={(e) => setProfile((p) => ({ ...p, full_name: e.target.value }))} /></div>
@@ -100,7 +100,7 @@ export default function Settings() {
             </form>
           </div>
           <div className="card p-5">
-            <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2"><Lock className="w-4 h-4 text-slate-500" />Change Password</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2"><Lock className="w-4 h-4 text-gray-400" />Change Password</h2>
             <form onSubmit={changePassword} className="space-y-4">
               <div><label className="label">Current Password</label><input className="input" type="password" value={pwd.current_password} required onChange={(e) => setPwd((p) => ({ ...p, current_password: e.target.value }))} /></div>
               <div className="grid grid-cols-2 gap-4">
@@ -115,7 +115,7 @@ export default function Settings() {
 
       {tab === 'notifications' && notifSettings && (
         <div className="card p-5">
-          <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2"><Bell className="w-4 h-4 text-slate-500" />Notification Preferences</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2"><Bell className="w-4 h-4 text-gray-400" />Notification Preferences</h2>
           <form onSubmit={saveNotifications} className="space-y-6">
             <div>
               <p className="label mb-3">Channels</p>
@@ -123,7 +123,7 @@ export default function Settings() {
                 {[['email_enabled','Email notifications'],['telegram_enabled','Telegram (requires Chat ID in Profile)'],['whatsapp_enabled','WhatsApp (requires number in Profile)']].map(([key, label]) => (
                   <label key={key} className="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" checked={notifSettings[key] ?? false} onChange={(e) => setNotifSettings((s) => ({ ...s, [key]: e.target.checked }))} className="rounded" />
-                    <span className="text-sm text-slate-300">{label}</span>
+                    <span className="text-sm text-gray-700">{label}</span>
                   </label>
                 ))}
               </div>
@@ -134,7 +134,7 @@ export default function Settings() {
                 {Object.entries(notifSettings.alert_on ?? {}).map(([key, val]) => (
                   <label key={key} className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={val} onChange={(e) => setNotifSettings((s) => ({ ...s, alert_on: { ...s.alert_on, [key]: e.target.checked } }))} className="rounded" />
-                    <span className="text-sm text-slate-300 capitalize">{key.replace(/_/g, ' ')}</span>
+                    <span className="text-sm text-gray-700 capitalize">{key.replace(/_/g, ' ')}</span>
                   </label>
                 ))}
               </div>
@@ -147,7 +147,7 @@ export default function Settings() {
       {tab === 'team' && (
         <div className="space-y-4">
           <div className="card p-5">
-            <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2"><Plus className="w-4 h-4 text-slate-500" />Invite Team Member</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2"><Plus className="w-4 h-4 text-gray-400" />Invite Team Member</h2>
             <form onSubmit={inviteUser} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="label">Email *</label><input className="input" type="email" required value={inviteForm.email} onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))} /></div>
@@ -166,16 +166,16 @@ export default function Settings() {
             </form>
           </div>
           <div className="card overflow-hidden">
-            <div className="card-header"><h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2"><Users className="w-4 h-4 text-slate-500" />Team ({teamUsers.length})</h2></div>
-            <div className="divide-y" style={{ borderColor: '#1a2540' }}>
+            <div className="card-header"><h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2"><Users className="w-4 h-4 text-gray-400" />Team ({teamUsers.length})</h2></div>
+            <div className="divide-y" style={{ borderColor: '#e5e7eb' }}>
               {teamUsers.map((u) => (
-                <div key={u.id} className="flex items-center gap-3 px-5 py-3 hover:bg-[#162033] transition-all duration-200">
+                <div key={u.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-all duration-200">
                   <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-sm font-semibold text-white flex-shrink-0">{u.full_name?.[0] ?? '?'}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-200">{u.full_name}</p>
-                    <p className="text-xs text-slate-500">{u.email}</p>
+                    <p className="text-sm font-medium text-gray-900">{u.full_name}</p>
+                    <p className="text-xs text-gray-400">{u.email}</p>
                   </div>
-                  <span className={`badge border capitalize ${u.role === 'superadmin' ? 'bg-violet-500/20 text-violet-400 border-violet-500/30' : u.role === 'engineer' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-slate-700/50 text-slate-400 border-slate-600/50'}`}>{u.role}</span>
+                  <span className={`badge border capitalize ${u.role === 'superadmin' ? 'bg-violet-500/20 text-violet-400 border-violet-500/30' : u.role === 'engineer' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>{u.role}</span>
                   <button onClick={() => toggleUserActive(u.id, u.is_active)} disabled={u.id === user?.id}
                     className={`text-xs px-2.5 py-1 rounded-lg transition-all duration-200 disabled:opacity-30 ${u.is_active ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'}`}>
                     {u.is_active ? 'Deactivate' : 'Activate'}

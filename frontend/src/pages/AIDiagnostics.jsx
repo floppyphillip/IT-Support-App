@@ -51,13 +51,13 @@ export default function AIDiagnostics() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl w-fit flex-wrap" style={{ background: '#090d18' }}>
+      <div className="flex gap-1 p-1 rounded-xl w-fit flex-wrap" style={{ background: '#f9fafb' }}>
         {TABS.map(([key, label, Icon]) => (
           <button key={key} onClick={() => setTab(key)}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-              tab === key ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'
+              tab === key ? 'text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'
             }`}
-            style={tab === key ? { background: '#0e1525' } : {}}>
+            style={tab === key ? { background: '#e2e8f0' } : {}}>
             <Icon className="w-3.5 h-3.5" />{label}
           </button>
         ))}
@@ -66,7 +66,7 @@ export default function AIDiagnostics() {
       {tab === 'diagnose' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <form onSubmit={runDiagnose} className="card p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-200">Describe the Issue</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Describe the Issue</h2>
             <div><label className="label">Issue Description *</label>
               <textarea className="input h-32 resize-none" required value={diagnoseForm.description}
                 onChange={(e) => setDiagnoseForm((f) => ({ ...f, description: e.target.value }))}
@@ -91,12 +91,12 @@ export default function AIDiagnostics() {
               </div>
               {diagnoseResult.error ? <p className="text-red-400 text-sm">{diagnoseResult.error}</p> : (
                 <>
-                  <div><p className="label">Diagnosis</p><p className="text-sm text-slate-300 leading-relaxed">{diagnoseResult.diagnosis}</p></div>
-                  <div><p className="label">Root Cause</p><p className="text-sm text-slate-400">{diagnoseResult.root_cause}</p></div>
+                  <div><p className="label">Diagnosis</p><p className="text-sm text-gray-700 leading-relaxed">{diagnoseResult.diagnosis}</p></div>
+                  <div><p className="label">Root Cause</p><p className="text-sm text-gray-500">{diagnoseResult.root_cause}</p></div>
                   {diagnoseResult.fix_steps?.length > 0 && (
                     <div><p className="label">Fix Steps</p>
                       <ol className="space-y-1.5">{diagnoseResult.fix_steps.map((step, i) => (
-                        <li key={i} className="text-sm text-slate-400 flex gap-2"><span className="text-slate-500 font-medium flex-shrink-0">{i + 1}.</span>{step}</li>
+                        <li key={i} className="text-sm text-gray-500 flex gap-2"><span className="text-gray-400 font-medium flex-shrink-0">{i + 1}.</span>{step}</li>
                       ))}</ol>
                     </div>
                   )}
@@ -120,7 +120,7 @@ export default function AIDiagnostics() {
       {tab === 'config' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <form onSubmit={runAnalyzeConfig} className="card p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-200">Paste Device Configuration</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Paste Device Configuration</h2>
             <div><label className="label">Device Type</label>
               <select className="input" value={deviceType} onChange={(e) => setDeviceType(e.target.value)}>
                 {DEVICE_TYPES.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
@@ -136,20 +136,20 @@ export default function AIDiagnostics() {
           {configResult && (
             <div className="card p-5 space-y-4 overflow-y-auto max-h-[600px]">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-200">Security Analysis</h2>
+                <h2 className="text-sm font-semibold text-gray-900">Security Analysis</h2>
                 {configResult.overall_security_score != null && (
                   <span className={`badge border ${configResult.overall_security_score >= 80 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : configResult.overall_security_score >= 50 ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
                     Score: {configResult.overall_security_score}/100
                   </span>
                 )}
               </div>
-              {configResult.summary && <p className="text-sm text-slate-400">{configResult.summary}</p>}
+              {configResult.summary && <p className="text-sm text-gray-500">{configResult.summary}</p>}
               {configResult.security_issues?.map((issue, i) => (
                 <div key={i} className="p-3 rounded-xl"
-                  style={{ borderLeft: `4px solid ${issue.severity === 'critical' ? '#ef4444' : issue.severity === 'high' ? '#f97316' : '#f59e0b'}`, background: '#162033' }}>
-                  <p className="text-xs font-semibold uppercase text-slate-500">{issue.severity}</p>
-                  <p className="text-sm font-medium text-slate-200">{issue.issue}</p>
-                  <p className="text-xs text-slate-500 mt-1">{issue.recommendation}</p>
+                  style={{ borderLeft: `4px solid ${issue.severity === 'critical' ? '#ef4444' : issue.severity === 'high' ? '#f97316' : '#f59e0b'}`, background: '#f3f4f6' }}>
+                  <p className="text-xs font-semibold uppercase text-gray-400">{issue.severity}</p>
+                  <p className="text-sm font-medium text-gray-900">{issue.issue}</p>
+                  <p className="text-xs text-gray-400 mt-1">{issue.recommendation}</p>
                 </div>
               ))}
             </div>
@@ -160,7 +160,7 @@ export default function AIDiagnostics() {
       {tab === 'logs' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <form onSubmit={runInterpretLogs} className="card p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-200">Paste Syslog / Log Output</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Paste Syslog / Log Output</h2>
             <div><label className="label">Device Type</label>
               <select className="input" value={logDeviceType} onChange={(e) => setLogDeviceType(e.target.value)}>
                 {LOG_TYPES.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
@@ -175,21 +175,21 @@ export default function AIDiagnostics() {
           </form>
           {logResult && (
             <div className="card p-5 space-y-4 overflow-y-auto max-h-[600px]">
-              <h2 className="text-sm font-semibold text-slate-200">Log Analysis</h2>
-              {logResult.timeline_summary && <p className="text-sm text-slate-400">{logResult.timeline_summary}</p>}
+              <h2 className="text-sm font-semibold text-gray-900">Log Analysis</h2>
+              {logResult.timeline_summary && <p className="text-sm text-gray-500">{logResult.timeline_summary}</p>}
               {logResult.requires_immediate_attention && (
                 <div className="rounded-xl p-3 text-sm text-red-400 font-medium" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
                   Requires immediate attention — {logResult.critical_events_count} critical event(s)
                 </div>
               )}
               {logResult.error_patterns?.map((p, i) => (
-                <div key={i} className="p-3 rounded-xl" style={{ background: '#162033' }}>
+                <div key={i} className="p-3 rounded-xl" style={{ background: '#f3f4f6' }}>
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium text-slate-200">{p.pattern}</p>
-                    <span className="badge bg-slate-700/50 text-slate-400 border border-slate-600/50">{p.occurrences}×</span>
+                    <p className="text-sm font-medium text-gray-900">{p.pattern}</p>
+                    <span className="badge bg-slate-700/50 text-gray-500 border border-slate-600/50">{p.occurrences}×</span>
                   </div>
-                  <p className="text-xs text-slate-500">{p.interpretation}</p>
-                  <p className="text-xs text-slate-500 mt-1 font-medium">→ {p.recommended_action}</p>
+                  <p className="text-xs text-gray-400">{p.interpretation}</p>
+                  <p className="text-xs text-gray-400 mt-1 font-medium">→ {p.recommended_action}</p>
                 </div>
               ))}
             </div>
