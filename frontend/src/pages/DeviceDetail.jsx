@@ -221,20 +221,17 @@ function exportCSV(sensor, points) {
 
 // ─── FullSensorModal ──────────────────────────────────────────────────────────
 function FullSensorModal({ sensor, onClose }) {
-  const [showReport, setShowReport] = useState(false)
   const [period, setPeriod]         = useState('2d')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo]     = useState('')
 
   if (!sensor) return null
-  const isBw = sensor.type === 'bandwidth'
-  const data = sensor.data
+  const isBw        = sensor.type === 'bandwidth'
+  const displayData = filterByPeriod(sensor.data, period, customFrom, customTo)
 
   let maxVal = null, minVal = null
-  data.forEach(pt => {
-    const v = isBw
-      ? (pt.in_kbps ?? 0) + (pt.out_kbps ?? 0)
-      : pt.latency_ms
+  displayData.forEach(pt => {
+    const v = isBw ? (pt.in_kbps ?? 0) + (pt.out_kbps ?? 0) : pt.latency_ms
     if (v == null) return
     if (maxVal === null || v > maxVal) maxVal = v
     if (minVal === null || v < minVal) minVal = v
@@ -268,7 +265,7 @@ function FullSensorModal({ sensor, onClose }) {
               <p className="text-sm font-bold text-gray-900 font-mono leading-tight">{title}</p>
               <p className="text-[15px] text-gray-400 mt-0.5">
                 {isBw ? 'Bandwidth Utilization' : 'Ping Latency (RTT)'}
-                {' · '}{data.length} samples · every {POLL_INTERVAL / 1000}s
+                {' · '}{displayData.length} of {sensor.data.length} samples · every {POLL_INTERVAL / 1000}s
               </p>
             </div>
           </div>
@@ -280,18 +277,62 @@ function FullSensorModal({ sensor, onClose }) {
           </button>
         </div>
 
+        {/* Period selector */}
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-200 flex-wrap" style={{ background: '#f9fafb' }}>
+          {REPORT_PERIODS.map(rp => (
+            <button
+              key={rp.key}
+              onClick={() => setPeriod(rp.key)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                period === rp.key
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              {rp.label}
+            </button>
+          ))}
+          {period === 'custom' && (
+            <div className="flex items-center gap-2 ml-2">
+              <input
+                type="date"
+                value={customFrom}
+                onChange={e => setCustomFrom(e.target.value)}
+                className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-700 outline-none focus:border-blue-500/50 transition-colors"
+              />
+              <span className="text-xs text-gray-400">to</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={e => setCustomTo(e.target.value)}
+                className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-700 outline-none focus:border-blue-500/50 transition-colors"
+              />
+            </div>
+          )}
+        </div>
+
         {/* Chart */}
         <div className="px-5 pt-5 pb-4" style={{ background: '#f9fafb' }}>
-          {data.length < 2 ? (
+          {displayData.length < 2 ? (
             <div className="h-64 flex flex-col items-center justify-center text-gray-400">
-              <Loader2 size={24} className="animate-spin mb-3 text-gray-400" />
-              <p className="text-sm">Collecting data… ({data.length} sample{data.length !== 1 ? 's' : ''})</p>
-              <p className="text-xs text-gray-400 mt-1">First reading arrives in ~{POLL_INTERVAL / 1000}s</p>
+              {sensor.data.length < 2 ? (
+                <>
+                  <Loader2 size={24} className="animate-spin mb-3 text-gray-400" />
+                  <p className="text-sm">Collecting data… ({sensor.data.length} sample{sensor.data.length !== 1 ? 's' : ''})</p>
+                  <p className="text-xs text-gray-400 mt-1">First reading arrives in ~{POLL_INTERVAL / 1000}s</p>
+                </>
+              ) : (
+                <>
+                  <FileText size={28} className="mb-3 opacity-30" />
+                  <p className="text-sm font-medium text-gray-500">No data for this period</p>
+                  <p className="text-xs text-gray-400 mt-1">Try a wider time range or select Custom</p>
+                </>
+              )}
             </div>
           ) : (
             <>
               <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={data} margin={{ top: 20, right: 100, bottom: 0, left: 8 }}>
+                <AreaChart data={displayData} margin={{ top: 20, right: 100, bottom: 0, left: 8 }}>
                   <defs>
                     <linearGradient id="gIn" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%"   stopColor="#3b82f6" stopOpacity={0.45} />
@@ -363,7 +404,7 @@ function FullSensorModal({ sensor, onClose }) {
                 </AreaChart>
               </ResponsiveContainer>
 
-              {/* Legend */}
+              {/* Legend + export */}
               <div className="flex items-center gap-6 mt-4 pt-3 border-t border-gray-100">
                 {isBw ? (
                   <>
@@ -373,93 +414,20 @@ function FullSensorModal({ sensor, onClose }) {
                 ) : (
                   <LegendItem color="#10b981" label="RTT (ms)" />
                 )}
-                <div className="ml-auto flex items-center gap-4 text-[15px] font-mono text-gray-400">
-                  {maxVal != null && <span>Max: <span className="text-gray-500">{fmtVal(maxVal)}</span></span>}
-                  {minVal != null && <span>Min: <span className="text-gray-500">{fmtVal(minVal)}</span></span>}
+                <div className="ml-auto flex items-center gap-4">
+                  <div className="flex items-center gap-4 text-[15px] font-mono text-gray-400">
+                    {maxVal != null && <span>Max: <span className="text-gray-500">{fmtVal(maxVal)}</span></span>}
+                    {minVal != null && <span>Min: <span className="text-gray-500">{fmtVal(minVal)}</span></span>}
+                  </div>
+                  <button
+                    onClick={() => exportCSV(sensor, displayData)}
+                    className="flex items-center gap-1.5 bg-white border border-gray-200 hover:border-gray-300 text-gray-600 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
+                  >
+                    <Download size={12} /> Export CSV
+                  </button>
                 </div>
               </div>
             </>
-          )}
-        </div>
-
-        {/* Report Generator */}
-        <div className="border-t border-gray-200">
-          <button
-            onClick={() => setShowReport(r => !r)}
-            className="w-full flex items-center justify-between px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            <span className="flex items-center gap-2 font-semibold">
-              <FileText size={14} className="text-gray-400" />
-              Generate Report
-            </span>
-            <ChevronRight size={14} className={`text-gray-400 transition-transform duration-200 ${showReport ? 'rotate-90' : ''}`} />
-          </button>
-
-          {showReport && (
-            <div className="px-5 pb-5 space-y-4 border-t border-gray-100" style={{ background: '#f9fafb' }}>
-              <div className="pt-4">
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Time Period</p>
-                <div className="flex flex-wrap gap-2">
-                  {REPORT_PERIODS.map(rp => (
-                    <button
-                      key={rp.key}
-                      onClick={() => setPeriod(rp.key)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                        period === rp.key
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
-                      }`}
-                    >
-                      {rp.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {period === 'custom' && (
-                <div className="flex items-end gap-3">
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">From</label>
-                    <input
-                      type="date"
-                      value={customFrom}
-                      onChange={e => setCustomFrom(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500/50 transition-colors"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">To</label>
-                    <input
-                      type="date"
-                      value={customTo}
-                      onChange={e => setCustomTo(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500/50 transition-colors"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {(() => {
-                const pts = filterByPeriod(data, period, customFrom, customTo)
-                return (
-                  <div className="flex items-center justify-between pt-1">
-                    <p className="text-xs text-gray-400">
-                      {pts.length > 0
-                        ? <><span className="text-gray-700 font-semibold">{pts.length.toLocaleString()}</span> data points in period</>
-                        : <span className="text-amber-500 font-medium">No data available for this period</span>
-                      }
-                    </p>
-                    <button
-                      onClick={() => exportCSV(sensor, pts)}
-                      disabled={pts.length === 0}
-                      className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <Download size={12} /> Download CSV
-                    </button>
-                  </div>
-                )
-              })()}
-            </div>
           )}
         </div>
       </div>
