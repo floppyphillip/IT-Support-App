@@ -260,6 +260,7 @@ function FullSensorModal({ sensor, onClose }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.07)" vertical={false} />
                   <XAxis
                     dataKey="t"
+                    tickFormatter={v => typeof v === 'string' ? v.slice(0, 5) : v}
                     tick={{ fontSize: 13, fill: '#6b7280' }}
                     tickLine={false}
                     axisLine={{ stroke: '#e5e7eb' }}
@@ -268,15 +269,15 @@ function FullSensorModal({ sensor, onClose }) {
                   <YAxis
                     tickFormatter={v =>
                       isBw
-                        ? v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}G`
-                          : v >= 1_000 ? `${(v / 1_000).toFixed(1)}M`
-                          : `${v.toFixed(0)}`
-                        : `${v}`
+                        ? v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)} Gb/s`
+                          : v >= 1_000 ? `${(v / 1_000).toFixed(1)} Mb/s`
+                          : `${v.toFixed(0)} kb/s`
+                        : `${v} ms`
                     }
                     tick={{ fontSize: 13, fill: '#6b7280' }}
                     tickLine={false}
                     axisLine={false}
-                    width={44}
+                    width={72}
                   />
                   <Tooltip
                     formatter={(v, name) => {
@@ -695,7 +696,7 @@ function SNMPMonitor({ device }) {
 
   const pollAll = async () => {
     const cur = sensorsRef.current
-    const t   = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+    const t   = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
     const bwSensors  = cur.filter(s => s.type === 'bandwidth')
     const latSensors = cur.filter(s => s.type === 'latency')
 
