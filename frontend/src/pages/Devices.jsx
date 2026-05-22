@@ -93,17 +93,16 @@ function DeviceFormModal({ device, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6"
-         style={{ background: 'rgba(0,0,0,0.7)' }}
-         onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full max-w-2xl my-8 rounded-2xl border flex flex-col"
-           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', maxHeight: 'calc(100vh - 4rem)' }}>
+    <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.7)' }}>
+      <div className="min-h-full flex items-center justify-center p-4"
+           onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+        <div className="w-full max-w-2xl bg-white rounded-2xl border border-gray-200 my-8">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
             <p className="font-semibold text-gray-900">{isEdit ? 'Edit Device' : 'Add Device'}</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+            <p className="text-xs text-gray-400 mt-0.5">
               {isEdit ? `Editing ${device.name}` : 'Register a new network device for monitoring'}
             </p>
           </div>
@@ -112,8 +111,8 @@ function DeviceFormModal({ device, onClose, onSaved }) {
           </button>
         </div>
 
-        {/* Body — scrollable */}
-        <div className="p-6 space-y-5 overflow-y-auto flex-1">
+        {/* Body */}
+        <div className="p-6 space-y-5">
 
           {/* Basic Info */}
           <section>
@@ -225,7 +224,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
           <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancel</button>
           <button onClick={submit} className="btn-primary" disabled={saving}>
             {saving
@@ -234,6 +233,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
                 ? <><Pencil className="w-3.5 h-3.5" />Save Changes</>
                 : <><Plus className="w-3.5 h-3.5" />Add Device</>}
           </button>
+        </div>
         </div>
       </div>
     </div>
