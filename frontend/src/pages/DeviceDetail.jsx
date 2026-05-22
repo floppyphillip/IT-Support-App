@@ -640,8 +640,23 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
 }
 
 // ─── SNMPMonitor ──────────────────────────────────────────────────────────────
+const SENSOR_STORAGE_KEY = id => `netsupportai-sensors-${id}`
+
+function loadPersistedSensors(deviceId) {
+  try {
+    const raw = localStorage.getItem(SENSOR_STORAGE_KEY(deviceId))
+    if (!raw) return []
+    return JSON.parse(raw).map(s => ({ ...s, data: [] }))
+  } catch { return [] }
+}
+
+function persistSensors(deviceId, sensors) {
+  const config = sensors.map(({ id, type, ifIndex, ifName, ifSpeed }) => ({ id, type, ifIndex, ifName, ifSpeed }))
+  localStorage.setItem(SENSOR_STORAGE_KEY(deviceId), JSON.stringify(config))
+}
+
 function SNMPMonitor({ device }) {
-  const [sensors, setSensors]               = useState([])
+  const [sensors, setSensors]               = useState(() => loadPersistedSensors(device.id))
   const [wizardOpen, setWizardOpen]         = useState(false)
   const [fullViewId, setFullViewId]         = useState(null)
   const [cachedInterfaces, setCachedInterfaces] = useState([])
@@ -650,7 +665,10 @@ function SNMPMonitor({ device }) {
   const timerRef   = useRef(null)
   const prevBwRef  = useRef(null)
   const sensorsRef = useRef(sensors)
-  useEffect(() => { sensorsRef.current = sensors }, [sensors])
+  useEffect(() => {
+    sensorsRef.current = sensors
+    persistSensors(device.id, sensors)
+  }, [sensors])
 
   const isPolling = sensors.length > 0
 
