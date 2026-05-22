@@ -93,14 +93,14 @@ function DeviceFormModal({ device, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto p-4"
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6"
          style={{ background: 'rgba(0,0,0,0.7)' }}
          onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full max-w-2xl mx-auto my-8 rounded-2xl border overflow-hidden flex flex-col"
-           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
+      <div className="w-full max-w-2xl my-8 rounded-2xl border flex flex-col"
+           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', maxHeight: 'calc(100vh - 4rem)' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
           <div>
             <p className="font-semibold text-gray-900">{isEdit ? 'Edit Device' : 'Add Device'}</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
@@ -113,7 +113,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
         </div>
 
         {/* Body — scrollable */}
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5 overflow-y-auto flex-1">
 
           {/* Basic Info */}
           <section>
@@ -225,7 +225,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
           <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancel</button>
           <button onClick={submit} className="btn-primary" disabled={saving}>
             {saving
