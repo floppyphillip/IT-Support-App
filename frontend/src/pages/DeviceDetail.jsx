@@ -646,13 +646,12 @@ function loadPersistedSensors(deviceId) {
   try {
     const raw = localStorage.getItem(SENSOR_STORAGE_KEY(deviceId))
     if (!raw) return []
-    return JSON.parse(raw).map(s => ({ ...s, data: [] }))
+    return JSON.parse(raw).map(s => ({ ...s, data: s.data ?? [] }))
   } catch { return [] }
 }
 
 function persistSensors(deviceId, sensors) {
-  const config = sensors.map(({ id, type, ifIndex, ifName, ifSpeed }) => ({ id, type, ifIndex, ifName, ifSpeed }))
-  localStorage.setItem(SENSOR_STORAGE_KEY(deviceId), JSON.stringify(config))
+  localStorage.setItem(SENSOR_STORAGE_KEY(deviceId), JSON.stringify(sensors))
 }
 
 function SNMPMonitor({ device }) {
