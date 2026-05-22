@@ -177,19 +177,21 @@ function LegendItem({ color, label }) {
 
 // ─── Report helpers ───────────────────────────────────────────────────────────
 const REPORT_PERIODS = [
-  { key: '2d', label: '2 Days' },
-  { key: '1w', label: '1 Week' },
-  { key: '1m', label: '1 Month' },
-  { key: '1y', label: '1 Year' },
+  { key: 'live', label: 'Live' },
+  { key: '2d',   label: '2 Days' },
+  { key: '1w',   label: '1 Week' },
+  { key: '1m',   label: '1 Month' },
+  { key: '1y',   label: '1 Year' },
   { key: 'custom', label: 'Custom' },
 ]
 
 const PERIOD_MS = { '2d': 2 * 86400000, '1w': 7 * 86400000, '1m': 30 * 86400000, '1y': 365 * 86400000 }
 
 function filterByPeriod(data, period, customFrom, customTo) {
+  if (period === 'live') return data
   const now = Date.now()
   return data.filter(p => {
-    if (!p.ts) return true
+    if (!p.ts) return false
     const t = new Date(p.ts).getTime()
     if (period === 'custom') {
       const from = customFrom ? new Date(customFrom).getTime() : 0
@@ -221,7 +223,7 @@ function exportCSV(sensor, points) {
 
 // ─── FullSensorModal ──────────────────────────────────────────────────────────
 function FullSensorModal({ sensor, onClose }) {
-  const [period, setPeriod]         = useState('2d')
+  const [period, setPeriod]         = useState('live')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo]     = useState('')
 
@@ -283,12 +285,15 @@ function FullSensorModal({ sensor, onClose }) {
             <button
               key={rp.key}
               onClick={() => setPeriod(rp.key)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                 period === rp.key
                   ? 'bg-blue-600 text-white'
                   : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
               }`}
             >
+              {rp.key === 'live' && (
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${period === 'live' ? 'bg-white status-online' : 'bg-emerald-400'}`} />
+              )}
               {rp.label}
             </button>
           ))}
@@ -765,8 +770,17 @@ function loadPersistedSensors(deviceId) {
     const raw = localStorage.getItem(SENSOR_STORAGE_KEY(deviceId))
     if (!raw) return []
     const seen = new Set()
+    const now  = Date.now()
     return JSON.parse(raw)
-      .map(s => ({ ...s, data: s.data ?? [] }))
+      .map(s => {
+        const data = (s.data ?? []).map((pt, i, arr) => {
+          if (pt.ts) return pt
+          // Reconstruct approximate timestamp for old data without ts
+          const msAgo = (arr.length - 1 - i) * POLL_INTERVAL
+          return { ...pt, ts: new Date(now - msAgo).toISOString() }
+        })
+        return { ...s, data }
+      })
       .filter(s => { if (seen.has(s.id)) return false; seen.add(s.id); return true })
   } catch { return [] }
 }
