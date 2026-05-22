@@ -7,7 +7,7 @@ import { Skeleton } from '../components/Skeleton'
 import {
   ArrowLeft, Terminal, RefreshCw, Database, Download, Zap, Cpu, HardDrive,
   Activity, Wifi, Loader2, Plus, X, BarChart2, Gauge, ArrowDown, ArrowUp,
-  ChevronLeft, ChevronRight, Check,
+  ChevronLeft, ChevronRight, Check, FileText,
 } from 'lucide-react'
 import {
   AreaChart, Area, LineChart, Line,
@@ -175,8 +175,57 @@ function LegendItem({ color, label }) {
   )
 }
 
+// ─── Report helpers ───────────────────────────────────────────────────────────
+const REPORT_PERIODS = [
+  { key: '2d', label: '2 Days' },
+  { key: '1w', label: '1 Week' },
+  { key: '1m', label: '1 Month' },
+  { key: '1y', label: '1 Year' },
+  { key: 'custom', label: 'Custom' },
+]
+
+const PERIOD_MS = { '2d': 2 * 86400000, '1w': 7 * 86400000, '1m': 30 * 86400000, '1y': 365 * 86400000 }
+
+function filterByPeriod(data, period, customFrom, customTo) {
+  const now = Date.now()
+  return data.filter(p => {
+    if (!p.ts) return true
+    const t = new Date(p.ts).getTime()
+    if (period === 'custom') {
+      const from = customFrom ? new Date(customFrom).getTime() : 0
+      const to   = customTo   ? new Date(customTo).getTime() + 86400000 : now
+      return t >= from && t <= to
+    }
+    return t >= now - PERIOD_MS[period]
+  })
+}
+
+function exportCSV(sensor, points) {
+  const isBw   = sensor.type === 'bandwidth'
+  const header = isBw
+    ? 'Timestamp,Traffic In (kbit/s),Traffic Out (kbit/s)'
+    : 'Timestamp,RTT (ms)'
+  const rows = points.map(p =>
+    isBw
+      ? `${p.ts ?? p.t},${p.in_kbps  != null ? p.in_kbps.toFixed(2)  : ''},${p.out_kbps != null ? p.out_kbps.toFixed(2) : ''}`
+      : `${p.ts ?? p.t},${p.latency_ms != null ? p.latency_ms.toFixed(1) : 'Timeout'}`
+  )
+  const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `${sensor.ifName.replace(/[^a-z0-9]/gi, '_')}_${sensor.type}_${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // ─── FullSensorModal ──────────────────────────────────────────────────────────
 function FullSensorModal({ sensor, onClose }) {
+  const [showReport, setShowReport] = useState(false)
+  const [period, setPeriod]         = useState('2d')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo]     = useState('')
+
   if (!sensor) return null
   const isBw = sensor.type === 'bandwidth'
   const data = sensor.data
@@ -330,6 +379,87 @@ function FullSensorModal({ sensor, onClose }) {
                 </div>
               </div>
             </>
+          )}
+        </div>
+
+        {/* Report Generator */}
+        <div className="border-t border-gray-200">
+          <button
+            onClick={() => setShowReport(r => !r)}
+            className="w-full flex items-center justify-between px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <span className="flex items-center gap-2 font-semibold">
+              <FileText size={14} className="text-gray-400" />
+              Generate Report
+            </span>
+            <ChevronRight size={14} className={`text-gray-400 transition-transform duration-200 ${showReport ? 'rotate-90' : ''}`} />
+          </button>
+
+          {showReport && (
+            <div className="px-5 pb-5 space-y-4 border-t border-gray-100" style={{ background: '#f9fafb' }}>
+              <div className="pt-4">
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Time Period</p>
+                <div className="flex flex-wrap gap-2">
+                  {REPORT_PERIODS.map(rp => (
+                    <button
+                      key={rp.key}
+                      onClick={() => setPeriod(rp.key)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        period === rp.key
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      {rp.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {period === 'custom' && (
+                <div className="flex items-end gap-3">
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">From</label>
+                    <input
+                      type="date"
+                      value={customFrom}
+                      onChange={e => setCustomFrom(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500/50 transition-colors"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">To</label>
+                    <input
+                      type="date"
+                      value={customTo}
+                      onChange={e => setCustomTo(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500/50 transition-colors"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {(() => {
+                const pts = filterByPeriod(data, period, customFrom, customTo)
+                return (
+                  <div className="flex items-center justify-between pt-1">
+                    <p className="text-xs text-gray-400">
+                      {pts.length > 0
+                        ? <><span className="text-gray-700 font-semibold">{pts.length.toLocaleString()}</span> data points in period</>
+                        : <span className="text-amber-500 font-medium">No data available for this period</span>
+                      }
+                    </p>
+                    <button
+                      onClick={() => exportCSV(sensor, pts)}
+                      disabled={pts.length === 0}
+                      className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Download size={12} /> Download CSV
+                    </button>
+                  </div>
+                )
+              })()}
+            </div>
           )}
         </div>
       </div>
@@ -696,6 +826,7 @@ function SNMPMonitor({ device }) {
 
   const pollAll = async () => {
     const cur = sensorsRef.current
+    const ts  = new Date().toISOString()
     const t   = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
     const bwSensors  = cur.filter(s => s.type === 'bandwidth')
     const latSensors = cur.filter(s => s.type === 'latency')
@@ -716,7 +847,7 @@ function SNMPMonitor({ device }) {
               if (!c || !p || c.in_octets == null || p.in_octets == null) return sensor
               const in_kbps  = Math.max(0, (c.in_octets  - p.in_octets)  * 8 / elapsed / 1000)
               const out_kbps = Math.max(0, (c.out_octets - p.out_octets) * 8 / elapsed / 1000)
-              return { ...sensor, data: [...sensor.data, { t, in_kbps, out_kbps }].slice(-120) }
+              return { ...sensor, data: [...sensor.data, { t, ts, in_kbps, out_kbps }].slice(-10080) }
             }))
           }
         }
@@ -730,7 +861,7 @@ function SNMPMonitor({ device }) {
         const latency_ms = data.reachable && data.latency_ms != null ? data.latency_ms : null
         setSensors(old => old.map(sensor => {
           if (sensor.type !== 'latency') return sensor
-          return { ...sensor, data: [...sensor.data, { t, latency_ms }].slice(-120) }
+          return { ...sensor, data: [...sensor.data, { t, ts, latency_ms }].slice(-10080) }
         }))
       } catch (err) { console.error('[Latency]', err.message) }
     }
