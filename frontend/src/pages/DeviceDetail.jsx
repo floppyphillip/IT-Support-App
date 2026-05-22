@@ -17,8 +17,7 @@ import { formatDistanceToNow } from 'date-fns'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const POLL_INTERVAL = 60_000
-let _sid = 0
-const newSid = () => `s${++_sid}`
+const newSid = () => `s${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtKbps(kbps) {
@@ -666,7 +665,10 @@ function loadPersistedSensors(deviceId) {
   try {
     const raw = localStorage.getItem(SENSOR_STORAGE_KEY(deviceId))
     if (!raw) return []
-    return JSON.parse(raw).map(s => ({ ...s, data: s.data ?? [] }))
+    const seen = new Set()
+    return JSON.parse(raw)
+      .map(s => ({ ...s, data: s.data ?? [] }))
+      .filter(s => { if (seen.has(s.id)) return false; seen.add(s.id); return true })
   } catch { return [] }
 }
 
@@ -816,7 +818,9 @@ function SNMPMonitor({ device }) {
         setCachedInterfaces={setCachedInterfaces}
       />
 
-      <FullSensorModal sensor={fullViewSensor} onClose={() => setFullViewId(null)} />
+      {fullViewSensor && (
+        <FullSensorModal key={fullViewSensor.id} sensor={fullViewSensor} onClose={() => setFullViewId(null)} />
+      )}
     </>
   )
 }
