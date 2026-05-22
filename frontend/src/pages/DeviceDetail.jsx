@@ -188,7 +188,7 @@ const REPORT_PERIODS = [
 const PERIOD_MS = { '2d': 2 * 86400000, '1w': 7 * 86400000, '1m': 30 * 86400000, '1y': 365 * 86400000 }
 
 function filterByPeriod(data, period, customFrom, customTo) {
-  if (period === 'live') return data
+  if (period === 'live') return data.slice(-120)
   const now = Date.now()
   return data.filter(p => {
     if (!p.ts) return false
@@ -223,13 +223,17 @@ function exportCSV(sensor, points) {
 
 // ─── FullSensorModal ──────────────────────────────────────────────────────────
 function FullSensorModal({ sensor, onClose }) {
-  const [period, setPeriod]         = useState('live')
-  const [customFrom, setCustomFrom] = useState('')
-  const [customTo, setCustomTo]     = useState('')
+  const [period, setPeriod]           = useState('live')
+  const [customFrom, setCustomFrom]   = useState('')
+  const [customTo, setCustomTo]       = useState('')
+  const [displayData, setDisplayData] = useState(() => filterByPeriod(sensor.data, 'live', '', ''))
+
+  useEffect(() => {
+    setDisplayData(filterByPeriod(sensor.data, period, customFrom, customTo))
+  }, [sensor.data, period, customFrom, customTo])
 
   if (!sensor) return null
-  const isBw        = sensor.type === 'bandwidth'
-  const displayData = filterByPeriod(sensor.data, period, customFrom, customTo)
+  const isBw = sensor.type === 'bandwidth'
 
   let maxVal = null, minVal = null
   displayData.forEach(pt => {
@@ -267,7 +271,7 @@ function FullSensorModal({ sensor, onClose }) {
               <p className="text-sm font-bold text-gray-900 font-mono leading-tight">{title}</p>
               <p className="text-[15px] text-gray-400 mt-0.5">
                 {isBw ? 'Bandwidth Utilization' : 'Ping Latency (RTT)'}
-                {' · '}{displayData.length} of {sensor.data.length} samples · every {POLL_INTERVAL / 1000}s
+                {' · '}{displayData.length} samples shown · {sensor.data.length} total
               </p>
             </div>
           </div>
