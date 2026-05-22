@@ -1126,18 +1126,16 @@ export default function DeviceDetail() {
               <RefreshCw className={`w-4 h-4 ${snmpPolling ? 'animate-spin' : ''}`} />SNMP
             </button>
           )}
+          <button onClick={triggerBackup} className="btn-secondary" disabled={backingUp}>
+            <Database className="w-4 h-4" />{backingUp ? 'Backing up…' : 'Config Backup'}
+          </button>
           {device.ssh_enabled && (
-            <>
-              <button onClick={triggerBackup} className="btn-secondary" disabled={backingUp}>
-                <Database className="w-4 h-4" />{backingUp ? 'Backing up…' : 'Backup'}
-              </button>
-              <Link
-                to={`/remote-access?host=${device.management_ip || device.ip_address}&user=${device.ssh_username || 'admin'}`}
-                className="btn-primary"
-              >
-                <Terminal className="w-4 h-4" />SSH
-              </Link>
-            </>
+            <Link
+              to={`/remote-access?host=${device.management_ip || device.ip_address}&user=${device.ssh_username || 'admin'}`}
+              className="btn-primary"
+            >
+              <Terminal className="w-4 h-4" />SSH
+            </Link>
           )}
         </div>
       </div>
