@@ -185,8 +185,9 @@ const REPORT_PERIODS = [
   { key: 'custom', label: 'Custom' },
 ]
 
-const PERIOD_MS = { '2d': 2 * 86400000, '1w': 7 * 86400000, '1m': 30 * 86400000, '1y': 365 * 86400000 }
+const PERIOD_MS = { live: 2 * 3600000, '2d': 2 * 86400000, '1w': 7 * 86400000, '1m': 30 * 86400000, '1y': 365 * 86400000 }
 
+// Used only for CSV export — returns raw data points within the period
 function filterByPeriod(data, period, customFrom, customTo) {
   if (period === 'live') return data.slice(-120)
   const now = Date.now()
@@ -200,6 +201,69 @@ function filterByPeriod(data, period, customFrom, customTo) {
     }
     return t >= now - PERIOD_MS[period]
   })
+}
+
+// Builds a full time-axis for the selected period, bucketing actual data into it.
+// Buckets with no data have null values so Recharts renders visible gaps.
+function buildChartData(data, isBw, period, customFrom, customTo) {
+  const now = Date.now()
+  let startMs, endMs
+
+  if (period === 'custom') {
+    startMs = customFrom ? new Date(customFrom).getTime() : now - 86400000
+    endMs   = customTo   ? new Date(customTo).getTime() + 86400000 : now
+  } else {
+    endMs   = now
+    startMs = now - (PERIOD_MS[period] ?? 2 * 3600000)
+  }
+
+  const rangeMs = endMs - startMs
+  // Snap bucket size to a sensible interval, targeting ≤120 buckets
+  const SNAPS = [60000, 5*60000, 15*60000, 30*60000, 3600000, 4*3600000, 12*3600000, 86400000, 7*86400000]
+  const bucketMs = SNAPS.find(s => rangeMs / s <= 120) ?? 7 * 86400000
+  const bucketCount = Math.ceil(rangeMs / bucketMs)
+
+  const fmt = ms => {
+    const d = new Date(ms)
+    if (period === 'live')
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    if (period === '2d')
+      return d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' +
+             d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    if (period === '1w')
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    const days = rangeMs / 86400000
+    if (days <= 3)
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+             d.toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }) + 'h'
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  const acc = Array.from({ length: bucketCount }, () => ({
+    sumIn: 0, sumOut: 0, sumLat: 0, cntBw: 0, cntLat: 0,
+  }))
+
+  data.forEach(pt => {
+    if (!pt.ts) return
+    const ptMs = new Date(pt.ts).getTime()
+    if (ptMs < startMs || ptMs > endMs) return
+    const idx = Math.min(Math.floor((ptMs - startMs) / bucketMs), bucketCount - 1)
+    if (idx < 0) return
+    if (isBw) {
+      if (pt.in_kbps  != null) { acc[idx].sumIn  += pt.in_kbps;  acc[idx].cntBw++ }
+      if (pt.out_kbps != null)   acc[idx].sumOut += pt.out_kbps
+    } else {
+      if (pt.latency_ms != null) { acc[idx].sumLat += pt.latency_ms; acc[idx].cntLat++ }
+    }
+  })
+
+  return acc.map((a, i) => ({
+    t:          fmt(startMs + i * bucketMs),
+    ts:         new Date(startMs + i * bucketMs).toISOString(),
+    in_kbps:    a.cntBw  > 0 ? a.sumIn  / a.cntBw  : null,
+    out_kbps:   a.cntBw  > 0 ? a.sumOut / a.cntBw  : null,
+    latency_ms: a.cntLat > 0 ? a.sumLat / a.cntLat : null,
+  }))
 }
 
 function exportCSV(sensor, points) {
@@ -223,17 +287,20 @@ function exportCSV(sensor, points) {
 
 // ─── FullSensorModal ──────────────────────────────────────────────────────────
 function FullSensorModal({ sensor, onClose }) {
+  const isBw = sensor?.type === 'bandwidth'
+
   const [period, setPeriod]           = useState('live')
   const [customFrom, setCustomFrom]   = useState('')
   const [customTo, setCustomTo]       = useState('')
-  const [displayData, setDisplayData] = useState(() => filterByPeriod(sensor.data, 'live', '', ''))
+  const [displayData, setDisplayData] = useState(() =>
+    sensor ? buildChartData(sensor.data, isBw, 'live', '', '') : []
+  )
 
   useEffect(() => {
-    setDisplayData(filterByPeriod(sensor.data, period, customFrom, customTo))
-  }, [sensor.data, period, customFrom, customTo])
+    if (sensor) setDisplayData(buildChartData(sensor.data, isBw, period, customFrom, customTo))
+  }, [sensor?.data, isBw, period, customFrom, customTo])
 
   if (!sensor) return null
-  const isBw = sensor.type === 'bandwidth'
 
   let maxVal = null, minVal = null
   displayData.forEach(pt => {
@@ -322,22 +389,24 @@ function FullSensorModal({ sensor, onClose }) {
 
         {/* Chart */}
         <div className="px-5 pt-5 pb-4" style={{ background: '#f9fafb' }}>
-          {displayData.length < 2 ? (
-            <div className="h-64 flex flex-col items-center justify-center text-gray-400">
-              {sensor.data.length < 2 ? (
-                <>
-                  <Loader2 size={24} className="animate-spin mb-3 text-gray-400" />
-                  <p className="text-sm">Collecting data… ({sensor.data.length} sample{sensor.data.length !== 1 ? 's' : ''})</p>
-                  <p className="text-xs text-gray-400 mt-1">First reading arrives in ~{POLL_INTERVAL / 1000}s</p>
-                </>
-              ) : (
-                <>
-                  <FileText size={28} className="mb-3 opacity-30" />
-                  <p className="text-sm font-medium text-gray-500">No data for this period</p>
-                  <p className="text-xs text-gray-400 mt-1">Try a wider time range or select Custom</p>
-                </>
-              )}
-            </div>
+          {(() => {
+            const hasData = displayData.some(p => isBw ? p.in_kbps != null : p.latency_ms != null)
+            return !hasData ? (
+              <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+                {sensor.data.length < 2 ? (
+                  <>
+                    <Loader2 size={24} className="animate-spin mb-3 text-gray-400" />
+                    <p className="text-sm">Collecting data… ({sensor.data.length} sample{sensor.data.length !== 1 ? 's' : ''})</p>
+                    <p className="text-xs text-gray-400 mt-1">First reading arrives in ~{POLL_INTERVAL / 1000}s</p>
+                  </>
+                ) : (
+                  <>
+                    <FileText size={28} className="mb-3 opacity-30" />
+                    <p className="text-sm font-medium text-gray-500">No data for this period</p>
+                    <p className="text-xs text-gray-400 mt-1">Try a wider time range or select Custom</p>
+                  </>
+                )}
+              </div>
           ) : (
             <>
               <ResponsiveContainer width="100%" height={260}>
@@ -359,7 +428,6 @@ function FullSensorModal({ sensor, onClose }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.07)" vertical={false} />
                   <XAxis
                     dataKey="t"
-                    tickFormatter={v => typeof v === 'string' ? v.slice(0, 5) : v}
                     tick={{ fontSize: 13, fill: '#6b7280' }}
                     tickLine={false}
                     axisLine={{ stroke: '#e5e7eb' }}
@@ -404,8 +472,8 @@ function FullSensorModal({ sensor, onClose }) {
                   )}
                   {isBw ? (
                     <>
-                      <Area type="monotone" dataKey="in_kbps"  name="in_kbps"  stroke="#3b82f6" fill="url(#gIn)"  dot={false} strokeWidth={2} isAnimationActive={false} connectNulls />
-                      <Area type="monotone" dataKey="out_kbps" name="out_kbps" stroke="#f59e0b" fill="url(#gOut)" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls />
+                      <Area type="monotone" dataKey="in_kbps"  name="in_kbps"  stroke="#3b82f6" fill="url(#gIn)"  dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
+                      <Area type="monotone" dataKey="out_kbps" name="out_kbps" stroke="#f59e0b" fill="url(#gOut)" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
                     </>
                   ) : (
                     <Area type="monotone" dataKey="latency_ms" name="latency_ms" stroke="#10b981" fill="url(#gLat)" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
@@ -437,7 +505,7 @@ function FullSensorModal({ sensor, onClose }) {
                 </div>
               </div>
             </>
-          )}
+          )})()}
         </div>
       </div>
     </div>

@@ -14,7 +14,7 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage()
 await page.setViewport({ width: WIDTH, height: HEIGHT })
 await page.evaluateOnNewDocument(() => {
-  localStorage.setItem('netsupportai-auth', JSON.stringify({ state: { user: { id: 'dev-user-1', full_name: 'Adewale Okafor', email: 'admin@netsupportai.com', role: 'superadmin' }, token: 'dev-mock-token' }, version: 0 }))
+  localStorage.setItem('netsupportai-auth', JSON.stringify({ state: { user: { id: 'dev-user-1', full_name: 'Adewale Okafor', email: 'admin@netsupportai.com', role: 'superadmin' }, accessToken: 'dev-mock-token' }, version: 0 }))
 })
 await page.goto(PAGE, { waitUntil: 'networkidle2', timeout: 15000 })
 await new Promise(r => setTimeout(r, 1500))
