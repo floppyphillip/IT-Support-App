@@ -16,7 +16,7 @@ import {
 import { formatDistanceToNow } from 'date-fns'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const POLL_INTERVAL = 10_000
+const POLL_INTERVAL = 60_000
 let _sid = 0
 const newSid = () => `s${++_sid}`
 
@@ -372,8 +372,12 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
 
   const handleNext = async () => {
     if (step === 1) {
-      setStep(2)
-      if (!cachedInterfaces.length && !discovering) discover()
+      if (type === 'latency') {
+        setStep(3)
+      } else {
+        setStep(2)
+        if (!cachedInterfaces.length && !discovering) discover()
+      }
     } else if (step === 2) {
       if (!selected.size) return toast.error('Select at least one interface')
       setStep(3)
@@ -381,18 +385,22 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
   }
 
   const handleAdd = () => {
-    const sensors = [...selected].map(ifIndex => {
-      const iface = cachedInterfaces.find(i => i.index === ifIndex)
-      return {
-        id: newSid(),
-        type,
-        ifIndex,
-        ifName: iface?.name ?? `ifIndex ${ifIndex}`,
-        ifSpeed: iface?.speed_bps ?? null,
-        data: [],
-      }
-    })
-    onAdd(sensors)
+    if (type === 'latency') {
+      onAdd([{ id: newSid(), type: 'latency', ifIndex: null, ifName: deviceIp || 'Device', ifSpeed: null, data: [] }])
+    } else {
+      const sensors = [...selected].map(ifIndex => {
+        const iface = cachedInterfaces.find(i => i.index === ifIndex)
+        return {
+          id: newSid(),
+          type,
+          ifIndex,
+          ifName: iface?.name ?? `ifIndex ${ifIndex}`,
+          ifSpeed: iface?.speed_bps ?? null,
+          data: [],
+        }
+      })
+      onAdd(sensors)
+    }
     onClose()
   }
 
@@ -569,39 +577,51 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
           {step === 3 && (
             <div>
               <p className="text-xs text-gray-500 mb-4">
-                Adding <span className="text-gray-900 font-semibold">{selected.size}</span>{' '}
-                {type === 'bandwidth' ? 'Bandwidth' : 'Latency'} sensor{selected.size !== 1 ? 's' : ''}:
+                {type === 'latency'
+                  ? 'Adding 1 Ping Latency sensor:'
+                  : <>Adding <span className="text-gray-900 font-semibold">{selected.size}</span>{' '}
+                      Bandwidth sensor{selected.size !== 1 ? 's' : ''}:</>
+                }
               </p>
               <div className="space-y-2 mb-4" style={{ maxHeight: 240, overflowY: 'auto' }}>
-                {[...selected].map(ifIndex => {
-                  const iface = cachedInterfaces.find(i => i.index === ifIndex)
-                  return (
-                    <div key={ifIndex} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
-                      <div className={`p-1.5 rounded flex-shrink-0 ${type === 'bandwidth' ? 'bg-blue-500/20' : 'bg-emerald-500/20'}`}>
-                        {type === 'bandwidth'
-                          ? <BarChart2 size={12} className="text-blue-400" />
-                          : <Gauge    size={12} className="text-emerald-400" />
-                        }
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-mono font-semibold text-gray-900 truncate">
-                          {iface?.name ?? `ifIndex ${ifIndex}`}
-                        </p>
-                        <p className="text-[15px] text-gray-400">
-                          ifIndex {ifIndex}{iface?.speed_bps ? ` · ${fmtBps(iface.speed_bps)}` : ''}
-                        </p>
-                      </div>
-                      <span className={`text-[13px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0 ${
-                        iface?.status === 'up'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          : 'bg-red-500/10 text-red-400 border-red-500/20'
-                      }`}>{iface?.status ?? '—'}</span>
+                {type === 'latency' ? (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                    <div className="p-1.5 rounded flex-shrink-0 bg-emerald-500/20">
+                      <Gauge size={12} className="text-emerald-400" />
                     </div>
-                  )
-                })}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-mono font-semibold text-gray-900 truncate">{deviceIp}</p>
+                      <p className="text-[15px] text-gray-400">ICMP ping · RTT in ms</p>
+                    </div>
+                  </div>
+                ) : (
+                  [...selected].map(ifIndex => {
+                    const iface = cachedInterfaces.find(i => i.index === ifIndex)
+                    return (
+                      <div key={ifIndex} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div className="p-1.5 rounded flex-shrink-0 bg-blue-500/20">
+                          <BarChart2 size={12} className="text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-mono font-semibold text-gray-900 truncate">
+                            {iface?.name ?? `ifIndex ${ifIndex}`}
+                          </p>
+                          <p className="text-[15px] text-gray-400">
+                            ifIndex {ifIndex}{iface?.speed_bps ? ` · ${fmtBps(iface.speed_bps)}` : ''}
+                          </p>
+                        </div>
+                        <span className={`text-[13px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0 ${
+                          iface?.status === 'up'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : 'bg-red-500/10 text-red-400 border-red-500/20'
+                        }`}>{iface?.status ?? '—'}</span>
+                      </div>
+                    )
+                  })
+                )}
               </div>
               <p className="text-[15px] text-gray-400">
-                Sensors begin polling immediately. First data point arrives in ~{POLL_INTERVAL / 1000}s.
+                Sensor{type === 'latency' ? '' : selected.size !== 1 ? 's' : ''} begin polling immediately. First data point arrives in ~{POLL_INTERVAL / 1000}s.
               </p>
             </div>
           )}
@@ -610,7 +630,7 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200">
           <button
-            onClick={step === 1 ? onClose : () => setStep(s => s - 1)}
+            onClick={step === 1 ? onClose : () => setStep(type === 'latency' && step === 3 ? 1 : s => s - 1)}
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors"
           >
             {step > 1 && <ChevronLeft size={14} />}
