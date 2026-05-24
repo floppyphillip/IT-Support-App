@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from app.models.ticket import TicketStatus, TicketPriority, TicketCategory
 
 
@@ -85,6 +85,11 @@ class TicketResponse(BaseModel):
     created_by: Optional[TicketUserResponse] = None
     messages: list[TicketMessageResponse] = []
     model_config = {"from_attributes": True}
+
+    @field_validator('messages', mode='before')
+    @classmethod
+    def coerce_messages(cls, v):
+        return v if v is not None else []
 
 
 class TicketListItem(BaseModel):

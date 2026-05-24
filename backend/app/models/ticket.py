@@ -74,7 +74,7 @@ class Ticket(Base):
     assigned_engineer: Mapped["User"] = relationship("User", foreign_keys=[assigned_engineer_id], back_populates="tickets_assigned", lazy="select")  # type: ignore[name-defined]
     created_by: Mapped["User"] = relationship("User", foreign_keys=[created_by_id], back_populates="tickets_created", lazy="select")  # type: ignore[name-defined]
     device: Mapped["Device"] = relationship("Device", back_populates="tickets", lazy="select")  # type: ignore[name-defined]
-    messages: Mapped[list] = relationship("TicketMessage", back_populates="ticket", cascade="all, delete-orphan", order_by="TicketMessage.created_at", lazy="select")
+    messages: Mapped[list["TicketMessage"]] = relationship("TicketMessage", back_populates="ticket", cascade="all, delete-orphan", order_by="TicketMessage.created_at", lazy="select")
 
     def __repr__(self) -> str:
         return f"<Ticket {self.ticket_number} [{self.status}]>"
