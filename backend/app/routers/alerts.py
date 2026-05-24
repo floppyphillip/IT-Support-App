@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.models.alert import Alert
@@ -11,6 +12,16 @@ from app.schemas.alert import AlertCreate, AlertResponse, AlertList
 from app.utils.security import get_current_user_id, require_superadmin_or_engineer
 
 router = APIRouter()
+
+
+async def _get_alert_or_404(db: AsyncSession, alert_id: str) -> Alert:
+    result = await db.execute(
+        select(Alert).where(Alert.id == alert_id).options(selectinload(Alert.ticket))
+    )
+    alert = result.scalar_one_or_none()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return alert
 
 
 @router.get("/", response_model=AlertList)
@@ -24,7 +35,7 @@ async def list_alerts(
     db: AsyncSession = Depends(get_db),
     _user: str = Depends(get_current_user_id),
 ):
-    q = select(Alert)
+    q = select(Alert).options(selectinload(Alert.ticket))
     if is_resolved is not None:
         q = q.where(Alert.is_resolved == is_resolved)
     if severity:
@@ -66,10 +77,7 @@ async def get_alert(
     db: AsyncSession = Depends(get_db),
     _user: str = Depends(get_current_user_id),
 ):
-    alert = await db.get(Alert, alert_id)
-    if not alert:
-        raise HTTPException(status_code=404, detail="Alert not found")
-    return alert
+    return await _get_alert_or_404(db, alert_id)
 
 
 @router.post("/{alert_id}/acknowledge", response_model=AlertResponse)
@@ -78,9 +86,7 @@ async def acknowledge_alert(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    alert = await db.get(Alert, alert_id)
-    if not alert:
-        raise HTTPException(status_code=404, detail="Alert not found")
+    alert = await _get_alert_or_404(db, alert_id)
     alert.is_acknowledged = True
     alert.acknowledged_by_id = user_id
     alert.acknowledged_at = datetime.now(timezone.utc)
@@ -94,9 +100,7 @@ async def resolve_alert(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(require_superadmin_or_engineer),
 ):
-    alert = await db.get(Alert, alert_id)
-    if not alert:
-        raise HTTPException(status_code=404, detail="Alert not found")
+    alert = await _get_alert_or_404(db, alert_id)
     alert.is_resolved = True
     alert.is_acknowledged = True
     alert.resolved_by_id = user_id
@@ -114,7 +118,5 @@ async def delete_alert(
     db: AsyncSession = Depends(get_db),
     _user: str = Depends(require_superadmin_or_engineer),
 ):
-    alert = await db.get(Alert, alert_id)
-    if not alert:
-        raise HTTPException(status_code=404, detail="Alert not found")
+    alert = await _get_alert_or_404(db, alert_id)
     await db.delete(alert)

@@ -1,8 +1,9 @@
 ﻿import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { alertsAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
-import { AlertTriangle, CheckCircle, Bell, Trash2, RefreshCw, ShieldCheck } from 'lucide-react'
+import { CheckCircle, Bell, Trash2, RefreshCw, ShieldCheck, ExternalLink } from 'lucide-react'
 import { SkeletonCard } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
 
@@ -15,6 +16,7 @@ const SEV = {
 const TABS = [['active', 'Active'], ['all', 'All'], ['resolved', 'Resolved']]
 
 export default function Alerts() {
+  const navigate = useNavigate()
   const [alerts, setAlerts] = useState([])
   const [total, setTotal] = useState(0)
   const [active, setActive] = useState(0)
@@ -88,8 +90,14 @@ export default function Alerts() {
         <div className="space-y-2">
           {alerts.map((a) => {
             const s = SEV[a.severity] ?? SEV.info
+            // Active alerts: navigate to ticket if one exists.
+            // Resolved alerts: only navigate if the linked ticket is closed.
+            const ticketClosed = a.ticket?.status === 'closed'
+            const canOpenTicket = !!a.ticket_id && (filter !== 'resolved' || ticketClosed)
             return (
-              <div key={a.id} className={`card border-l-4 ${s.left} p-4 hover:shadow-lg transition-all duration-200`}>
+              <div key={a.id}
+                className={`card border-l-4 ${s.left} p-4 hover:shadow-lg transition-all duration-200 ${canOpenTicket ? 'cursor-pointer' : ''}`}
+                onClick={() => canOpenTicket && navigate(`/tickets/${a.ticket_id}`)}>
                 <div className="flex items-start gap-3">
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${s.dot}`} />
                   <div className="flex-1 min-w-0">
@@ -104,9 +112,14 @@ export default function Alerts() {
                       <span className="capitalize">{a.alert_type.replace(/_/g, ' ')}</span>
                       {a.metric_value != null && <span>Value: {a.metric_value}</span>}
                       <span>{formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</span>
+                      {canOpenTicket && (
+                        <span className="flex items-center gap-1 text-blue-400">
+                          <ExternalLink className="w-3 h-3" />View ticket
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                     {!a.is_acknowledged && !a.is_resolved && (
                       <button className="btn-ghost py-1.5 px-2" onClick={() => doAction(a.id, 'acknowledge')}
                         disabled={actioning === a.id} title="Acknowledge">

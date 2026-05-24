@@ -21,10 +21,17 @@ class AlertUpdate(BaseModel):
     is_resolved: Optional[bool] = None
 
 
+class AlertTicketInfo(BaseModel):
+    id: str
+    status: str
+    model_config = {"from_attributes": True}
+
+
 class AlertResponse(BaseModel):
     id: str
     device_id: Optional[str] = None
     ticket_id: Optional[str] = None
+    ticket: Optional[AlertTicketInfo] = None
     alert_type: AlertType
     severity: AlertSeverity
     title: str

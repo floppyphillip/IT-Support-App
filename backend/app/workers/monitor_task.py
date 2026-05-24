@@ -108,6 +108,8 @@ async def _async_poll_all_devices():
                         sla_deadline=datetime.now(timezone.utc) + timedelta(hours=settings.SLA_CRITICAL_HOURS),
                     )
                     db.add(ticket)
+                    await db.flush()  # populate ticket.id
+                    alert.ticket_id = ticket.id
                     results["tickets_created"] += 1
 
             # Alert: device recovered
