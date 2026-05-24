@@ -6,7 +6,7 @@ export default function Layout() {
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div id="overlay-root" className="flex-1 flex flex-col overflow-hidden relative">
         <Navbar />
         <main className="flex-1 overflow-y-auto p-5 pb-20 md:pb-5">
           <Outlet />

@@ -1,4 +1,5 @@
 ﻿import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { devicesAPI } from '../api/client'
 import StatusIndicator from '../components/StatusIndicator'
@@ -97,13 +98,13 @@ function DeviceFormModal({ device, onClose, onSaved }) {
     }
   }
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
+      <div className="absolute inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
 
       {/* Centered modal */}
-      <div className="fixed inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
+      <div className="absolute inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
       <div className="w-full max-w-2xl flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
            style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', pointerEvents: 'auto' }}>
 
@@ -245,7 +246,8 @@ function DeviceFormModal({ device, onClose, onSaved }) {
         </div>
       </div>
       </div>
-    </>
+    </>,
+    document.getElementById('overlay-root')
   )
 }
 
@@ -272,8 +274,8 @@ function DeleteConfirmModal({ device, onClose, onDeleted }) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+  return createPortal(
+    <div className="absolute inset-0 z-50 flex items-center justify-center p-4"
          style={{ background: 'rgba(0,0,0,0.75)' }}
          onClick={(e) => { if (e.target === e.currentTarget && !deleting) onClose() }}>
       <div className="w-full max-w-sm rounded-2xl border overflow-hidden"
@@ -308,7 +310,8 @@ function DeleteConfirmModal({ device, onClose, onDeleted }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.getElementById('overlay-root')
   )
 }
 
@@ -423,14 +426,14 @@ function PingModal({ device, onClose }) {
     return 'text-red-400'
   }
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }}
+      <div className="absolute inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }}
            onClick={e => { if (!running) onClose() }} />
 
       {/* Centered modal */}
-      <div className="fixed inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
+      <div className="absolute inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
       <div className="w-full max-w-lg flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
            style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', pointerEvents: 'auto' }}>
 
@@ -524,7 +527,8 @@ function PingModal({ device, onClose }) {
         </div>
       </div>
       </div>
-    </>
+    </>,
+    document.getElementById('overlay-root')
   )
 }
 
