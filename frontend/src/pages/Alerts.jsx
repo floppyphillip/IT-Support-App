@@ -88,7 +88,7 @@ export default function Alerts() {
         </div>
       ) : (
         <div className="space-y-2">
-          {alerts.map((a) => {
+          {(filter === 'resolved' ? alerts.filter(a => a.ticket?.status === 'closed') : alerts).map((a) => {
             const s = SEV[a.severity] ?? SEV.info
             // Active alerts: navigate to ticket if one exists.
             // Resolved alerts: only navigate if the linked ticket is closed.
