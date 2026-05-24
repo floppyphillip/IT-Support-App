@@ -98,7 +98,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
       <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
 
       {/* Centered modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ pointerEvents: 'none' }}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ pointerEvents: 'none' }}>
       <div className="w-full max-w-2xl flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
            style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', height: '100%', pointerEvents: 'auto' }}>
 
@@ -415,7 +415,7 @@ function PingModal({ device, onClose }) {
            onClick={e => { if (!running) onClose() }} />
 
       {/* Centered modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ pointerEvents: 'none' }}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ pointerEvents: 'none' }}>
       <div className="w-full max-w-lg flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
            style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', height: '100%', pointerEvents: 'auto' }}>
 
