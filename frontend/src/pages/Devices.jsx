@@ -94,12 +94,13 @@ function DeviceFormModal({ device, onClose, onSaved }) {
 
   return (
     <>
-      {/* Dim backdrop — devices page still visible behind */}
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.25)' }} onClick={onClose} />
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
 
-      {/* Right-side drawer */}
-      <div className="fixed top-0 right-0 z-50 h-screen flex flex-col shadow-2xl border-l"
-           style={{ width: '480px', background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
+      {/* Centered modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ pointerEvents: 'none' }}>
+      <div className="w-full max-w-2xl flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
+           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', maxHeight: '90vh', pointerEvents: 'auto' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
@@ -237,6 +238,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
                 : <><Plus className="w-3.5 h-3.5" />Add Device</>}
           </button>
         </div>
+      </div>
       </div>
     </>
   )
@@ -408,13 +410,14 @@ function PingModal({ device, onClose }) {
 
   return (
     <>
-      {/* Dim backdrop — devices page still visible behind */}
-      <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.25)' }}
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }}
            onClick={e => { if (!running) onClose() }} />
 
-      {/* Right-side drawer */}
-      <div className="fixed top-0 right-0 z-50 h-screen flex flex-col shadow-2xl border-l"
-           style={{ width: '480px', background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
+      {/* Centered modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ pointerEvents: 'none' }}>
+      <div className="w-full max-w-lg flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
+           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', maxHeight: '90vh', pointerEvents: 'auto' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
@@ -504,6 +507,7 @@ function PingModal({ device, onClose }) {
             <p className="text-[15px] text-center" style={{ color: 'var(--text-4)' }}>— stats appear after first ping —</p>
           )}
         </div>
+      </div>
       </div>
     </>
   )
