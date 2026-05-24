@@ -97,7 +97,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
          style={{ background: 'rgba(0,0,0,0.7)' }}
          onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div className="w-full max-w-2xl mx-auto my-8 rounded-2xl border overflow-hidden flex flex-col"
-           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
+           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', minHeight: 'calc(100vh - 4rem)' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -113,7 +113,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
         </div>
 
         {/* Body — scrollable */}
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5 flex-1 overflow-y-auto">
 
           {/* Basic Info */}
           <section>
@@ -408,8 +408,8 @@ function PingModal({ device, onClose }) {
     <div className="fixed inset-0 z-50 overflow-y-auto p-4"
          style={{ background: 'rgba(0,0,0,0.75)' }}
          onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
-      <div className="w-full max-w-lg mx-auto my-12 rounded-2xl border overflow-hidden"
-           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
+      <div className="w-full max-w-lg mx-auto my-8 rounded-2xl border overflow-hidden flex flex-col"
+           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', minHeight: 'calc(100vh - 4rem)' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -452,7 +452,7 @@ function PingModal({ device, onClose }) {
         </div>
 
         {/* Terminal output */}
-        <div className="h-56 overflow-y-auto p-4 font-mono text-xs leading-relaxed"
+        <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed"
              style={{ background: 'var(--bg)' }}>
           {results.length === 0 && !running && (
             <p className="text-gray-400 text-center pt-16">Set count and press Start</p>
