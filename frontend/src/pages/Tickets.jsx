@@ -23,8 +23,8 @@ function TicketRow({ t }) {
         <StatusIndicator status={t.status} />
         <AlertBadge priority={t.priority} />
         <span className="text-xs text-gray-500">
-          {t.assigned_technician
-            ? <span className="flex items-center gap-1 text-gray-500"><User className="w-3 h-3" />{t.assigned_technician.full_name}</span>
+          {t.assigned_engineer
+            ? <span className="flex items-center gap-1 text-gray-500"><User className="w-3 h-3" />{t.assigned_engineer.full_name}</span>
             : <span className="text-gray-400">Unassigned</span>}
         </span>
         <span className="text-xs text-gray-500">{formatDistanceToNow(new Date(t.created_at), { addSuffix: true })}</span>

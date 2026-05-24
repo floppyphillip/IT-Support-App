@@ -87,6 +87,29 @@ class TicketResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class TicketListItem(BaseModel):
+    """Lightweight ticket representation for list views — no messages loaded."""
+    id: str
+    ticket_number: str
+    title: str
+    description: Optional[str] = None
+    status: TicketStatus
+    priority: TicketPriority
+    category: TicketCategory
+    client_id: Optional[str] = None
+    device_id: Optional[str] = None
+    assigned_engineer_id: Optional[str] = None
+    created_by_id: str
+    tags: Optional[list[str]] = None
+    sla_deadline: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    closed_at: Optional[datetime] = None
+    assigned_engineer: Optional[TicketUserResponse] = None
+    created_by: Optional[TicketUserResponse] = None
+    model_config = {"from_attributes": True}
+
+
 class TicketList(BaseModel):
     total: int
-    items: list[TicketResponse]
+    items: list[TicketListItem]

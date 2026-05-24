@@ -72,8 +72,8 @@ async def _async_poll_all_devices():
 
             db.add(metric)
 
-            # Alert: device went offline
-            if not reachable and prev_status == DeviceStatus.online:
+            # Alert: device went offline (also trigger on unknown→offline so new devices are covered)
+            if not reachable and prev_status in (DeviceStatus.online, DeviceStatus.unknown):
                 results["offline"] += 1
                 alert = Alert(
                     device_id=device.id,
