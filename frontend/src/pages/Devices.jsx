@@ -408,10 +408,10 @@ function PingModal({ device, onClose }) {
     <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.75)' }}>
       <div className="min-h-full flex items-center justify-center p-4"
            onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
-      <div className="w-full max-w-lg bg-white rounded-2xl border border-gray-200 my-8">
+      <div className="w-full max-w-lg bg-white rounded-2xl border border-gray-200 my-8 flex flex-col" style={{ minHeight: '75vh' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
           <div>
             <p className="font-semibold text-gray-900 flex items-center gap-2">
               <Zap className="w-4 h-4 text-blue-400" /> Ping Test
@@ -427,7 +427,7 @@ function PingModal({ device, onClose }) {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-4 px-5 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+        <div className="flex items-center gap-4 px-5 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
           <div className="flex items-center gap-2">
             <label className="text-[15px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>Count</label>
             <input type="number" min="1" max="100"
@@ -451,8 +451,8 @@ function PingModal({ device, onClose }) {
         </div>
 
         {/* Terminal output */}
-        <div className="h-56 overflow-y-auto p-4 font-mono text-xs leading-relaxed"
-             style={{ background: 'var(--bg)' }}>
+        <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed"
+             style={{ background: 'var(--bg)', minHeight: '200px' }}>
           {results.length === 0 && !running && (
             <p className="text-gray-400 text-center pt-16">Set count and press Start</p>
           )}
@@ -474,7 +474,7 @@ function PingModal({ device, onClose }) {
         </div>
 
         {/* Summary */}
-        <div className="border-t px-5 py-3" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+        <div className="border-t px-5 py-3 flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
           {summary ? (
             <div className="grid grid-cols-4 gap-3 text-center">
               <div>
