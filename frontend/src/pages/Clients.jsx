@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { clientsAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
-import { Plus, Search, Phone, Mail, Edit2, X, Building2 } from 'lucide-react'
+import { Plus, Search, Phone, Mail, Edit2, X, Building2, KeyRound, ShieldCheck } from 'lucide-react'
 import { SkeletonTable } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
 
@@ -22,14 +22,25 @@ function ClientModal({ client, onClose, onSave }) {
     plan:          client?.plan          ?? 'basic',
     sla_hours:     client?.sla_hours     ?? 24,
     notes:         client?.notes         ?? '',
+    password:      '',
+    confirm_password: '',
   })
   const [saving, setSaving] = useState(false)
   const set = (f) => (e) => setForm((p) => ({ ...p, [f]: e.target.value }))
 
   const save = async (e) => {
-    e.preventDefault(); setSaving(true)
+    e.preventDefault()
+    if (form.password && form.password !== form.confirm_password) {
+      toast.error('Passwords do not match'); return
+    }
+    if (form.password && form.password.length < 8) {
+      toast.error('Password must be at least 8 characters'); return
+    }
+    setSaving(true)
     try {
-      const { data } = isEdit ? await clientsAPI.update(client.id, form) : await clientsAPI.create(form)
+      const { confirm_password, password, ...base } = form
+      const payload = password ? { ...base, password } : base
+      const { data } = isEdit ? await clientsAPI.update(client.id, payload) : await clientsAPI.create(payload)
       onSave(data); onClose()
     } catch (err) { toast.error(err.response?.data?.detail || 'Save failed') }
     finally { setSaving(false) }
@@ -59,6 +70,28 @@ function ClientModal({ client, onClose, onSave }) {
             <div><label className="label">SLA (hours)</label><input className="input" type="number" value={form.sla_hours} onChange={set('sla_hours')} /></div>
           </div>
           <div><label className="label">Notes</label><textarea className="input h-20 resize-none" value={form.notes} onChange={set('notes')} /></div>
+          <div className="pt-2" style={{ borderTop: '1px solid #e5e7eb' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <KeyRound className="w-3.5 h-3.5 text-gray-400" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                {isEdit ? (client?.user_id ? 'Change Portal Password' : 'Set Portal Password') : 'Portal Login Password'}
+              </span>
+              {!isEdit && <span className="text-xs text-gray-400">(optional)</span>}
+              {isEdit && client?.user_id && <span className="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px]">active</span>}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">{isEdit ? 'New Password' : 'Password'}</label>
+                <input className="input" type="password" placeholder={isEdit ? 'Leave blank to keep current' : 'Min. 8 characters'}
+                  value={form.password} onChange={set('password')} minLength={form.password ? 8 : undefined} />
+              </div>
+              <div>
+                <label className="label">Confirm Password</label>
+                <input className="input" type="password" placeholder="Re-enter password"
+                  value={form.confirm_password} onChange={set('confirm_password')} />
+              </div>
+            </div>
+          </div>
           <div className="flex gap-3 pt-1" style={{ borderTop: '1px solid #e5e7eb' }}>
             <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Client'}</button>
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -78,9 +111,14 @@ function ClientRow({ c, onEdit }) {
           {c.contact_name?.[0]?.toUpperCase() ?? '?'}
         </div>
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-medium text-gray-900">{c.contact_name}</p>
             {!c.is_active && <span className="badge bg-red-500/20 text-red-400 border border-red-500/30">inactive</span>}
+            {c.user_id && (
+              <span className="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                <ShieldCheck className="w-2.5 h-2.5" />portal
+              </span>
+            )}
           </div>
           <p className="text-xs text-gray-400">{c.company_name}</p>
         </div>

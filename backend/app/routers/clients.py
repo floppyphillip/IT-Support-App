@@ -5,8 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.client import Client
+from app.models.user import User, UserRole
 from app.schemas.alert import ClientSchema, ClientCreate, ClientUpdate
-from app.utils.security import get_current_user_id, require_superadmin_or_engineer
+from app.utils.security import get_current_user_id, require_superadmin_or_engineer, hash_password
 
 router = APIRouter()
 
@@ -28,7 +29,27 @@ async def create_client(
     if existing:
         raise HTTPException(status_code=409, detail="Client with this email already exists")
 
-    client = Client(**payload.model_dump())
+    user_id = None
+    if payload.password:
+        existing_user = await db.scalar(select(User).where(User.email == payload.contact_email))
+        if existing_user:
+            raise HTTPException(status_code=409, detail="A login account with this email already exists")
+        portal_user = User(
+            email=payload.contact_email,
+            full_name=payload.contact_name,
+            password_hash=hash_password(payload.password),
+            role=UserRole.client,
+            is_active=True,
+            force_password_change=True,
+        )
+        db.add(portal_user)
+        await db.flush()
+        user_id = portal_user.id
+
+    client_data = payload.model_dump(exclude={'password'})
+    if user_id:
+        client_data['user_id'] = user_id
+    client = Client(**client_data)
     db.add(client)
     await db.flush()
     return client
@@ -76,8 +97,32 @@ async def update_client(
     _user: str = Depends(require_superadmin_or_engineer),
 ):
     client = await _get_client_or_404(db, client_id)
-    for field, value in payload.model_dump(exclude_none=True).items():
+    for field, value in payload.model_dump(exclude_none=True, exclude={'password'}).items():
         setattr(client, field, value)
+
+    if payload.password:
+        if client.user_id:
+            portal_user = await db.get(User, client.user_id)
+            if portal_user:
+                portal_user.password_hash = hash_password(payload.password)
+        else:
+            existing_user = await db.scalar(select(User).where(User.email == client.contact_email))
+            if existing_user:
+                existing_user.password_hash = hash_password(payload.password)
+                client.user_id = existing_user.id
+            else:
+                portal_user = User(
+                    email=client.contact_email,
+                    full_name=client.contact_name,
+                    password_hash=hash_password(payload.password),
+                    role=UserRole.client,
+                    is_active=True,
+                    force_password_change=True,
+                )
+                db.add(portal_user)
+                await db.flush()
+                client.user_id = portal_user.id
+
     return client
 
 

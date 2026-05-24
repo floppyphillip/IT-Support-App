@@ -24,6 +24,7 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String(200), nullable=False)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.engineer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    force_password_change: Mapped[bool] = mapped_column(Boolean, server_default='false', default=False, nullable=False)
     phone: Mapped[str | None] = mapped_column(String(50))
     telegram_chat_id: Mapped[str | None] = mapped_column(String(100))
     whatsapp_number: Mapped[str | None] = mapped_column(String(50))

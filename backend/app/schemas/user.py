@@ -58,6 +58,7 @@ class NotificationSettingsResponse(BaseModel):
 class UserResponse(UserBase):
     id: str
     is_active: bool
+    force_password_change: bool = False
     avatar_url: Optional[str] = None
     created_at: datetime
     last_login: Optional[datetime] = None

@@ -145,6 +145,7 @@ async def change_password(
         from fastapi import HTTPException, status
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password incorrect")
     user.password_hash = hash_password(payload.new_password)
+    user.force_password_change = False
 
 
 # ─── Team management (superadmin) ────────────────────────────────────────────

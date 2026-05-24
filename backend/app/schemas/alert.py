@@ -72,6 +72,7 @@ class ClientSchema(BaseModel):
     plan: ClientPlan
     sla_hours: int
     assigned_engineer_id: Optional[str] = None
+    user_id: Optional[str] = None
     created_at: datetime
     model_config = {"from_attributes": True}
 
@@ -88,6 +89,7 @@ class ClientCreate(BaseModel):
     plan: ClientPlan = ClientPlan.basic
     sla_hours: int = Field(default=24, ge=1)
     assigned_engineer_id: Optional[str] = None
+    password: Optional[str] = Field(default=None, min_length=8)
 
 
 class ClientUpdate(BaseModel):
@@ -103,3 +105,4 @@ class ClientUpdate(BaseModel):
     plan: Optional[ClientPlan] = None
     sla_hours: Optional[int] = None
     assigned_engineer_id: Optional[str] = None
+    password: Optional[str] = Field(default=None, min_length=8)
