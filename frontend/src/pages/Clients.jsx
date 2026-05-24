@@ -14,10 +14,14 @@ const CONTRACT_STYLES = {
 function ClientModal({ client, onClose, onSave }) {
   const isEdit = !!client?.id
   const [form, setForm] = useState({
-    name: client?.name ?? '', company: client?.company ?? '',
-    email: client?.email ?? '', phone: client?.phone ?? '',
-    address: client?.address ?? '', contract_type: client?.contract_type ?? '',
-    sla_hours: client?.sla_hours ?? 24, notes: client?.notes ?? '',
+    contact_name:  client?.contact_name  ?? '',
+    company_name:  client?.company_name  ?? '',
+    contact_email: client?.contact_email ?? '',
+    contact_phone: client?.contact_phone ?? '',
+    address:       client?.address       ?? '',
+    plan:          client?.plan          ?? 'basic',
+    sla_hours:     client?.sla_hours     ?? 24,
+    notes:         client?.notes         ?? '',
   })
   const [saving, setSaving] = useState(false)
   const set = (f) => (e) => setForm((p) => ({ ...p, [f]: e.target.value }))
@@ -41,15 +45,15 @@ function ClientModal({ client, onClose, onSave }) {
         </div>
         <form onSubmit={save} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div><label className="label">Name *</label><input className="input" required value={form.name} onChange={set('name')} /></div>
-            <div><label className="label">Company</label><input className="input" value={form.company} onChange={set('company')} /></div>
-            <div><label className="label">Email *</label><input className="input" type="email" required value={form.email} onChange={set('email')} /></div>
-            <div><label className="label">Phone</label><input className="input" value={form.phone} onChange={set('phone')} /></div>
+            <div><label className="label">Contact Name *</label><input className="input" required value={form.contact_name} onChange={set('contact_name')} /></div>
+            <div><label className="label">Company Name *</label><input className="input" required value={form.company_name} onChange={set('company_name')} /></div>
+            <div><label className="label">Email *</label><input className="input" type="email" required value={form.contact_email} onChange={set('contact_email')} /></div>
+            <div><label className="label">Phone</label><input className="input" value={form.contact_phone} onChange={set('contact_phone')} /></div>
             <div className="col-span-2"><label className="label">Address</label><input className="input" value={form.address} onChange={set('address')} /></div>
             <div>
-              <label className="label">Contract</label>
-              <select className="input" value={form.contract_type} onChange={set('contract_type')}>
-                {['', 'basic', 'pro', 'enterprise'].map((c) => <option key={c} value={c}>{c || '— None —'}</option>)}
+              <label className="label">Plan</label>
+              <select className="input" value={form.plan} onChange={set('plan')}>
+                {['basic', 'pro', 'enterprise'].map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div><label className="label">SLA (hours)</label><input className="input" type="number" value={form.sla_hours} onChange={set('sla_hours')} /></div>
@@ -71,22 +75,22 @@ function ClientRow({ c, onEdit }) {
       {/* Desktop row */}
       <div className="tr hidden md:grid grid-cols-[40px_1fr_200px_100px_80px_40px] items-center gap-4 px-4 py-3 last:border-0">
         <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 font-semibold text-sm">
-          {c.name[0].toUpperCase()}
+          {c.contact_name?.[0]?.toUpperCase() ?? '?'}
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-medium text-gray-900">{c.name}</p>
+            <p className="text-sm font-medium text-gray-900">{c.contact_name}</p>
             {!c.is_active && <span className="badge bg-red-500/20 text-red-400 border border-red-500/30">inactive</span>}
           </div>
-          <p className="text-xs text-gray-400">{c.company}</p>
+          <p className="text-xs text-gray-400">{c.company_name}</p>
         </div>
         <div className="text-xs text-gray-400 space-y-0.5 min-w-0">
-          <div className="flex items-center gap-1 truncate"><Mail className="w-3 h-3 flex-shrink-0" />{c.email}</div>
-          {c.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3 flex-shrink-0" />{c.phone}</div>}
+          <div className="flex items-center gap-1 truncate"><Mail className="w-3 h-3 flex-shrink-0" />{c.contact_email}</div>
+          {c.contact_phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3 flex-shrink-0" />{c.contact_phone}</div>}
         </div>
         <div>
-          {c.contract_type
-            ? <span className={`badge border ${CONTRACT_STYLES[c.contract_type] ?? CONTRACT_STYLES.basic}`}>{c.contract_type}</span>
+          {c.plan
+            ? <span className={`badge border ${CONTRACT_STYLES[c.plan] ?? CONTRACT_STYLES.basic}`}>{c.plan}</span>
             : <span className="text-xs text-gray-400">—</span>}
         </div>
         <span className="text-xs text-gray-400">{c.sla_hours ? `${c.sla_hours}h` : '—'}</span>
@@ -98,18 +102,18 @@ function ClientRow({ c, onEdit }) {
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 font-semibold">
-              {c.name[0].toUpperCase()}
+              {c.contact_name?.[0]?.toUpperCase() ?? '?'}
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900">{c.name}</p>
-              <p className="text-xs text-gray-400">{c.company}</p>
+              <p className="text-sm font-medium text-gray-900">{c.contact_name}</p>
+              <p className="text-xs text-gray-400">{c.company_name}</p>
             </div>
           </div>
           <button className="btn-ghost p-1" onClick={() => onEdit(c)}><Edit2 className="w-3.5 h-3.5" /></button>
         </div>
         <div className="flex items-center gap-2 flex-wrap text-xs text-gray-400 mt-2">
-          <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{c.email}</span>
-          {c.contract_type && <span className={`badge border ${CONTRACT_STYLES[c.contract_type]}`}>{c.contract_type}</span>}
+          <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{c.contact_email}</span>
+          {c.plan && <span className={`badge border ${CONTRACT_STYLES[c.plan] ?? CONTRACT_STYLES.basic}`}>{c.plan}</span>}
         </div>
       </div>
     </>
