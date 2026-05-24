@@ -96,8 +96,8 @@ function DeviceFormModal({ device, onClose, onSaved }) {
     <div className="fixed inset-0 z-50 overflow-y-auto p-4"
          style={{ background: 'rgba(0,0,0,0.7)' }}
          onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full max-w-2xl mx-auto my-8 rounded-2xl border overflow-hidden flex flex-col"
-           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', minHeight: 'calc(100vh - 4rem)' }}>
+      <div className="w-full max-w-2xl mx-auto flex flex-col"
+           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', height: '100vh' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -408,8 +408,8 @@ function PingModal({ device, onClose }) {
     <div className="fixed inset-0 z-50 overflow-y-auto p-4"
          style={{ background: 'rgba(0,0,0,0.75)' }}
          onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
-      <div className="w-full max-w-lg mx-auto my-8 rounded-2xl border overflow-hidden flex flex-col"
-           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', minHeight: 'calc(100vh - 4rem)' }}>
+      <div className="w-full max-w-lg mx-auto flex flex-col"
+           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', height: '100vh' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
