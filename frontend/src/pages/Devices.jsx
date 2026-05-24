@@ -405,11 +405,10 @@ function PingModal({ device, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto p-4"
-         style={{ background: 'rgba(0,0,0,0.75)' }}
-         onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
-      <div className="w-full max-w-lg mx-auto my-12 rounded-2xl border overflow-hidden"
-           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
+    <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.75)' }}>
+      <div className="min-h-full flex items-center justify-center p-4"
+           onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
+      <div className="w-full max-w-lg bg-white rounded-2xl border border-gray-200 my-8">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -499,6 +498,7 @@ function PingModal({ device, onClose }) {
             <p className="text-[15px] text-center" style={{ color: 'var(--text-4)' }}>— stats appear after first ping —</p>
           )}
         </div>
+      </div>
       </div>
     </div>
   )
