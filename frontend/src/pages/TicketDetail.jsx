@@ -8,7 +8,7 @@ import { Skeleton } from '../components/Skeleton'
 import { formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, Bot, MessageSquare, Trash2, Send, Clock, Shield } from 'lucide-react'
 
-const STATUS_OPTIONS = ['open', 'in_progress', 'ai_resolved', 'escalated', 'pending', 'resolved', 'closed']
+const STATUS_OPTIONS = ['open', 'in_progress', 'ai_resolved', 'escalated', 'closed']
 
 export default function TicketDetail() {
   const { id } = useParams()
@@ -21,9 +21,16 @@ export default function TicketDetail() {
   const [diagnosing, setDiagnosing] = useState(false)
 
   const load = async () => {
-    try { const { data } = await ticketsAPI.get(id); setTicket(data) }
-    catch { navigate('/tickets') }
-    finally { setLoading(false) }
+    try {
+      const { data } = await ticketsAPI.get(id)
+      setTicket(data)
+    } catch (err) {
+      console.error('[TicketDetail] load failed', err?.response?.status, err?.response?.data ?? err?.message)
+      toast.error(`Could not load ticket: ${err?.response?.data?.detail ?? err?.message ?? 'server error'}`)
+      navigate('/tickets')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [id])

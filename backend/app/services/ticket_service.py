@@ -138,7 +138,8 @@ async def update_ticket(db: AsyncSession, ticket_id: str, payload: TicketUpdate)
     if payload.status == TicketStatus.closed and not ticket.closed_at:
         ticket.closed_at = datetime.now(timezone.utc)
     await db.flush()
-    return ticket
+    # Re-fetch so all relationships are eagerly loaded before Pydantic serialises the response
+    return await get_ticket(db, ticket_id)
 
 
 async def delete_ticket(db: AsyncSession, ticket_id: str) -> None:
