@@ -100,7 +100,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
       {/* Centered modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ pointerEvents: 'none' }}>
       <div className="w-full max-w-2xl flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
-           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', height: '100vh', pointerEvents: 'auto' }}>
+           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', height: '100%', pointerEvents: 'auto' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
@@ -417,7 +417,7 @@ function PingModal({ device, onClose }) {
       {/* Centered modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ pointerEvents: 'none' }}>
       <div className="w-full max-w-lg flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
-           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', height: '100vh', pointerEvents: 'auto' }}>
+           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', height: '100%', pointerEvents: 'auto' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
