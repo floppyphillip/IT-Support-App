@@ -25,6 +25,11 @@ const EMPTY_FORM = {
 
 function DeviceFormModal({ device, onClose, onSaved }) {
   const isEdit = !!device
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
   const [form, setForm] = useState(isEdit ? {
     name:               device.name           ?? '',
     ip_address:         device.ip_address     ?? '',
@@ -245,6 +250,11 @@ function DeviceFormModal({ device, onClose, onSaved }) {
 }
 
 function DeleteConfirmModal({ device, onClose, onDeleted }) {
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
   const [deleting, setDeleting] = useState(false)
 
   const confirm = async () => {
@@ -319,6 +329,11 @@ function Toggle({ label, checked, onChange }) {
 }
 
 function PingModal({ device, onClose }) {
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
   const [count, setCount]     = useState('4')
   const [infinite, setInfinite] = useState(false)
   const [running, setRunning] = useState(false)
