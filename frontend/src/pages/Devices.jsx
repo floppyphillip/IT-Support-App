@@ -93,14 +93,16 @@ function DeviceFormModal({ device, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto p-4"
-         style={{ background: 'rgba(0,0,0,0.7)' }}
-         onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full max-w-2xl mx-auto flex flex-col"
-           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', height: '100vh' }}>
+    <>
+      {/* Dim backdrop — devices page still visible behind */}
+      <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.25)' }} onClick={onClose} />
+
+      {/* Right-side drawer */}
+      <div className="fixed top-0 right-0 z-50 h-screen flex flex-col shadow-2xl border-l"
+           style={{ width: '480px', background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
           <div>
             <p className="font-semibold text-gray-900">{isEdit ? 'Edit Device' : 'Add Device'}</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
@@ -225,7 +227,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
           <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancel</button>
           <button onClick={submit} className="btn-primary" disabled={saving}>
             {saving
@@ -236,7 +238,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
           </button>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -405,14 +407,17 @@ function PingModal({ device, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto p-4"
-         style={{ background: 'rgba(0,0,0,0.75)' }}
-         onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
-      <div className="w-full max-w-lg mx-auto flex flex-col"
-           style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', height: '100vh' }}>
+    <>
+      {/* Dim backdrop — devices page still visible behind */}
+      <div className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.25)' }}
+           onClick={e => { if (!running) onClose() }} />
+
+      {/* Right-side drawer */}
+      <div className="fixed top-0 right-0 z-50 h-screen flex flex-col shadow-2xl border-l"
+           style={{ width: '480px', background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
           <div>
             <p className="font-semibold text-gray-900 flex items-center gap-2">
               <Zap className="w-4 h-4 text-blue-400" /> Ping Test
@@ -500,7 +505,7 @@ function PingModal({ device, onClose }) {
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
