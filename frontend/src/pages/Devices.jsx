@@ -93,74 +93,67 @@ function DeviceFormModal({ device, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.7)' }}>
-      <div className="min-h-full flex items-center justify-center p-4"
-           onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-        <div className="w-full max-w-2xl bg-white rounded-2xl border border-gray-200 my-8">
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div>
-            <p className="font-semibold text-gray-900">{isEdit ? 'Edit Device' : 'Add Device'}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {isEdit ? `Editing ${device.name}` : 'Register a new network device for monitoring'}
-            </p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg transition-colors hover:bg-gray-100 text-gray-400 hover:text-gray-700">
-            <X className="w-4 h-4" />
-          </button>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div>
+          <p style={{ fontWeight: 600, color: '#111827', margin: 0 }}>{isEdit ? 'Edit Device' : 'Add Device'}</p>
+          <p style={{ fontSize: '12px', color: '#9ca3af', margin: 0 }}>
+            {isEdit ? `Editing ${device.name}` : 'Register a new network device for monitoring'}
+          </p>
         </div>
+        <button onClick={onClose} style={{ padding: '6px', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#9ca3af' }}>
+          <X size={16} />
+        </button>
+      </div>
 
-        {/* Body */}
-        <div className="p-6 space-y-5">
+      {/* Body — scrollable, fills all available space */}
+      <div style={{ flex: 1, overflowY: 'auto', background: '#fff', padding: '24px' }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           {/* Basic Info */}
           <section>
-            <p className="text-[15px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-4)' }}>Basic Information</p>
+            <p className="label mb-3">Basic Information</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>
-                  Device Name <span className="text-red-400">*</span>
-                </label>
+                <label className="label">Device Name <span className="text-red-400">*</span></label>
                 <input className="input w-full" placeholder="core-router-01"
                   value={form.name} onChange={(e) => set('name', e.target.value)} />
               </div>
               <div>
-                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>
-                  IP Address <span className="text-red-400">*</span>
-                </label>
+                <label className="label">IP Address <span className="text-red-400">*</span></label>
                 <input className="input w-full font-mono" placeholder="192.168.1.1"
                   value={form.ip_address} onChange={(e) => set('ip_address', e.target.value)} />
               </div>
               <div>
-                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Hostname</label>
+                <label className="label">Hostname</label>
                 <input className="input w-full font-mono" placeholder="router.local"
                   value={form.hostname} onChange={(e) => set('hostname', e.target.value)} />
               </div>
               <div>
-                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Location</label>
+                <label className="label">Location</label>
                 <input className="input w-full" placeholder="Server Room A"
                   value={form.location} onChange={(e) => set('location', e.target.value)} />
               </div>
               <div>
-                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Device Type</label>
+                <label className="label">Device Type</label>
                 <select className="input w-full" value={form.device_type} onChange={(e) => set('device_type', e.target.value)}>
                   {DEVICE_TYPES.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Vendor</label>
+                <label className="label">Vendor</label>
                 <select className="input w-full" value={form.vendor} onChange={(e) => set('vendor', e.target.value)}>
                   {VENDORS.map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Model</label>
+                <label className="label">Model</label>
                 <input className="input w-full" placeholder="ISR 4431"
                   value={form.model} onChange={(e) => set('model', e.target.value)} />
               </div>
               <div>
-                <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>OS / Firmware Version</label>
+                <label className="label">OS / Firmware Version</label>
                 <input className="input w-full font-mono" placeholder="IOS 15.7"
                   value={form.os_version} onChange={(e) => set('os_version', e.target.value)} />
               </div>
@@ -168,25 +161,25 @@ function DeviceFormModal({ device, onClose, onSaved }) {
           </section>
 
           {/* Monitoring */}
-          <section className="border-t pt-5" style={{ borderColor: 'var(--border)' }}>
-            <p className="text-[15px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-4)' }}>Monitoring</p>
+          <section style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
+            <p className="label mb-3">Monitoring</p>
             <Toggle label="Enable monitoring (ICMP ping)" checked={form.monitoring_enabled}
               onChange={(v) => set('monitoring_enabled', v)} />
           </section>
 
           {/* SNMP */}
-          <section className="border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+          <section style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
             <Toggle label="SNMP polling" checked={form.snmp_enabled}
               onChange={(v) => set('snmp_enabled', v)} />
             {form.snmp_enabled && (
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <div>
-                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Community String</label>
+                  <label className="label">Community String</label>
                   <input className="input w-full font-mono" placeholder="public"
                     value={form.snmp_community} onChange={(e) => set('snmp_community', e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>SNMP Version</label>
+                  <label className="label">SNMP Version</label>
                   <select className="input w-full" value={form.snmp_version} onChange={(e) => set('snmp_version', e.target.value)}>
                     <option value="1">v1</option>
                     <option value="2c">v2c</option>
@@ -198,23 +191,23 @@ function DeviceFormModal({ device, onClose, onSaved }) {
           </section>
 
           {/* SSH */}
-          <section className="border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+          <section style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
             <Toggle label="SSH remote access" checked={form.ssh_enabled}
               onChange={(v) => set('ssh_enabled', v)} />
             {form.ssh_enabled && (
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <div>
-                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>SSH Port</label>
+                  <label className="label">SSH Port</label>
                   <input className="input w-full font-mono" type="number" placeholder="22"
                     value={form.ssh_port} onChange={(e) => set('ssh_port', e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Username</label>
+                  <label className="label">Username</label>
                   <input className="input w-full font-mono" placeholder="admin"
                     value={form.ssh_username} onChange={(e) => set('ssh_username', e.target.value)} />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Password</label>
+                  <label className="label">Password</label>
                   <input className="input w-full font-mono" type="password" placeholder="Encrypted at rest"
                     value={form.ssh_password} onChange={(e) => set('ssh_password', e.target.value)} />
                 </div>
@@ -222,19 +215,18 @@ function DeviceFormModal({ device, onClose, onSaved }) {
             )}
           </section>
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
-          <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancel</button>
-          <button onClick={submit} className="btn-primary" disabled={saving}>
-            {saving
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</>
-              : isEdit
-                ? <><Pencil className="w-3.5 h-3.5" />Save Changes</>
-                : <><Plus className="w-3.5 h-3.5" />Add Device</>}
-          </button>
-        </div>
-        </div>
+      {/* Footer */}
+      <div style={{ background: '#fff', borderTop: '1px solid #e5e7eb', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '12px', flexShrink: 0 }}>
+        <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancel</button>
+        <button onClick={submit} className="btn-primary" disabled={saving}>
+          {saving
+            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</>
+            : isEdit
+              ? <><Pencil className="w-3.5 h-3.5" />Save Changes</>
+              : <><Plus className="w-3.5 h-3.5" />Add Device</>}
+        </button>
       </div>
     </div>
   )
@@ -405,100 +397,84 @@ function PingModal({ device, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.75)' }}>
-      <div className="min-h-full flex items-center justify-center p-4"
-           onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
-      <div className="w-full max-w-lg bg-white rounded-2xl border border-gray-200 my-8 flex flex-col" style={{ minHeight: '75vh' }}>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
-          <div>
-            <p className="font-semibold text-gray-900 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-blue-400" /> Ping Test
-            </p>
-            <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-3)' }}>
-              {device.name} — {device.ip_address}
-            </p>
-          </div>
-          <button onClick={onClose} disabled={running}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors disabled:opacity-30">
-            <X className="w-4 h-4" />
-          </button>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.75)', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div>
+          <p style={{ fontWeight: 600, color: '#111827', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Zap size={16} style={{ color: '#60a5fa' }} /> Ping Test
+          </p>
+          <p style={{ fontSize: '12px', fontFamily: 'monospace', color: '#6b7280', margin: 0 }}>
+            {device.name} — {device.ip_address}
+          </p>
         </div>
+        <button onClick={onClose} disabled={running}
+          style={{ padding: '6px', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#9ca3af', opacity: running ? 0.3 : 1 }}>
+          <X size={16} />
+        </button>
+      </div>
 
-        {/* Controls */}
-        <div className="flex items-center gap-4 px-5 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
-          <div className="flex items-center gap-2">
-            <label className="text-[15px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>Count</label>
-            <input type="number" min="1" max="100"
-              className="input w-16 text-center font-mono py-1 text-xs"
-              value={count} onChange={e => setCount(e.target.value)}
-              disabled={infinite || running} />
-          </div>
-          <Toggle label="Infinite" checked={infinite} onChange={v => setInfinite(v)} />
-          <div className="ml-auto">
-            {running ? (
-              <button onClick={stop}
-                className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all">
-                <Square className="w-3 h-3" /> Stop
-              </button>
-            ) : (
-              <button onClick={start} className="btn-primary text-xs py-1.5 px-3">
-                <Play className="w-3 h-3" /> Start
-              </button>
-            )}
-          </div>
+      {/* Controls */}
+      <div style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af' }}>Count</label>
+          <input type="number" min="1" max="100" className="input w-16 text-center font-mono"
+            style={{ padding: '4px 8px', fontSize: '13px' }}
+            value={count} onChange={e => setCount(e.target.value)}
+            disabled={infinite || running} />
         </div>
-
-        {/* Terminal output */}
-        <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed"
-             style={{ background: 'var(--bg)', minHeight: '200px' }}>
-          {results.length === 0 && !running && (
-            <p className="text-gray-400 text-center pt-16">Set count and press Start</p>
-          )}
-          {results.map(r => (
-            <div key={r.key} className={r.error ? 'text-red-400' : r.reachable ? 'text-emerald-400' : 'text-amber-400'}>
-              {r.error
-                ? `Error: ${r.msg ?? 'request failed'}`
-                : r.reachable
-                  ? `Reply from ${r.ip}: time=${r.latency != null ? r.latency.toFixed(1) : '?'}ms`
-                  : `Request timeout for icmp_seq from ${r.ip}`}
-            </div>
-          ))}
-          {running && (
-            <div className="text-blue-400 flex items-center gap-1.5 mt-1">
-              <Loader2 className="w-3 h-3 animate-spin" /> sending…
-            </div>
-          )}
-          <div ref={bottomRef} />
-        </div>
-
-        {/* Summary */}
-        <div className="border-t px-5 py-3 flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
-          {summary ? (
-            <div className="grid grid-cols-4 gap-3 text-center">
-              <div>
-                <p className="text-[13px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Sent</p>
-                <p className="font-mono text-sm font-bold text-gray-900">{summary.sent}</p>
-              </div>
-              <div>
-                <p className="text-[13px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Received</p>
-                <p className="font-mono text-sm font-bold text-emerald-400">{summary.received}</p>
-              </div>
-              <div>
-                <p className="text-[13px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Loss</p>
-                <p className={`font-mono text-sm font-bold ${lossColor(summary.loss)}`}>{summary.loss}%</p>
-              </div>
-              <div>
-                <p className="text-[13px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>Avg RTT</p>
-                <p className="font-mono text-sm font-bold text-blue-400">{summary.avg !== '—' ? `${summary.avg}ms` : '—'}</p>
-              </div>
-            </div>
+        <Toggle label="Infinite" checked={infinite} onChange={v => setInfinite(v)} />
+        <div style={{ marginLeft: 'auto' }}>
+          {running ? (
+            <button onClick={stop}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', fontSize: '12px', fontWeight: 600, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer' }}>
+              <Square size={12} /> Stop
+            </button>
           ) : (
-            <p className="text-[15px] text-center" style={{ color: 'var(--text-4)' }}>— stats appear after first ping —</p>
+            <button onClick={start} className="btn-primary" style={{ fontSize: '13px', padding: '6px 14px' }}>
+              <Play size={12} /> Start
+            </button>
           )}
         </div>
       </div>
+
+      {/* Terminal output — fills all remaining space */}
+      <div ref={el => { if (el) el.scrollTop = el.scrollHeight }}
+           style={{ flex: 1, overflowY: 'auto', padding: '16px', fontFamily: 'monospace', fontSize: '13px', lineHeight: '1.6', background: '#f9fafb' }}>
+        {results.length === 0 && !running && (
+          <p style={{ color: '#9ca3af', textAlign: 'center', marginTop: '60px' }}>Set count and press Start</p>
+        )}
+        {results.map(r => (
+          <div key={r.key} style={{ color: r.error ? '#f87171' : r.reachable ? '#34d399' : '#fbbf24' }}>
+            {r.error
+              ? `Error: ${r.msg ?? 'request failed'}`
+              : r.reachable
+                ? `Reply from ${r.ip}: time=${r.latency != null ? r.latency.toFixed(1) : '?'}ms`
+                : `Request timeout for icmp_seq from ${r.ip}`}
+          </div>
+        ))}
+        {running && (
+          <div style={{ color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+            <Loader2 size={12} className="animate-spin" /> sending…
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Summary */}
+      <div style={{ background: '#f8fafc', borderTop: '1px solid #e5e7eb', padding: '12px 20px', flexShrink: 0 }}>
+        {summary ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', textAlign: 'center' }}>
+            {[['Sent', summary.sent, '#111827'], ['Received', summary.received, '#34d399'], ['Loss', `${summary.loss}%`, parseFloat(summary.loss) === 0 ? '#34d399' : parseFloat(summary.loss) < 50 ? '#fbbf24' : '#f87171'], ['Avg RTT', summary.avg !== '—' ? `${summary.avg}ms` : '—', '#60a5fa']].map(([label, value, color]) => (
+              <div key={label}>
+                <p style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', margin: 0 }}>{label}</p>
+                <p style={{ fontFamily: 'monospace', fontWeight: 700, color, margin: 0 }}>{value}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ textAlign: 'center', color: '#9ca3af', margin: 0 }}>— stats appear after first ping —</p>
+        )}
       </div>
     </div>
   )
