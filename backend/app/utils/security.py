@@ -90,7 +90,7 @@ def require_roles(*roles: str):
 
 
 require_superadmin = require_roles("superadmin")
-require_superadmin_or_engineer = require_roles("superadmin", "engineer")
+require_superadmin_or_engineer = require_roles("superadmin", "admin", "technical_support", "noc", "engineer")
 
 
 # ─── Fernet symmetric encryption (for SSH passwords at rest) ─────────────────

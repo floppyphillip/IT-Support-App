@@ -151,6 +151,15 @@ export const dashboardAPI = {
   recentActivity: (limit) => api.get('/dashboard/recent-activity', { params: { limit } }),
 }
 
+// ─── Customers ────────────────────────────────────────────────────────────────
+export const customersAPI = {
+  list:   (params) => api.get('/customers/', { params }),
+  get:    (id)     => api.get(`/customers/${id}`),
+  create: (data)   => api.post('/customers/', data),
+  update: (id, d)  => api.put(`/customers/${id}`, d),
+  delete: (id)     => api.delete(`/customers/${id}`),
+}
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export const notificationsAPI = {
   sendAlert: (data) => api.post('/notifications/alert', data),

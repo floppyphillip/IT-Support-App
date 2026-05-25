@@ -4,13 +4,22 @@ import { toast } from 'react-hot-toast'
 import useAuth from '../hooks/useAuth'
 import { User, Lock, Bell, Users, Plus } from 'lucide-react'
 
+const ROLE_STYLES = {
+  superadmin:        { label: 'Superadmin',        cls: 'bg-violet-500/20 text-violet-400 border-violet-500/30' },
+  admin:             { label: 'Admin',              cls: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+  technical_support: { label: 'Technical Support',  cls: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+  noc:               { label: 'NOC',                cls: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
+  engineer:          { label: 'Engineer',           cls: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+  client:            { label: 'Client',             cls: 'bg-gray-100 text-gray-500 border-gray-300' },
+}
+
 export default function Settings() {
   const { user, fetchMe, isSuperadmin } = useAuth()
   const [profile, setProfile] = useState({ full_name: user?.full_name ?? '', phone: user?.phone ?? '', telegram_chat_id: user?.telegram_chat_id ?? '', whatsapp_number: user?.whatsapp_number ?? '' })
   const [pwd, setPwd] = useState({ current_password: '', new_password: '', confirm: '' })
   const [notifSettings, setNotifSettings] = useState(null)
   const [teamUsers, setTeamUsers] = useState([])
-  const [inviteForm, setInviteForm] = useState({ email: '', full_name: '', role: 'engineer', temporary_password: '' })
+  const [inviteForm, setInviteForm] = useState({ email: '', full_name: '', role: 'admin', temporary_password: '' })
   const [saving, setSaving] = useState(false)
   const [savingPwd, setSavingPwd] = useState(false)
   const [savingNotif, setSavingNotif] = useState(false)
@@ -52,7 +61,7 @@ export default function Settings() {
     try {
       await authAPI.inviteUser(inviteForm)
       toast.success(`User ${inviteForm.email} invited`)
-      setInviteForm({ email: '', full_name: '', role: 'engineer', temporary_password: '' })
+      setInviteForm({ email: '', full_name: '', role: 'admin', temporary_password: '' })
       const { data } = await authAPI.listUsers(); setTeamUsers(data.items || [])
     } catch (err) { toast.error(err.response?.data?.detail || 'Failed') }
     finally { setInviting(false) }
@@ -155,8 +164,9 @@ export default function Settings() {
                 <div>
                   <label className="label">Role</label>
                   <select className="input" value={inviteForm.role} onChange={(e) => setInviteForm((f) => ({ ...f, role: e.target.value }))}>
-                    <option value="engineer">Engineer</option>
-                    <option value="client">Client</option>
+                    <option value="admin">Admin</option>
+                    <option value="technical_support">Technical Support</option>
+                    <option value="noc">NOC</option>
                     <option value="superadmin">Superadmin</option>
                   </select>
                 </div>
@@ -175,7 +185,7 @@ export default function Settings() {
                     <p className="text-sm font-medium text-gray-900">{u.full_name}</p>
                     <p className="text-xs text-gray-400">{u.email}</p>
                   </div>
-                  <span className={`badge border capitalize ${u.role === 'superadmin' ? 'bg-violet-500/20 text-violet-400 border-violet-500/30' : u.role === 'engineer' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>{u.role}</span>
+                  <span className={`badge border ${ROLE_STYLES[u.role]?.cls ?? 'bg-gray-100 text-gray-500 border-gray-300'}`}>{ROLE_STYLES[u.role]?.label ?? u.role}</span>
                   <button onClick={() => toggleUserActive(u.id, u.is_active)} disabled={u.id === user?.id}
                     className={`text-xs px-2.5 py-1 rounded-lg transition-all duration-200 disabled:opacity-30 ${u.is_active ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'}`}>
                     {u.is_active ? 'Deactivate' : 'Activate'}

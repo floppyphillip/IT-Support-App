@@ -11,7 +11,10 @@ from app.database import Base
 
 class UserRole(str, enum.Enum):
     superadmin = "superadmin"
-    engineer = "engineer"
+    admin = "admin"
+    technical_support = "technical_support"
+    noc = "noc"
+    engineer = "engineer"      # legacy — kept for existing records
     client = "client"
 
 

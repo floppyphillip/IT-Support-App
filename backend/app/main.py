@@ -12,7 +12,7 @@ from app.database import engine, Base
 from app.utils.logger import get_logger
 from app.routers import (
     auth, tickets, devices, clients, alerts,
-    ai_diagnostics, remote_access, notifications, dashboard,
+    ai_diagnostics, remote_access, notifications, dashboard, customers,
 )
 
 logger = get_logger(__name__)
@@ -60,6 +60,7 @@ app.include_router(ai_diagnostics.router, prefix=f"{_p}/ai",             tags=["
 app.include_router(remote_access.router,  prefix=f"{_p}/remote",         tags=["Remote Access"])
 app.include_router(notifications.router,  prefix=f"{_p}/notifications",  tags=["Notifications"])
 app.include_router(dashboard.router,      prefix=f"{_p}/dashboard",      tags=["Dashboard"])
+app.include_router(customers.router,      prefix=f"{_p}/customers",      tags=["Customers"])
 
 
 @app.get("/health", tags=["Health"])

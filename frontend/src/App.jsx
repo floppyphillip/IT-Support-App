@@ -13,8 +13,9 @@ import Clients      from './pages/Clients'
 import AIDiagnostics from './pages/AIDiagnostics'
 import RemoteAccess from './pages/RemoteAccess'
 import Alerts       from './pages/Alerts'
-import Settings     from './pages/Settings'
-import ClientPortal from './pages/ClientPortal'
+import Settings            from './pages/Settings'
+import ClientPortal        from './pages/ClientPortal'
+import CustomerManagement  from './pages/CustomerManagement'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="remote-access"             element={<RemoteAccess />} />
         <Route path="alerts"                    element={<Alerts />} />
         <Route path="settings"                  element={<Settings />} />
+        <Route path="customer-management"       element={<CustomerManagement />} />
       </Route>
     </Routes>
   )
