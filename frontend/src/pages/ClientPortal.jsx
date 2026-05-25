@@ -159,7 +159,7 @@ export default function ClientPortal() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {forcePasswordChange && <ForcePasswordChangeModal />}
+      {forcePasswordChange && <ForcePasswordChangeModal light />}
       {/* Portal header */}
       <header className="bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">

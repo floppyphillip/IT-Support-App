@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { clientsAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import { Plus, Search, Phone, Mail, Edit2, X, Building2, KeyRound, ShieldCheck } from 'lucide-react'
@@ -46,7 +47,7 @@ function ClientModal({ client, onClose, onSave }) {
     finally { setSaving(false) }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ background: 'rgba(0,0,0,0.7)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="rounded-2xl w-full max-w-lg animate-slide-up" style={{ background: '#ffffff', border: '1px solid #e5e7eb' }}>
@@ -98,7 +99,8 @@ function ClientModal({ client, onClose, onSave }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
