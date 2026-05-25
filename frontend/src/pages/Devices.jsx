@@ -24,7 +24,7 @@ const EMPTY_FORM = {
   ssh_enabled: false, ssh_port: 22, ssh_username: '', ssh_password: '',
 }
 
-function DeviceFormModal({ device, onClose, onSaved }) {
+function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
   const isEdit = !!device
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -60,6 +60,7 @@ function DeviceFormModal({ device, onClose, onSaved }) {
     try {
       const payload = {
         ...form,
+        category,
         name:       form.name.trim(),
         ip_address: form.ip_address.trim(),
         hostname:   form.hostname.trim()   || undefined,
@@ -545,7 +546,7 @@ export default function Devices() {
   const load = async () => {
     setLoading(true)
     try {
-      const { data } = await devicesAPI.list({ limit: 50, search: search || undefined })
+      const { data } = await devicesAPI.list({ limit: 50, search: search || undefined, category: 'noc' })
       setDevices(data.items)
       setTotal(data.total)
     } catch (err) {
@@ -559,8 +560,8 @@ export default function Devices() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {showAdd      && <DeviceFormModal onClose={() => setShowAdd(false)} onSaved={load} />}
-      {editTarget   && <DeviceFormModal device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />}
+      {showAdd      && <DeviceFormModal category="noc" onClose={() => setShowAdd(false)} onSaved={load} />}
+      {editTarget   && <DeviceFormModal category="noc" device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />}
       {deleteTarget && <DeleteConfirmModal device={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={load} />}
       {pingTarget   && <PingModal device={pingTarget} onClose={() => { setPingTarget(null); load() }} />}
       <div className="flex items-center justify-between">

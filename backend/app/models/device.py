@@ -80,6 +80,9 @@ class Device(Base):
     uptime_seconds: Mapped[int | None] = mapped_column(Integer)
     extra_data: Mapped[dict | None] = mapped_column(JSON)
 
+    # Category: 'noc' (internal NOC devices) or 'customer' (customer-site devices)
+    category: Mapped[str] = mapped_column(String(20), nullable=False, default="noc", server_default="noc")
+
     # Foreign keys
     client_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("clients.id"), nullable=True, index=True)
 

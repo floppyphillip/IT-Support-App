@@ -18,6 +18,7 @@ class DeviceCreate(BaseModel):
     location: Optional[str] = None
     tags: list[str] = []
     client_id: Optional[str] = None
+    category: str = "noc"
     monitoring_enabled: bool = True
     snmp_enabled: bool = False
     snmp_community: Optional[str] = "public"
@@ -42,6 +43,7 @@ class DeviceUpdate(BaseModel):
     location: Optional[str] = None
     tags: Optional[list[str]] = None
     client_id: Optional[str] = None
+    category: Optional[str] = None
     monitoring_enabled: Optional[bool] = None
     snmp_enabled: Optional[bool] = None
     snmp_community: Optional[str] = None
@@ -68,6 +70,7 @@ class DeviceResponse(BaseModel):
     location: Optional[str] = None
     tags: Optional[list[str]] = None
     client_id: Optional[str] = None
+    category: str = "noc"
     monitoring_enabled: bool
     snmp_enabled: bool
     snmp_community: Optional[str] = None

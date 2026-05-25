@@ -62,6 +62,7 @@ async def list_devices(
     client_id: str | None = None,
     status: str | None = None,
     search: str | None = None,
+    category: str | None = None,
     db: AsyncSession = Depends(get_db),
     _user: str = Depends(get_current_user_id),
 ):
@@ -70,6 +71,8 @@ async def list_devices(
         q = q.where(Device.client_id == client_id)
     if status:
         q = q.where(Device.status == status)
+    if category:
+        q = q.where(Device.category == category)
     if search:
         q = q.where(
             Device.name.ilike(f"%{search}%") | Device.ip_address.ilike(f"%{search}%")
