@@ -19,7 +19,8 @@ const NAV = [
     label: 'Tools',
     items: [
       { to: '/ai-diagnostics',      label: 'AI Diagnostics',      icon: Bot          },
-      { to: '/devices',             label: 'Devices',             icon: Server       },
+      { to: '/devices',             label: 'NOC Devices',         icon: Server       },
+      { to: '/customer-devices',    label: 'Customer Devices',    icon: Server       },
       { to: '/remote-access',       label: 'Remote Access',       icon: Terminal     },
       { to: '/customer-management', label: 'Customer Mgmt',       icon: UserCircle2  },
     ],
