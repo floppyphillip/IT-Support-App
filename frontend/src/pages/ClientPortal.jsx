@@ -7,7 +7,8 @@ import AlertBadge from '../components/AlertBadge'
 import { Skeleton } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
 import useAuth from '../hooks/useAuth'
-import { Monitor, LogIn, ArrowRight, Shield, Plus, Ticket, X, CheckCircle, Clock, Users } from 'lucide-react'
+import { Monitor, LogIn, ArrowRight, Shield, Plus, Ticket, X, CheckCircle, Clock, Users, LogOut } from 'lucide-react'
+import ForcePasswordChangeModal from '../components/ForcePasswordChangeModal'
 
 const FEATURES = [
   { icon: CheckCircle, title: 'Submit Tickets',   desc: 'Report issues directly from this portal' },
@@ -16,7 +17,8 @@ const FEATURES = [
 ]
 
 export default function ClientPortal() {
-  const { isAuthenticated, login, user } = useAuth()
+  const { isAuthenticated, login, logout, user } = useAuth()
+  const forcePasswordChange = user?.force_password_change
   const navigate = useNavigate()
   const [creds, setCreds] = useState({ email: '', password: '' })
   const [logging, setLogging] = useState(false)
@@ -157,6 +159,7 @@ export default function ClientPortal() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {forcePasswordChange && <ForcePasswordChangeModal />}
       {/* Portal header */}
       <header className="bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -167,9 +170,17 @@ export default function ClientPortal() {
           <span className="text-slate-400 text-sm">/</span>
           <span className="text-slate-500 text-sm">Client Portal</span>
         </div>
-        <span className="text-sm text-slate-500">
-          Welcome, <span className="text-slate-900 font-medium">{user?.full_name}</span>
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-slate-500">
+            Welcome, <span className="text-slate-900 font-medium">{user?.full_name}</span>
+          </span>
+          <button
+            onClick={logout}
+            className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 px-2.5 py-1.5 rounded-lg transition-all duration-150">
+            <LogOut className="w-3.5 h-3.5" />
+            Sign out
+          </button>
+        </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
