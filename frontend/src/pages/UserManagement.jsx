@@ -59,7 +59,11 @@ function UserModal({ editUser, onClose, onSave }) {
       }
       onClose()
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Save failed')
+      const detail = err.response?.data?.detail
+      const msg = Array.isArray(detail)
+        ? detail.map((d) => d.msg ?? d).join('; ')
+        : detail || err.message || 'Save failed'
+      toast.error(msg)
     } finally {
       setSaving(false)
     }

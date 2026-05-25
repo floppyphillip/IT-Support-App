@@ -58,7 +58,7 @@ async def invite_user(
         role=payload.role,
         password=payload.temporary_password,
     )
-    return await auth_service.register_user(db, create_payload)
+    return await auth_service.register_user(db, create_payload, force_password_change=True)
 
 
 @router.post("/login", response_model=TokenResponse)

@@ -20,7 +20,7 @@ from app.config import settings
 logger = get_logger(__name__)
 
 
-async def register_user(db: AsyncSession, payload: UserCreate) -> User:
+async def register_user(db: AsyncSession, payload: UserCreate, force_password_change: bool = False) -> User:
     existing = await db.scalar(select(User).where(User.email == payload.email))
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
@@ -31,6 +31,7 @@ async def register_user(db: AsyncSession, payload: UserCreate) -> User:
         full_name=payload.full_name,
         role=payload.role,
         phone=payload.phone,
+        force_password_change=force_password_change,
     )
     db.add(user)
     await db.flush()
