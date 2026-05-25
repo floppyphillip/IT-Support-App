@@ -16,7 +16,7 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
-      {forcePasswordChange && <ForcePasswordChangeModal />}
+      {forcePasswordChange && <ForcePasswordChangeModal light />}
     </div>
   )
 }

@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth'
-import { Bell, Plus, Search } from 'lucide-react'
+import { Bell, Plus, Search, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { alertsAPI } from '../api/client'
 
 export default function Navbar() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [alertCount, setAlertCount] = useState(0)
   const [search, setSearch] = useState('')
@@ -93,6 +93,16 @@ export default function Navbar() {
             {user?.role?.replace('_', ' ')}
           </p>
         </div>
+        <button
+          onClick={logout}
+          title="Sign out"
+          className="p-1.5 rounded-lg transition-all duration-150 ml-1"
+          style={{ color: 'var(--text-4)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--hover)'; e.currentTarget.style.color = '#f87171'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-4)'; }}
+        >
+          <LogOut className="w-3.5 h-3.5" />
+        </button>
       </div>
     </header>
   )
