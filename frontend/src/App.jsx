@@ -16,6 +16,7 @@ import Alerts       from './pages/Alerts'
 import Settings            from './pages/Settings'
 import ClientPortal        from './pages/ClientPortal'
 import CustomerManagement  from './pages/CustomerManagement'
+import UserManagement       from './pages/UserManagement'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="alerts"                    element={<Alerts />} />
         <Route path="settings"                  element={<Settings />} />
         <Route path="customer-management"       element={<CustomerManagement />} />
+        <Route path="users"                     element={<UserManagement />} />
       </Route>
     </Routes>
   )
