@@ -661,7 +661,7 @@ export default function CustomerDevices() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {devices.map((d) => (
-            <Link key={d.id} to={`/devices/${d.id}`} className="card p-5 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group">
+            <Link key={d.id} to={`/customer-devices/${d.id}`} className="card p-5 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: '#f3f4f6' }}>

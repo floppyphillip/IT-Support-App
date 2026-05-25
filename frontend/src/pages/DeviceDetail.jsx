@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { devicesAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import StatusIndicator from '../components/StatusIndicator'
@@ -1015,6 +1015,8 @@ function SNMPMonitor({ device }) {
 export default function DeviceDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const backPath = pathname.startsWith('/customer-devices') ? '/customer-devices' : '/devices'
   const [device, setDevice]   = useState(null)
   const [metrics, setMetrics] = useState([])
   const [backups, setBackups] = useState([])
@@ -1031,7 +1033,7 @@ export default function DeviceDetail() {
         devicesAPI.getConfigBackups(id),
       ])
       setDevice(d); setMetrics([...m].reverse()); setBackups(b)
-    } catch { navigate('/devices') }
+    } catch { navigate(backPath) }
     finally { setLoading(false) }
   }
 
@@ -1101,7 +1103,7 @@ export default function DeviceDetail() {
     <div className="space-y-5 animate-fade-in">
       <div className="flex items-start gap-3">
         <Link
-          to="/devices"
+          to={backPath}
           className="p-2 text-gray-400 hover:text-gray-900 rounded-lg transition-all duration-200 mt-0.5 flex-shrink-0"
           style={{ background: 'transparent' }}
           onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}

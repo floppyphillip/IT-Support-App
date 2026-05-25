@@ -51,6 +51,7 @@ export default function App() {
         <Route path="settings"                  element={<Settings />} />
         <Route path="customer-management"       element={<CustomerManagement />} />
         <Route path="customer-devices"          element={<CustomerDevices />} />
+        <Route path="customer-devices/:id"      element={<DeviceDetail />} />
         <Route path="users"                     element={<UserManagement />} />
       </Route>
     </Routes>
