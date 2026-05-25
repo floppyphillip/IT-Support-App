@@ -568,6 +568,112 @@ function LinkFormModal({ onClose, onSaved, category = 'customer' }) {
   )
 }
 
+const LINE_COLOR = {
+  online: '#10b981', offline: '#ef4444', degraded: '#f59e0b',
+  maintenance: '#8b5cf6', unknown: '#64748b',
+}
+const NODE_B_CLS = {
+  online:      'bg-emerald-500/10 border-emerald-400 text-emerald-400',
+  offline:     'bg-red-500/10 border-red-400 text-red-400',
+  degraded:    'bg-amber-500/10 border-amber-400 text-amber-400',
+  maintenance: 'bg-purple-500/10 border-purple-400 text-purple-400',
+  unknown:     'bg-slate-500/10 border-slate-400 text-slate-400',
+}
+
+function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
+  const status    = d.status ?? 'unknown'
+  const lineColor = LINE_COLOR[status] ?? LINE_COLOR.unknown
+  const nodeBCls  = NODE_B_CLS[status]  ?? NODE_B_CLS.unknown
+  const isOnline  = status === 'online'
+  const linkType  = d.extra_data?.link_type ?? 'link'
+  const bandwidth = d.extra_data?.bandwidth
+  const provider  = d.extra_data?.provider
+
+  return (
+    <Link to={detailPath}
+      className="card p-4 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group block">
+
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="min-w-0 flex-1 mr-2">
+          <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-400 transition-colors truncate">{d.name}</p>
+          <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 uppercase tracking-wide"
+            style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6' }}>
+            {linkType.replace('_', ' ')}
+          </span>
+        </div>
+        <StatusIndicator status={d.status} dot />
+      </div>
+
+      {/* Topology diagram — A ──line── B */}
+      <div className="flex items-center gap-2 my-4">
+        {/* Node A */}
+        <div className="flex flex-col items-center flex-shrink-0" style={{ width: 68 }}>
+          <div className="w-9 h-9 rounded-full bg-blue-500/10 border-2 border-blue-400 flex items-center justify-center text-xs font-bold text-blue-400 mb-1">
+            A
+          </div>
+          <p className="text-[10px] font-mono text-gray-500 truncate w-full text-center">{d.ip_address}</p>
+        </div>
+
+        {/* Connecting line */}
+        <div className="flex-1 flex flex-col items-center" style={{ minWidth: 0 }}>
+          <div className="relative w-full flex items-center">
+            <div className="w-full" style={{
+              borderTop: `2px ${isOnline ? 'solid' : 'dashed'} ${lineColor}`,
+              opacity: status === 'unknown' ? 0.35 : 1,
+            }} />
+            <div className="absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full flex-shrink-0"
+              style={{
+                top: '50%', transform: 'translate(-50%, -50%)',
+                background: lineColor,
+                boxShadow: isOnline ? `0 0 8px ${lineColor}` : 'none',
+              }} />
+          </div>
+          {bandwidth && (
+            <p className="text-[9px] font-mono mt-1.5 truncate" style={{ color: lineColor }}>{bandwidth}</p>
+          )}
+        </div>
+
+        {/* Node B */}
+        <div className="flex flex-col items-center flex-shrink-0" style={{ width: 68 }}>
+          <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-1 ${nodeBCls}`}>
+            B
+          </div>
+          <p className="text-[10px] font-mono text-gray-500 truncate w-full text-center">
+            {d.management_ip || '—'}
+          </p>
+        </div>
+      </div>
+
+      {/* Metadata */}
+      {(provider || d.serial_number || d.location) && (
+        <div className="flex items-center gap-1.5 flex-wrap mb-3 text-[10px] text-gray-400">
+          {provider && <span>{provider}</span>}
+          {d.serial_number && <span className="font-mono">{provider ? '· ' : ''}{d.serial_number}</span>}
+          {d.location && <span className="flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />{d.location}</span>}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <button className="btn-secondary flex-1 justify-center text-xs py-1.5"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPing(d) }}>
+          <Zap className="w-3 h-3" /> Ping
+        </button>
+        <button className="btn-secondary justify-center text-xs py-1.5 px-3" title="Edit"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(d) }}>
+          <Pencil className="w-3 h-3" />
+        </button>
+        <button className="flex items-center justify-center text-xs py-1.5 px-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all"
+          title="Delete"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(d) }}>
+          <Trash2 className="w-3 h-3" />
+        </button>
+      </div>
+    </Link>
+  )
+}
+
 function AddDropdown({ onNetworkDevice, onLink }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -660,7 +766,14 @@ export default function CustomerDevices() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {devices.map((d) => (
+          {devices.map((d) => d.tags?.includes('link') ? (
+            <LinkCard
+              key={d.id} d={d} detailPath={`/customer-devices/${d.id}`}
+              onPing={() => setPingTarget(d)}
+              onEdit={() => setEditTarget(d)}
+              onDelete={() => setDeleteTarget(d)}
+            />
+          ) : (
             <Link key={d.id} to={`/customer-devices/${d.id}`} className="card p-5 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
