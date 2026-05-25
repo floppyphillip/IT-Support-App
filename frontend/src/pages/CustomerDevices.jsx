@@ -5,7 +5,7 @@ import { devicesAPI } from '../api/client'
 import StatusIndicator from '../components/StatusIndicator'
 import { SkeletonCard } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
-import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square, Pencil, Trash2, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square, Pencil, Trash2, AlertTriangle, ChevronDown, Link2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 const DEVICE_ICONS = {
@@ -427,12 +427,192 @@ function PingModal({ device, onClose }) {
   )
 }
 
+const LINK_TYPES = ['fiber', 'ethernet', 'mpls', 'vpn', 'p2p', 'leased_line', 'other']
+const LINK_EMPTY = {
+  name: '', link_type: 'fiber', endpoint_a: '', endpoint_b: '',
+  bandwidth: '', provider: '', circuit_id: '', location: '', monitoring_enabled: true,
+}
+
+function LinkFormModal({ onClose, onSaved, category = 'customer' }) {
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+  const [form, setForm] = useState(LINK_EMPTY)
+  const [saving, setSaving] = useState(false)
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const submit = async () => {
+    if (!form.name.trim())       return toast.error('Link name is required')
+    if (!form.endpoint_a.trim()) return toast.error('Endpoint A IP is required')
+    setSaving(true)
+    try {
+      await devicesAPI.create({
+        name:               form.name.trim(),
+        ip_address:         form.endpoint_a.trim(),
+        management_ip:      form.endpoint_b.trim()  || undefined,
+        serial_number:      form.circuit_id.trim()  || undefined,
+        location:           form.location.trim()    || undefined,
+        monitoring_enabled: form.monitoring_enabled,
+        tags:               ['link'],
+        category,
+        device_type:        'other',
+        vendor:             'other',
+        extra_data: {
+          link_type: form.link_type,
+          bandwidth: form.bandwidth.trim() || undefined,
+          provider:  form.provider.trim()  || undefined,
+        },
+      })
+      toast.success('Link added successfully')
+      onSaved()
+      onClose()
+    } catch (err) {
+      if (!err.response) {
+        toast.error('Cannot reach server — make sure the backend is running')
+      } else {
+        const detail = err.response.data?.detail
+        if (Array.isArray(detail)) toast.error(detail.map(d => d.msg ?? d).join(', '))
+        else toast.error(detail ?? `Server error ${err.response.status}`)
+      }
+    } finally { setSaving(false) }
+  }
+
+  return createPortal(
+    <>
+      <div className="absolute inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
+      <div className="absolute inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
+        <div className="w-full max-w-2xl flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
+             style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', pointerEvents: 'auto' }}>
+          <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+            <div>
+              <p className="font-semibold text-gray-900">Add Link</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Register a network link or circuit</p>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg transition-colors hover:bg-gray-100 text-gray-400 hover:text-gray-700">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+            <section>
+              <p className="text-[15px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-4)' }}>Link Details</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>
+                    Link Name <span className="text-red-400">*</span>
+                  </label>
+                  <input className="input w-full" placeholder="Lagos-Abuja-MPLS"
+                    value={form.name} onChange={e => set('name', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Link Type</label>
+                  <select className="input w-full" value={form.link_type} onChange={e => set('link_type', e.target.value)}>
+                    {LINK_TYPES.map(t => (
+                      <option key={t} value={t}>{t.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Bandwidth</label>
+                  <input className="input w-full font-mono" placeholder="100 Mbps"
+                    value={form.bandwidth} onChange={e => set('bandwidth', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>
+                    Endpoint A <span className="text-red-400">*</span>
+                  </label>
+                  <input className="input w-full font-mono" placeholder="192.168.1.1"
+                    value={form.endpoint_a} onChange={e => set('endpoint_a', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Endpoint B</label>
+                  <input className="input w-full font-mono" placeholder="10.0.0.1"
+                    value={form.endpoint_b} onChange={e => set('endpoint_b', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Provider / Carrier</label>
+                  <input className="input w-full" placeholder="MTN Business"
+                    value={form.provider} onChange={e => set('provider', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Circuit ID</label>
+                  <input className="input w-full font-mono" placeholder="MTN-MPLS-004921"
+                    value={form.circuit_id} onChange={e => set('circuit_id', e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Location / Route</label>
+                  <input className="input w-full" placeholder="Lagos → Abuja"
+                    value={form.location} onChange={e => set('location', e.target.value)} />
+                </div>
+              </div>
+            </section>
+            <section className="border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+              <p className="text-[15px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-4)' }}>Monitoring</p>
+              <Toggle label="Enable monitoring (ICMP ping on Endpoint A)" checked={form.monitoring_enabled}
+                onChange={v => set('monitoring_enabled', v)} />
+            </section>
+          </div>
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+            <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancel</button>
+            <button onClick={submit} className="btn-primary" disabled={saving}>
+              {saving
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</>
+                : <><Link2 className="w-3.5 h-3.5" />Add Link</>}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.getElementById('overlay-root')
+  )
+}
+
+function AddDropdown({ onNetworkDevice, onLink }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen(o => !o)} className="btn-primary">
+        <Plus className="w-4 h-4" />Add Device<ChevronDown className="w-3.5 h-3.5 ml-1" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-48 rounded-xl shadow-xl border z-50 overflow-hidden py-1"
+             style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
+          <button
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            onClick={() => { setOpen(false); onNetworkDevice() }}
+          >
+            <Server className="w-4 h-4 text-blue-400 flex-shrink-0" />
+            Network Device
+          </button>
+          <button
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            onClick={() => { setOpen(false); onLink() }}
+          >
+            <Link2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            Link
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function CustomerDevices() {
   const [devices, setDevices]           = useState([])
   const [total, setTotal]               = useState(0)
   const [loading, setLoading]           = useState(true)
   const [search, setSearch]             = useState('')
   const [showAdd, setShowAdd]           = useState(false)
+  const [showAddLink, setShowAddLink]   = useState(false)
   const [editTarget, setEditTarget]     = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [pingTarget, setPingTarget]     = useState(null)
@@ -454,13 +634,14 @@ export default function CustomerDevices() {
   return (
     <div className="space-y-4 animate-fade-in">
       {showAdd      && <DeviceFormModal category="customer" onClose={() => setShowAdd(false)} onSaved={load} />}
+      {showAddLink  && <LinkFormModal category="customer" onClose={() => setShowAddLink(false)} onSaved={load} />}
       {editTarget   && <DeviceFormModal category="customer" device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />}
       {deleteTarget && <DeleteConfirmModal device={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={load} />}
       {pingTarget   && <PingModal device={pingTarget} onClose={() => { setPingTarget(null); load() }} />}
 
       <div className="flex items-center justify-between">
         <div><h1 className="page-title">Customer Devices</h1><p className="page-sub">{total} total</p></div>
-        <button onClick={() => setShowAdd(true)} className="btn-primary"><Plus className="w-4 h-4" />Add Device</button>
+        <AddDropdown onNetworkDevice={() => setShowAdd(true)} onLink={() => setShowAddLink(true)} />
       </div>
 
       <div className="relative">
