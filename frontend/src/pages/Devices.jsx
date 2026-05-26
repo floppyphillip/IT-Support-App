@@ -339,10 +339,14 @@ function PingModal({ device, onClose }) {
     return () => { document.body.style.overflow = prev }
   }, [])
   const isLink = device.tags?.includes('link')
+  const bEndpoints = (() => {
+    const fromExtra = device.extra_data?.endpoints_b?.filter(ip => ip?.trim()) ?? []
+    return fromExtra.length > 0 ? fromExtra : (device.management_ip ? [device.management_ip] : [])
+  })()
   const endpoints = isLink
     ? [
         { label: 'A', ip: device.ip_address },
-        ...(device.management_ip ? [{ label: 'B', ip: device.management_ip }] : []),
+        ...bEndpoints.map((ip, i) => ({ label: bEndpoints.length > 1 ? `B${i + 1}` : 'B', ip })),
       ]
     : null
   const [selectedIp, setSelectedIp] = useState(device.ip_address)
@@ -573,7 +577,7 @@ const TOPOLOGY_OPTIONS = {
   radio: ['point_to_point', 'point_to_multipoint'],
 }
 const LINK_EMPTY = {
-  name: '', link_type: 'fiber', topology: 'point_to_point', endpoint_a: '', endpoint_b: '',
+  name: '', link_type: 'fiber', topology: 'point_to_point', endpoint_a: '', endpoints_b: [''],
   bandwidth: '', provider: '', circuit_id: '', location: '', monitoring_enabled: true,
 }
 
@@ -586,16 +590,20 @@ function LinkFormModal({ onClose, onSaved, category = 'noc' }) {
   const [form, setForm] = useState(LINK_EMPTY)
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const setEndpointB = (i, val) => setForm(f => { const a = [...f.endpoints_b]; a[i] = val; return { ...f, endpoints_b: a } })
+  const addEndpointB = () => setForm(f => ({ ...f, endpoints_b: [...f.endpoints_b, ''] }))
+  const removeEndpointB = (i) => setForm(f => ({ ...f, endpoints_b: f.endpoints_b.filter((_, j) => j !== i) }))
 
   const submit = async () => {
     if (!form.name.trim())       return toast.error('Link name is required')
     if (!form.endpoint_a.trim()) return toast.error('Endpoint A IP is required')
+    const validB = form.endpoints_b.filter(ip => ip.trim())
     setSaving(true)
     try {
       await devicesAPI.create({
         name:              form.name.trim(),
         ip_address:        form.endpoint_a.trim(),
-        management_ip:     form.endpoint_b.trim()  || undefined,
+        management_ip:     validB[0] || undefined,
         serial_number:     form.circuit_id.trim()  || undefined,
         location:          form.location.trim()    || undefined,
         monitoring_enabled: form.monitoring_enabled,
@@ -604,10 +612,11 @@ function LinkFormModal({ onClose, onSaved, category = 'noc' }) {
         device_type:       'other',
         vendor:            'other',
         extra_data: {
-          link_type: form.link_type,
-          topology:  form.topology,
-          bandwidth: form.bandwidth.trim() || undefined,
-          provider:  form.provider.trim()  || undefined,
+          link_type:   form.link_type,
+          topology:    form.topology,
+          bandwidth:   form.bandwidth.trim() || undefined,
+          provider:    form.provider.trim()  || undefined,
+          endpoints_b: validB.length > 0 ? validB : undefined,
         },
       })
       toast.success('Link added successfully')
@@ -683,10 +692,36 @@ function LinkFormModal({ onClose, onSaved, category = 'noc' }) {
                   <input className="input w-full font-mono" placeholder="192.168.1.1"
                     value={form.endpoint_a} onChange={e => set('endpoint_a', e.target.value)} />
                 </div>
-                <div>
-                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Endpoint B</label>
-                  <input className="input w-full font-mono" placeholder="10.0.0.1"
-                    value={form.endpoint_b} onChange={e => set('endpoint_b', e.target.value)} />
+                <div className="col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[15px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>Endpoint B</label>
+                    <button
+                      type="button"
+                      disabled={form.topology !== 'point_to_multipoint'}
+                      onClick={addEndpointB}
+                      className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}
+                    >
+                      <Plus className="w-3 h-3" /> Add Point B
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {form.endpoints_b.map((ip, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-blue-400 font-mono w-5 flex-shrink-0 text-center">
+                          {form.endpoints_b.length > 1 ? `B${i + 1}` : 'B'}
+                        </span>
+                        <input className="input flex-1 font-mono" placeholder="10.0.0.1"
+                          value={ip} onChange={e => setEndpointB(i, e.target.value)} />
+                        {form.endpoints_b.length > 1 && (
+                          <button type="button" onClick={() => removeEndpointB(i)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors flex-shrink-0">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Provider / Carrier</label>
@@ -753,6 +788,10 @@ function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
   const linkType  = d.extra_data?.link_type ?? 'link'
   const bandwidth = d.extra_data?.bandwidth
   const provider  = d.extra_data?.provider
+  const endpointsB = (() => {
+    const fromExtra = d.extra_data?.endpoints_b?.filter(ip => ip?.trim()) ?? []
+    return fromExtra.length > 0 ? fromExtra : (d.management_ip ? [d.management_ip] : ['—'])
+  })()
 
   return (
     <Link to={detailPath}
@@ -771,43 +810,50 @@ function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
         <StatusIndicator status={d.status} dot />
       </div>
 
-      {/* Topology diagram — A ──line── B */}
-      <div className="flex items-center gap-2 my-4">
-        {/* Node A */}
-        <div className="flex flex-col items-center flex-shrink-0" style={{ width: 68 }}>
+      {/* Topology diagram */}
+      <div className="flex gap-2 my-4">
+        {/* Node A — vertically centered */}
+        <div className="flex flex-col items-center justify-center flex-shrink-0" style={{ width: 64 }}>
           <div className="w-9 h-9 rounded-full bg-blue-500/10 border-2 border-blue-400 flex items-center justify-center text-xs font-bold text-blue-400 mb-1">
             A
           </div>
           <p className="text-[10px] font-mono text-gray-500 truncate w-full text-center">{d.ip_address}</p>
         </div>
 
-        {/* Connecting line */}
-        <div className="flex-1 flex flex-col items-center" style={{ minWidth: 0 }}>
-          <div className="relative w-full flex items-center">
-            <div className="w-full" style={{
-              borderTop: `2px ${isOnline ? 'solid' : 'dashed'} ${lineColor}`,
-              opacity: status === 'unknown' ? 0.35 : 1,
-            }} />
-            <div className="absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full flex-shrink-0"
-              style={{
-                top: '50%', transform: 'translate(-50%, -50%)',
-                background: lineColor,
-                boxShadow: isOnline ? `0 0 8px ${lineColor}` : 'none',
-              }} />
-          </div>
-          {bandwidth && (
-            <p className="text-[9px] font-mono mt-1.5 truncate" style={{ color: lineColor }}>{bandwidth}</p>
+        {/* Lines + B nodes */}
+        <div className="flex-1 flex flex-col justify-center gap-2 min-w-0">
+          {endpointsB.map((bIp, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="relative w-full flex items-center">
+                  <div className="w-full" style={{
+                    borderTop: `2px ${isOnline ? 'solid' : 'dashed'} ${lineColor}`,
+                    opacity: status === 'unknown' ? 0.35 : 1,
+                  }} />
+                  {endpointsB.length === 1 && (
+                    <div className="absolute w-2.5 h-2.5 rounded-full"
+                      style={{
+                        left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+                        background: lineColor,
+                        boxShadow: isOnline ? `0 0 8px ${lineColor}` : 'none',
+                      }} />
+                  )}
+                </div>
+                {bandwidth && endpointsB.length === 1 && (
+                  <p className="text-[9px] font-mono mt-1 truncate" style={{ color: lineColor }}>{bandwidth}</p>
+                )}
+              </div>
+              <div className="flex flex-col items-center flex-shrink-0" style={{ width: 60 }}>
+                <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-0.5 ${nodeBCls}`}>
+                  {endpointsB.length > 1 ? `B${i + 1}` : 'B'}
+                </div>
+                <p className="text-[10px] font-mono text-gray-500 truncate w-full text-center">{bIp}</p>
+              </div>
+            </div>
+          ))}
+          {bandwidth && endpointsB.length > 1 && (
+            <p className="text-[9px] font-mono truncate" style={{ color: lineColor }}>{bandwidth}</p>
           )}
-        </div>
-
-        {/* Node B */}
-        <div className="flex flex-col items-center flex-shrink-0" style={{ width: 68 }}>
-          <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-1 ${nodeBCls}`}>
-            B
-          </div>
-          <p className="text-[10px] font-mono text-gray-500 truncate w-full text-center">
-            {d.management_ip || '—'}
-          </p>
         </div>
       </div>
 
