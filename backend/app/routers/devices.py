@@ -123,16 +123,20 @@ async def delete_device(
 async def ping_device(
     device_id: str,
     count: int = Query(4, ge=1, le=100),
+    ip: str | None = Query(None, description="Override IP to ping (for link devices with multiple endpoints)"),
     db: AsyncSession = Depends(get_db),
     _user: str = Depends(get_current_user_id),
 ):
     device = await _get_device_or_404(db, device_id)
-    result = await ping_host(device.ip_address, count=count)
+    target_ip = ip if ip else device.ip_address
+    result = await ping_host(target_ip, count=count)
 
-    device.last_ping_ms = result.get("latency_ms")
-    device.last_seen = datetime.now(timezone.utc) if result["reachable"] else device.last_seen
-    device.status = DeviceStatus.online if result["reachable"] else DeviceStatus.offline
-    await db.flush()
+    # Only update device status when pinging the primary IP
+    if not ip or ip == device.ip_address:
+        device.last_ping_ms = result.get("latency_ms")
+        device.last_seen = datetime.now(timezone.utc) if result["reachable"] else device.last_seen
+        device.status = DeviceStatus.online if result["reachable"] else DeviceStatus.offline
+        await db.flush()
 
     return PingResult(**result)
 

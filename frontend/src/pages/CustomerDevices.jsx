@@ -316,6 +316,14 @@ function PingModal({ device, onClose }) {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [])
+  const isLink = device.tags?.includes('link')
+  const endpoints = isLink
+    ? [
+        { label: 'A', ip: device.ip_address },
+        ...(device.management_ip ? [{ label: 'B', ip: device.management_ip }] : []),
+      ]
+    : null
+  const [selectedIp, setSelectedIp] = useState(device.ip_address)
   const [count, setCount]       = useState('4')
   const [infinite, setInfinite] = useState(false)
   const [running, setRunning]   = useState(false)
@@ -335,12 +343,13 @@ function PingModal({ device, onClose }) {
   })
 
   const start = async () => {
+    const pingIp = isLink ? selectedIp : null
     setResults([]); setSummary(null); setRunning(true); stopRef.current = false
     if (infinite) {
       let sent = 0, received = 0, latencies = []
       while (!stopRef.current) {
         try {
-          const { data } = await devicesAPI.ping(device.id, 1)
+          const { data } = await devicesAPI.ping(device.id, 1, pingIp)
           sent++
           if (data.reachable && data.latency_ms != null) { received++; latencies.push(data.latency_ms) }
           setResults(prev => [...prev, { key: Date.now() + Math.random(), reachable: data.reachable, latency: data.latency_ms, ip: data.ip_address }])
@@ -355,7 +364,7 @@ function PingModal({ device, onClose }) {
     } else {
       const n = Math.max(1, Math.min(100, parseInt(count) || 4))
       try {
-        const { data } = await devicesAPI.ping(device.id, n)
+        const { data } = await devicesAPI.ping(device.id, n, pingIp)
         setResults([{ key: Date.now(), reachable: data.reachable, latency: data.latency_ms, ip: data.ip_address, packets_sent: data.packets_sent, packets_received: data.packets_received, loss: data.packet_loss_pct }])
         setSummary({ sent: data.packets_sent, received: data.packets_received, loss: data.packet_loss_pct?.toFixed(0) ?? '100', avg: data.latency_ms != null ? data.latency_ms.toFixed(1) : '—', min: '—', max: '—' })
       } catch (err) {
@@ -383,6 +392,31 @@ function PingModal({ device, onClose }) {
             <X className="w-4 h-4" />
           </button>
         </div>
+        {/* IP selector — link devices only */}
+        {isLink && endpoints && (
+          <div className="flex items-center gap-3 px-5 py-2.5 border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+            <span className="text-[10px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: 'var(--text-4)' }}>Ping target</span>
+            <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: 'var(--border-mid)' }}>
+              {endpoints.map(({ label, ip }) => (
+                <button
+                  key={ip}
+                  disabled={running}
+                  onClick={() => { setSelectedIp(ip); setResults([]); setSummary(null) }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-semibold transition-colors disabled:opacity-50"
+                  style={{
+                    background: selectedIp === ip ? 'var(--blue)' : 'transparent',
+                    color: selectedIp === ip ? '#fff' : 'var(--text-3)',
+                    borderRight: label !== endpoints[endpoints.length - 1].label ? '1px solid var(--border-mid)' : 'none',
+                  }}
+                >
+                  <span className="font-sans font-bold" style={{ fontSize: 10 }}>{label}</span>
+                  {ip}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-4 px-5 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
           <div className="flex items-center gap-2">
             <label className="text-[15px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>Count</label>

@@ -338,6 +338,14 @@ function PingModal({ device, onClose }) {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [])
+  const isLink = device.tags?.includes('link')
+  const endpoints = isLink
+    ? [
+        { label: 'A', ip: device.ip_address },
+        ...(device.management_ip ? [{ label: 'B', ip: device.management_ip }] : []),
+      ]
+    : null
+  const [selectedIp, setSelectedIp] = useState(device.ip_address)
   const [count, setCount]     = useState('4')
   const [infinite, setInfinite] = useState(false)
   const [running, setRunning] = useState(false)
@@ -364,11 +372,12 @@ function PingModal({ device, onClose }) {
     setRunning(true)
     stopRef.current = false
 
+    const pingIp = isLink ? selectedIp : null
     if (infinite) {
       let sent = 0, received = 0, latencies = []
       while (!stopRef.current) {
         try {
-          const { data } = await devicesAPI.ping(device.id, 1)
+          const { data } = await devicesAPI.ping(device.id, 1, pingIp)
           sent++
           if (data.reachable && data.latency_ms != null) {
             received++
@@ -391,7 +400,7 @@ function PingModal({ device, onClose }) {
     } else {
       const n = Math.max(1, Math.min(100, parseInt(count) || 4))
       try {
-        const { data } = await devicesAPI.ping(device.id, n)
+        const { data } = await devicesAPI.ping(device.id, n, pingIp)
         setResults([{
           key: Date.now(),
           reachable: data.reachable,
@@ -453,6 +462,31 @@ function PingModal({ device, onClose }) {
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* IP selector — link devices only */}
+        {isLink && endpoints && (
+          <div className="flex items-center gap-3 px-5 py-2.5 border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+            <span className="text-[10px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: 'var(--text-4)' }}>Ping target</span>
+            <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: 'var(--border-mid)' }}>
+              {endpoints.map(({ label, ip }) => (
+                <button
+                  key={ip}
+                  disabled={running}
+                  onClick={() => { setSelectedIp(ip); setResults([]); setSummary(null) }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-semibold transition-colors disabled:opacity-50"
+                  style={{
+                    background: selectedIp === ip ? 'var(--blue)' : 'transparent',
+                    color: selectedIp === ip ? '#fff' : 'var(--text-3)',
+                    borderRight: label !== endpoints[endpoints.length - 1].label ? '1px solid var(--border-mid)' : 'none',
+                  }}
+                >
+                  <span className="font-sans font-bold" style={{ fontSize: 10 }}>{label}</span>
+                  {ip}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Controls */}
         <div className="flex items-center gap-4 px-5 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
