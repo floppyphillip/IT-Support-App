@@ -19,6 +19,7 @@ class DeviceCreate(BaseModel):
     tags: list[str] = []
     client_id: Optional[str] = None
     category: str = "noc"
+    extra_data: Optional[Any] = None
     monitoring_enabled: bool = True
     snmp_enabled: bool = False
     snmp_community: Optional[str] = "public"
@@ -44,6 +45,7 @@ class DeviceUpdate(BaseModel):
     tags: Optional[list[str]] = None
     client_id: Optional[str] = None
     category: Optional[str] = None
+    extra_data: Optional[Any] = None
     monitoring_enabled: Optional[bool] = None
     snmp_enabled: Optional[bool] = None
     snmp_community: Optional[str] = None
