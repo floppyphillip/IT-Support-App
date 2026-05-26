@@ -475,13 +475,28 @@ const LINK_EMPTY = {
   bandwidth: '', provider: '', circuit_id: '', location: '', monitoring_enabled: true,
 }
 
-function LinkFormModal({ onClose, onSaved, category = 'customer' }) {
+function LinkFormModal({ onClose, onSaved, category = 'customer', device = null }) {
+  const isEdit = !!device
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [])
-  const [form, setForm] = useState(LINK_EMPTY)
+  const [form, setForm] = useState(isEdit ? {
+    name:               device.name ?? '',
+    link_type:          device.extra_data?.link_type ?? 'fiber',
+    topology:           device.extra_data?.topology  ?? 'point_to_point',
+    endpoint_a:         device.ip_address ?? '',
+    endpoints_b:        (() => {
+      const fromExtra = device.extra_data?.endpoints_b?.filter(ip => ip?.trim()) ?? []
+      return fromExtra.length > 0 ? fromExtra : [device.management_ip ?? '']
+    })(),
+    bandwidth:          device.extra_data?.bandwidth ?? '',
+    provider:           device.extra_data?.provider  ?? '',
+    circuit_id:         device.serial_number ?? '',
+    location:           device.location ?? '',
+    monitoring_enabled: device.monitoring_enabled ?? true,
+  } : LINK_EMPTY)
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const setEndpointB = (i, val) => setForm(f => { const a = [...f.endpoints_b]; a[i] = val; return { ...f, endpoints_b: a } })
@@ -494,17 +509,13 @@ function LinkFormModal({ onClose, onSaved, category = 'customer' }) {
     const validB = form.endpoints_b.filter(ip => ip.trim())
     setSaving(true)
     try {
-      await devicesAPI.create({
+      const payload = {
         name:               form.name.trim(),
         ip_address:         form.endpoint_a.trim(),
         management_ip:      validB[0] || undefined,
         serial_number:      form.circuit_id.trim()  || undefined,
         location:           form.location.trim()    || undefined,
         monitoring_enabled: form.monitoring_enabled,
-        tags:               ['link'],
-        category,
-        device_type:        'other',
-        vendor:             'other',
         extra_data: {
           link_type:   form.link_type,
           topology:    form.topology,
@@ -512,8 +523,14 @@ function LinkFormModal({ onClose, onSaved, category = 'customer' }) {
           provider:    form.provider.trim()  || undefined,
           endpoints_b: validB.length > 0 ? validB : undefined,
         },
-      })
-      toast.success('Link added successfully')
+      }
+      if (isEdit) {
+        await devicesAPI.update(device.id, payload)
+        toast.success('Link updated')
+      } else {
+        await devicesAPI.create({ ...payload, tags: ['link'], category, device_type: 'other', vendor: 'other' })
+        toast.success('Link added successfully')
+      }
       onSaved()
       onClose()
     } catch (err) {
@@ -535,8 +552,8 @@ function LinkFormModal({ onClose, onSaved, category = 'customer' }) {
              style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', pointerEvents: 'auto' }}>
           <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
             <div>
-              <p className="font-semibold text-gray-900">Add Link</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Register a network link or circuit</p>
+              <p className="font-semibold text-gray-900">{isEdit ? 'Edit Link' : 'Add Link'}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{isEdit ? `Editing ${device.name}` : 'Register a network link or circuit'}</p>
             </div>
             <button onClick={onClose} className="p-1.5 rounded-lg transition-colors hover:bg-gray-100 text-gray-400 hover:text-gray-700">
               <X className="w-4 h-4" />
@@ -645,7 +662,9 @@ function LinkFormModal({ onClose, onSaved, category = 'customer' }) {
             <button onClick={submit} className="btn-primary" disabled={saving}>
               {saving
                 ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</>
-                : <><Link2 className="w-3.5 h-3.5" />Add Link</>}
+                : isEdit
+                  ? <><Pencil className="w-3.5 h-3.5" />Save Changes</>
+                  : <><Link2 className="w-3.5 h-3.5" />Add Link</>}
             </button>
           </div>
         </div>
@@ -847,7 +866,9 @@ export default function CustomerDevices() {
     <div className="space-y-4 animate-fade-in">
       {showAdd      && <DeviceFormModal category="customer" onClose={() => setShowAdd(false)} onSaved={load} />}
       {showAddLink  && <LinkFormModal category="customer" onClose={() => setShowAddLink(false)} onSaved={load} />}
-      {editTarget   && <DeviceFormModal category="customer" device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />}
+      {editTarget && (editTarget.tags?.includes('link')
+        ? <LinkFormModal category="customer" device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />
+        : <DeviceFormModal category="customer" device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />)}
       {deleteTarget && <DeleteConfirmModal device={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={load} />}
       {pingTarget   && <PingModal device={pingTarget} onClose={() => { setPingTarget(null); load() }} />}
 
