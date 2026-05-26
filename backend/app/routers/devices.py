@@ -113,11 +113,10 @@ async def delete_device(
     db: AsyncSession = Depends(get_db),
     _user: str = Depends(require_superadmin_or_engineer),
 ):
-    device = await _get_device_or_404(db, device_id)
-    # Raw SQL to null FK references before delete — avoids async lazy-load errors
+    await _get_device_or_404(db, device_id)
     await db.execute(text("UPDATE alerts SET device_id = NULL WHERE device_id = :id"), {"id": device_id})
     await db.execute(text("UPDATE tickets SET device_id = NULL WHERE device_id = :id"), {"id": device_id})
-    await db.delete(device)
+    await db.execute(text("DELETE FROM devices WHERE id = :id"), {"id": device_id})
 
 
 # ─── Live operations ──────────────────────────────────────────────────────────
