@@ -91,8 +91,8 @@ class Device(Base):
 
     # Relationships
     client: Mapped["Client"] = relationship("Client", back_populates="devices", lazy="select")  # type: ignore[name-defined]
-    tickets: Mapped[list] = relationship("Ticket", back_populates="device", lazy="select")
-    alerts: Mapped[list] = relationship("Alert", back_populates="device", lazy="select")
+    tickets: Mapped[list] = relationship("Ticket", back_populates="device", lazy="select", passive_deletes=True)
+    alerts: Mapped[list] = relationship("Alert", back_populates="device", lazy="select", passive_deletes=True)
     metrics: Mapped[list] = relationship("DeviceMetric", back_populates="device", lazy="select", order_by="DeviceMetric.recorded_at.desc()")
     config_backups: Mapped[list] = relationship("ConfigBackup", back_populates="device", lazy="select", order_by="ConfigBackup.backed_up_at.desc()")
 
