@@ -461,9 +461,13 @@ function PingModal({ device, onClose }) {
   )
 }
 
-const LINK_TYPES = ['fiber', 'ethernet', 'mpls', 'vpn', 'p2p', 'leased_line', 'other']
+const LINK_TYPES = ['fiber', 'radio']
+const TOPOLOGY_OPTIONS = {
+  fiber: ['point_to_point', 'point_to_multipoint'],
+  radio: ['point_to_point', 'point_to_multipoint'],
+}
 const LINK_EMPTY = {
-  name: '', link_type: 'fiber', endpoint_a: '', endpoint_b: '',
+  name: '', link_type: 'fiber', topology: 'point_to_point', endpoint_a: '', endpoint_b: '',
   bandwidth: '', provider: '', circuit_id: '', location: '', monitoring_enabled: true,
 }
 
@@ -495,6 +499,7 @@ function LinkFormModal({ onClose, onSaved, category = 'customer' }) {
         vendor:             'other',
         extra_data: {
           link_type: form.link_type,
+          topology:  form.topology,
           bandwidth: form.bandwidth.trim() || undefined,
           provider:  form.provider.trim()  || undefined,
         },
@@ -541,9 +546,22 @@ function LinkFormModal({ onClose, onSaved, category = 'customer' }) {
                 </div>
                 <div>
                   <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Link Type</label>
-                  <select className="input w-full" value={form.link_type} onChange={e => set('link_type', e.target.value)}>
+                  <select className="input w-full" value={form.link_type}
+                    onChange={e => {
+                      const t = e.target.value
+                      set('link_type', t)
+                      set('topology', TOPOLOGY_OPTIONS[t]?.[0] ?? 'point_to_point')
+                    }}>
                     {LINK_TYPES.map(t => (
-                      <option key={t} value={t}>{t.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
+                      <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Topology</label>
+                  <select className="input w-full" value={form.topology} onChange={e => set('topology', e.target.value)}>
+                    {(TOPOLOGY_OPTIONS[form.link_type] ?? []).map(t => (
+                      <option key={t} value={t}>{t.replace(/_/g, '-').replace(/\b\w/g, c => c.toUpperCase())}</option>
                     ))}
                   </select>
                 </div>
