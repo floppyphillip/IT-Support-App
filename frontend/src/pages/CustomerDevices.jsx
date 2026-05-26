@@ -570,14 +570,21 @@ function LinkFormModal({ onClose, onSaved, category = 'customer' }) {
 
 const LINE_COLOR = {
   online: '#10b981', offline: '#ef4444', degraded: '#f59e0b',
-  maintenance: '#8b5cf6', unknown: '#64748b',
+  maintenance: '#8b5cf6', unknown: '#ef4444',
 }
 const NODE_B_CLS = {
   online:      'bg-emerald-500/10 border-emerald-400 text-emerald-400',
   offline:     'bg-red-500/10 border-red-400 text-red-400',
   degraded:    'bg-amber-500/10 border-amber-400 text-amber-400',
   maintenance: 'bg-purple-500/10 border-purple-400 text-purple-400',
-  unknown:     'bg-slate-500/10 border-slate-400 text-slate-400',
+  unknown:     'bg-red-500/10 border-red-400 text-red-400',
+}
+const CARD_BORDER = {
+  online:      'rgba(16,185,129,0.30)',
+  offline:     'rgba(239,68,68,0.45)',
+  degraded:    'rgba(245,158,11,0.30)',
+  maintenance: 'rgba(139,92,246,0.30)',
+  unknown:     'rgba(239,68,68,0.35)',
 }
 
 function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
@@ -591,7 +598,8 @@ function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
 
   return (
     <Link to={detailPath}
-      className="card p-4 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group block">
+      className="card p-4 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group block"
+      style={{ borderColor: CARD_BORDER[status] }}>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
@@ -774,7 +782,8 @@ export default function CustomerDevices() {
               onDelete={() => setDeleteTarget(d)}
             />
           ) : (
-            <Link key={d.id} to={`/customer-devices/${d.id}`} className="card p-5 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group">
+            <Link key={d.id} to={`/customer-devices/${d.id}`} className="card p-5 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group"
+              style={{ borderColor: CARD_BORDER[d.status] }}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: '#f3f4f6' }}>

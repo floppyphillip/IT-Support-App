@@ -10,7 +10,7 @@ const STATUS_CONFIG = {
   offline:     { dot: 'bg-red-500',     label: 'Down',        badge: 'bg-red-500/20 text-red-400 border-red-500/30' },
   degraded:    { dot: 'bg-amber-500',   label: 'Degraded',    badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
   maintenance: { dot: 'bg-violet-500',  label: 'Maintenance', badge: 'bg-violet-500/20 text-violet-400 border-violet-500/30' },
-  unknown:     { dot: 'bg-gray-400',    label: 'Unknown',     badge: 'bg-gray-100 text-gray-500 border-gray-300' },
+  unknown:     { dot: 'bg-red-400',     label: 'Unknown',     badge: 'bg-red-500/20 text-red-400 border-red-500/30' },
 }
 
 export default function StatusIndicator({ status, dot = false }) {
