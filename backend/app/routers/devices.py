@@ -2,13 +2,15 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.device import Device, DeviceStatus
 from app.models.device_metric import DeviceMetric
 from app.models.config_backup import ConfigBackup
+from app.models.alert import Alert
+from app.models.ticket import Ticket
 from app.schemas.device import (
     DeviceCreate, DeviceUpdate, DeviceResponse, DeviceList,
     PingResult, SNMPResult, DeviceMetricResponse, ConfigBackupResponse,
@@ -114,6 +116,9 @@ async def delete_device(
     _user: str = Depends(require_superadmin_or_engineer),
 ):
     device = await _get_device_or_404(db, device_id)
+    # Null out nullable FK references so the DELETE isn't blocked by constraints
+    await db.execute(update(Alert).where(Alert.device_id == device_id).values(device_id=None))
+    await db.execute(update(Ticket).where(Ticket.device_id == device_id).values(device_id=None))
     await db.delete(device)
 
 
