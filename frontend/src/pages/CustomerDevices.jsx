@@ -471,7 +471,8 @@ const TOPOLOGY_OPTIONS = {
   radio: ['point_to_point', 'point_to_multipoint'],
 }
 const LINK_EMPTY = {
-  name: '', link_type: 'fiber', topology: 'point_to_point', endpoint_a: '', endpoints_b: [''],
+  name: '', link_type: 'fiber', topology: 'point_to_point',
+  name_a: '', endpoint_a: '', names_b: [''], endpoints_b: [''],
   bandwidth: '', provider: '', circuit_id: '', location: '', monitoring_enabled: true,
 }
 
@@ -486,10 +487,17 @@ function LinkFormModal({ onClose, onSaved, category = 'customer', device = null 
     name:               device.name ?? '',
     link_type:          device.extra_data?.link_type ?? 'fiber',
     topology:           device.extra_data?.topology  ?? 'point_to_point',
+    name_a:             device.extra_data?.name_a ?? '',
     endpoint_a:         device.ip_address ?? '',
     endpoints_b:        (() => {
       const fromExtra = device.extra_data?.endpoints_b?.filter(ip => ip?.trim()) ?? []
       return fromExtra.length > 0 ? fromExtra : [device.management_ip ?? '']
+    })(),
+    names_b:            (() => {
+      const fromExtra = device.extra_data?.endpoints_b?.filter(ip => ip?.trim()) ?? []
+      const bLen = fromExtra.length > 0 ? fromExtra.length : 1
+      const stored = device.extra_data?.names_b ?? []
+      return Array.from({ length: bLen }, (_, i) => stored[i] ?? '')
     })(),
     bandwidth:          device.extra_data?.bandwidth ?? '',
     provider:           device.extra_data?.provider  ?? '',
@@ -500,8 +508,9 @@ function LinkFormModal({ onClose, onSaved, category = 'customer', device = null 
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const setEndpointB = (i, val) => setForm(f => { const a = [...f.endpoints_b]; a[i] = val; return { ...f, endpoints_b: a } })
-  const addEndpointB = () => setForm(f => ({ ...f, endpoints_b: [...f.endpoints_b, ''] }))
-  const removeEndpointB = (i) => setForm(f => ({ ...f, endpoints_b: f.endpoints_b.filter((_, j) => j !== i) }))
+  const setNameB = (i, val) => setForm(f => { const a = [...f.names_b]; a[i] = val; return { ...f, names_b: a } })
+  const addEndpointB = () => setForm(f => ({ ...f, endpoints_b: [...f.endpoints_b, ''], names_b: [...f.names_b, ''] }))
+  const removeEndpointB = (i) => setForm(f => ({ ...f, endpoints_b: f.endpoints_b.filter((_, j) => j !== i), names_b: f.names_b.filter((_, j) => j !== i) }))
 
   const submit = async () => {
     if (!form.name.trim())       return toast.error('Link name is required')
@@ -519,6 +528,8 @@ function LinkFormModal({ onClose, onSaved, category = 'customer', device = null 
         extra_data: {
           link_type:   form.link_type,
           topology:    form.topology,
+          name_a:      form.name_a.trim() || undefined,
+          names_b:     form.names_b.map(n => n.trim()),
           bandwidth:   form.bandwidth.trim() || undefined,
           provider:    form.provider.trim()  || undefined,
           endpoints_b: validB.length > 0 ? validB : undefined,
@@ -596,12 +607,16 @@ function LinkFormModal({ onClose, onSaved, category = 'customer', device = null 
                   <input className="input w-full font-mono" placeholder="100 Mbps"
                     value={form.bandwidth} onChange={e => set('bandwidth', e.target.value)} />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>
                     Endpoint A <span className="text-red-400">*</span>
                   </label>
-                  <input className="input w-full font-mono" placeholder="192.168.1.1"
-                    value={form.endpoint_a} onChange={e => set('endpoint_a', e.target.value)} />
+                  <div className="flex gap-2">
+                    <input className="input flex-1" placeholder="Site / location name"
+                      value={form.name_a} onChange={e => set('name_a', e.target.value)} />
+                    <input className="input flex-1 font-mono" placeholder="192.168.1.1"
+                      value={form.endpoint_a} onChange={e => set('endpoint_a', e.target.value)} />
+                  </div>
                 </div>
                 <div className="col-span-2">
                   <div className="flex items-center justify-between mb-1">
@@ -622,6 +637,8 @@ function LinkFormModal({ onClose, onSaved, category = 'customer', device = null 
                         <span className="text-[10px] font-bold text-blue-400 font-mono w-5 flex-shrink-0 text-center">
                           {form.endpoints_b.length > 1 ? `B${i + 1}` : 'B'}
                         </span>
+                        <input className="input flex-1" placeholder="Site / location name"
+                          value={form.names_b[i] ?? ''} onChange={e => setNameB(i, e.target.value)} />
                         <input className="input flex-1 font-mono" placeholder="10.0.0.1"
                           value={ip} onChange={e => setEndpointB(i, e.target.value)} />
                         {form.endpoints_b.length > 1 && (
@@ -701,6 +718,8 @@ function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
   const linkType  = d.extra_data?.link_type ?? 'link'
   const bandwidth = d.extra_data?.bandwidth
   const provider  = d.extra_data?.provider
+  const nameA     = d.extra_data?.name_a
+  const namesB    = d.extra_data?.names_b ?? []
   const endpointsB = (() => {
     const fromExtra = d.extra_data?.endpoints_b?.filter(ip => ip?.trim()) ?? []
     return fromExtra.length > 0 ? fromExtra : (d.management_ip ? [d.management_ip] : ['—'])
@@ -730,6 +749,7 @@ function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
           <div className="w-9 h-9 rounded-full bg-blue-500/10 border-2 border-blue-400 flex items-center justify-center text-xs font-bold text-blue-400 mb-1">
             A
           </div>
+          {nameA && <p className="text-[9px] font-medium text-blue-300 truncate w-full text-center">{nameA}</p>}
           <p className="text-[10px] font-mono text-gray-500 truncate w-full text-center">{d.ip_address}</p>
         </div>
 
@@ -760,6 +780,7 @@ function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
                 <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-0.5 ${nodeBCls}`}>
                   {endpointsB.length > 1 ? `B${i + 1}` : 'B'}
                 </div>
+                {namesB[i] && <p className="text-[9px] font-medium truncate w-full text-center" style={{ color: lineColor }}>{namesB[i]}</p>}
                 <p className="text-[10px] font-mono text-gray-500 truncate w-full text-center">{bIp}</p>
               </div>
             </div>
