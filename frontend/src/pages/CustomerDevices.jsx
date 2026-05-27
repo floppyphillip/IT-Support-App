@@ -1091,6 +1091,7 @@ function LinkCard({ d, detailPath, onNodeClick, onEdit, onDelete }) {
   const nodeBCls  = NODE_B_CLS[status]  ?? NODE_B_CLS.unknown
   const isOnline  = status === 'online'
   const linkType  = d.extra_data?.link_type ?? 'link'
+  const topology  = d.extra_data?.topology
   const bandwidth = d.extra_data?.bandwidth
   const provider  = d.extra_data?.provider
   const nameA     = d.extra_data?.name_a
@@ -1109,10 +1110,18 @@ function LinkCard({ d, detailPath, onNodeClick, onEdit, onDelete }) {
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0 flex-1 mr-2">
           <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-400 transition-colors truncate">{d.name}</p>
-          <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 uppercase tracking-wide"
-            style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6' }}>
-            {linkType.replace('_', ' ')}
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
+              style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6' }}>
+              {linkType.replace(/_/g, ' ')}
+            </span>
+            {topology && (
+              <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
+                style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>
+                {topology.replace(/_/g, ' ')}
+              </span>
+            )}
+          </div>
         </div>
         <StatusIndicator status={d.status} dot />
       </div>
