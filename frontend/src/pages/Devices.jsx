@@ -23,6 +23,7 @@ const EMPTY_FORM = {
   monitoring_enabled: true,
   snmp_enabled: false, snmp_community: 'public', snmp_version: '2c',
   ssh_enabled: false, ssh_port: 22, ssh_username: '', ssh_password: '',
+  telnet_enabled: false, telnet_port: 23, telnet_username: '', telnet_password: '',
 }
 
 function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
@@ -48,7 +49,11 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
     ssh_enabled:        device.ssh_enabled    ?? false,
     ssh_port:           device.ssh_port       ?? 22,
     ssh_username:       device.ssh_username   ?? '',
-    ssh_password:       '',  // never pre-fill; blank = keep existing
+    ssh_password:       '',
+    telnet_enabled:     device.telnet_enabled  ?? false,
+    telnet_port:        device.telnet_port     ?? 23,
+    telnet_username:    device.telnet_username ?? '',
+    telnet_password:    '',
   } : EMPTY_FORM)
   const [saving, setSaving] = useState(false)
 
@@ -71,8 +76,11 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
         ssh_port:   Number(form.ssh_port) || 22,
         snmp_community: form.snmp_enabled ? form.snmp_community : undefined,
         snmp_version:   form.snmp_enabled ? form.snmp_version   : undefined,
-        ssh_username:   form.ssh_enabled  ? form.ssh_username   || undefined : undefined,
-        ssh_password:   form.ssh_enabled  ? form.ssh_password   || undefined : undefined,
+        ssh_username:    form.ssh_enabled    ? form.ssh_username    || undefined : undefined,
+        ssh_password:    form.ssh_enabled    ? form.ssh_password    || undefined : undefined,
+        telnet_port:     Number(form.telnet_port) || 23,
+        telnet_username: form.telnet_enabled ? form.telnet_username || undefined : undefined,
+        telnet_password: form.telnet_enabled ? form.telnet_password || undefined : undefined,
       }
       if (isEdit) {
         await devicesAPI.update(device.id, payload)
@@ -229,6 +237,31 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
                   <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Password</label>
                   <input className="input w-full font-mono" type="password" placeholder="Encrypted at rest"
                     value={form.ssh_password} onChange={(e) => set('ssh_password', e.target.value)} />
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Telnet */}
+          <section className="border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+            <Toggle label="Telnet remote access" checked={form.telnet_enabled}
+              onChange={(v) => set('telnet_enabled', v)} />
+            {form.telnet_enabled && (
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Telnet Port</label>
+                  <input className="input w-full font-mono" type="number" placeholder="23"
+                    value={form.telnet_port} onChange={(e) => set('telnet_port', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Username</label>
+                  <input className="input w-full font-mono" placeholder="admin"
+                    value={form.telnet_username} onChange={(e) => set('telnet_username', e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Password</label>
+                  <input className="input w-full font-mono" type="password" placeholder="Encrypted at rest"
+                    value={form.telnet_password} onChange={(e) => set('telnet_password', e.target.value)} />
                 </div>
               </div>
             )}
