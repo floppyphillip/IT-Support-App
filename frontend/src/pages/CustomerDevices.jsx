@@ -707,15 +707,9 @@ function EndpointPopup({ device, endpoint, onClose }) {
   const [logs, setLogs]           = useState([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logsFetched, setLogsFetched] = useState(false)
-  const [showFilter, setShowFilter] = useState(true)
-  const [filterFrom, setFilterFrom] = useState(() => {
-    const d = new Date(), p = n => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T00:00`
-  })
-  const [filterTo, setFilterTo] = useState(() => {
-    const d = new Date(), p = n => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
-  })
+  const [showFilter, setShowFilter] = useState(false)
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo, setFilterTo]     = useState('')
   const stopRef   = useRef(false)
   const bottomRef = useRef(null)
 
@@ -916,7 +910,14 @@ function EndpointPopup({ device, endpoint, onClose }) {
             {/* Filter toolbar */}
             <div className="flex items-center gap-2 px-5 py-2 border-b flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
               <button
-                onClick={() => setShowFilter(f => !f)}
+                onClick={() => setShowFilter(f => {
+                  if (!f) {
+                    const d = new Date(), p = n => String(n).padStart(2, '0')
+                    setFilterFrom(`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T00:00`)
+                    setFilterTo(`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`)
+                  }
+                  return !f
+                })}
                 className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-all"
                 style={{
                   background: (showFilter || filterFrom || filterTo) ? 'rgba(59,130,246,0.1)' : 'transparent',
