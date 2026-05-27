@@ -746,10 +746,10 @@ function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
       <div className="flex gap-2 my-4">
         {/* Node A — vertically centered */}
         <div className="flex flex-col items-center justify-center flex-shrink-0" style={{ width: 64 }}>
-          <div className="w-9 h-9 rounded-full bg-blue-500/10 border-2 border-blue-400 flex items-center justify-center text-xs font-bold text-blue-400 mb-1">
+          <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-1 ${nodeBCls}`}>
             A
           </div>
-          {nameA && <p className="text-[9px] font-medium text-blue-300 truncate w-full text-center">{nameA}</p>}
+          {nameA && <p className="text-[18px] font-medium truncate w-full text-center" style={{ color: lineColor }}>{nameA}</p>}
           <p className="text-[10px] font-mono text-gray-500 truncate w-full text-center">{d.ip_address}</p>
         </div>
 
@@ -780,7 +780,7 @@ function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
                 <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-0.5 ${nodeBCls}`}>
                   {endpointsB.length > 1 ? `B${i + 1}` : 'B'}
                 </div>
-                {namesB[i] && <p className="text-[9px] font-medium truncate w-full text-center" style={{ color: lineColor }}>{namesB[i]}</p>}
+                {namesB[i] && <p className="text-[18px] font-medium truncate w-full text-center" style={{ color: lineColor }}>{namesB[i]}</p>}
                 <p className="text-[10px] font-mono text-gray-500 truncate w-full text-center">{bIp}</p>
               </div>
             </div>
