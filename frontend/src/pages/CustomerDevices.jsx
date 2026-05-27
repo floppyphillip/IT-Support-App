@@ -103,7 +103,7 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'customer' }) {
     <>
       <div className="absolute inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
       <div className="absolute inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
-      <div className="w-full max-w-2xl flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
+      <div className="w-full max-w-[806px] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
            style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', pointerEvents: 'auto' }}>
         <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
           <div>
@@ -386,7 +386,7 @@ function PingModal({ device, onClose }) {
     <>
       <div className="absolute inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { if (!running) onClose() }} />
       <div className="absolute inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
-      <div className="w-full max-w-lg flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
+      <div className="w-full max-w-[614px] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
            style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', pointerEvents: 'auto' }}>
         <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
           <div>
@@ -560,7 +560,7 @@ function LinkFormModal({ onClose, onSaved, category = 'customer', device = null 
     <>
       <div className="absolute inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
       <div className="absolute inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
-        <div className="w-full max-w-2xl flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
+        <div className="w-full max-w-[806px] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
              style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', pointerEvents: 'auto' }}>
           <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
             <div>
@@ -707,9 +707,15 @@ function EndpointPopup({ device, endpoint, onClose }) {
   const [logs, setLogs]           = useState([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logsFetched, setLogsFetched] = useState(false)
-  const [showFilter, setShowFilter] = useState(false)
-  const [filterFrom, setFilterFrom] = useState('')
-  const [filterTo, setFilterTo]     = useState('')
+  const [showFilter, setShowFilter] = useState(true)
+  const [filterFrom, setFilterFrom] = useState(() => {
+    const d = new Date(), p = n => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T00:00`
+  })
+  const [filterTo, setFilterTo] = useState(() => {
+    const d = new Date(), p = n => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+  })
   const stopRef   = useRef(false)
   const bottomRef = useRef(null)
 
@@ -821,7 +827,7 @@ function EndpointPopup({ device, endpoint, onClose }) {
       <div className="absolute inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }}
            onClick={() => { if (!running) onClose() }} />
       <div className="absolute inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
-        <div className="w-full max-w-lg flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
+        <div className="w-full max-w-[614px] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
              style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', pointerEvents: 'auto' }}>
 
           {/* Header */}
