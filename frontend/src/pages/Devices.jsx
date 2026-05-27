@@ -280,7 +280,7 @@ function DeleteConfirmModal({ device, onClose, onDeleted }) {
     <div className="absolute inset-0 z-50 flex items-center justify-center p-4"
          style={{ background: 'rgba(0,0,0,0.75)' }}
          onClick={(e) => { if (e.target === e.currentTarget && !deleting) onClose() }}>
-      <div className="w-full max-w-sm rounded-2xl border overflow-hidden"
+      <div className="w-full max-w-[461px] rounded-2xl border overflow-hidden"
            style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
 
         <div className="px-6 pt-6 pb-5 text-center">
