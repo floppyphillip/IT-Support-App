@@ -22,6 +22,11 @@ async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION} ({settings.ENVIRONMENT})")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(
+            __import__('sqlalchemy').text(
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS device_ids JSON NOT NULL DEFAULT '[]'"
+            )
+        )
     logger.info("Database tables verified.")
     yield
     logger.info("Shutting down — disposing DB engine.")
