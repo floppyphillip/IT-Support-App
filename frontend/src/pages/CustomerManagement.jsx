@@ -32,7 +32,7 @@ function DevicePickerModal({ onClose, onAdd, alreadySelectedIds }) {
   const loadDevices = () => {
     setLoading(true)
     setFetchError(false)
-    devicesAPI.list({ category: 'customer', limit: 500 })
+    devicesAPI.list({ category: 'customer', limit: 100 })
       .then(({ data }) => {
         const items = Array.isArray(data) ? data : (data.items ?? [])
         setAllDevices(items)
