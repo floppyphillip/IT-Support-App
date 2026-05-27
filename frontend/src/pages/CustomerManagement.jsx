@@ -1,19 +1,156 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { customersAPI } from '../api/client'
+import { customersAPI, devicesAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import {
   Plus, Search, Edit2, Trash2, X, UserCircle2,
   Mail, Phone, MapPin, Hash, ChevronDown, ChevronUp, PlusCircle,
+  Server, Check, Monitor,
 } from 'lucide-react'
 import { SkeletonTable } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
+
+const DEVICE_ICONS = {
+  router: '🔀', switch: '🔌', server: '🖥️', workstation: '💻',
+  printer: '🖨️', access_point: '📡', firewall: '🛡️', nas: '💾', camera: '📷', other: '📦',
+}
 
 const EMPTY_FIELD = { name: '', title: '' }
 const EMPTY_FORM = {
   customer_name: '', customer_id: '', email: '',
   phone: '', address: '', state: '', country: '',
   custom_fields: [],
+}
+
+function DevicePickerModal({ onClose, onAdd, alreadySelectedIds }) {
+  const [allDevices, setAllDevices] = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [search, setSearch]         = useState('')
+  const [selected, setSelected]     = useState(new Set())
+
+  useEffect(() => {
+    devicesAPI.list({ category: 'customer', limit: 200 })
+      .then(({ data }) => setAllDevices(data.items ?? data ?? []))
+      .catch(() => setAllDevices([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const filtered = allDevices.filter(d =>
+    !alreadySelectedIds.has(d.id) &&
+    (d.name?.toLowerCase().includes(search.toLowerCase()) ||
+     d.ip_address?.toLowerCase().includes(search.toLowerCase()))
+  )
+
+  const toggle = (id) => setSelected(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+
+  const confirm = () => {
+    onAdd(allDevices.filter(d => selected.has(d.id)))
+    onClose()
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.4)' }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        style={{ background: '#fff', border: '1px solid #e5e7eb', maxHeight: '70vh' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid #e5e7eb' }}>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Add Customer Device</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Select one or more devices to attach</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid #f3f4f6' }}>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              className="input pl-9 w-full text-sm"
+              placeholder="Search by name or IP…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              autoFocus
+            />
+          </div>
+        </div>
+
+        {/* Device list */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="py-12 text-center text-sm text-gray-400">Loading devices…</div>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center">
+              <Server className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+              <p className="text-sm text-gray-400">{search ? 'No matching devices' : 'No available devices'}</p>
+              {!search && <p className="text-xs text-gray-300 mt-1">Add devices in Customer Devices under Tools</p>}
+            </div>
+          ) : (
+            <div className="divide-y" style={{ borderColor: '#f3f4f6' }}>
+              {filtered.map(d => (
+                <div
+                  key={d.id}
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${selected.has(d.id) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                  onClick={() => toggle(d.id)}
+                >
+                  {/* Checkbox */}
+                  <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${selected.has(d.id) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
+                    {selected.has(d.id) && <Check className="w-2.5 h-2.5 text-white" />}
+                  </div>
+                  {/* Icon */}
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: '#f3f4f6' }}>
+                    {DEVICE_ICONS[d.device_type] ?? '📦'}
+                  </div>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{d.name}</p>
+                    <p className="text-xs font-mono text-gray-400 truncate">{d.ip_address}</p>
+                  </div>
+                  {/* Status pill */}
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize flex-shrink-0 ${
+                    d.status === 'online'  ? 'bg-emerald-50 text-emerald-600' :
+                    d.status === 'offline' ? 'bg-red-50 text-red-400' :
+                                            'bg-gray-100 text-gray-400'
+                  }`}>
+                    {d.status ?? 'unknown'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid #e5e7eb' }}>
+          <span className="text-xs text-gray-400">{selected.size} selected</span>
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className="btn-secondary text-xs py-1.5 px-3">Cancel</button>
+            <button
+              type="button"
+              onClick={confirm}
+              disabled={selected.size === 0}
+              className="btn-primary text-xs py-1.5 px-3 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Add{selected.size > 0 ? ` (${selected.size})` : ''}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
 }
 
 function CustomerModal({ customer, onClose, onSave }) {
@@ -32,8 +169,12 @@ function CustomerModal({ customer, onClose, onSave }) {
         }
       : { ...EMPTY_FORM, custom_fields: [] }
   )
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving]               = useState(false)
+  const [showDevicePicker, setShowDevicePicker] = useState(false)
+  const [selectedDevices, setSelectedDevices]   = useState(customer?.devices ?? [])
   const set = (f) => (e) => setForm((p) => ({ ...p, [f]: e.target.value }))
+
+  const removeDevice = (id) => setSelectedDevices(prev => prev.filter(d => d.id !== id))
 
   const addField = () => setForm((p) => ({ ...p, custom_fields: [...p.custom_fields, { ...EMPTY_FIELD }] }))
   const removeField = (i) => setForm((p) => ({ ...p, custom_fields: p.custom_fields.filter((_, idx) => idx !== i) }))
@@ -54,10 +195,11 @@ function CustomerModal({ customer, onClose, onSave }) {
     try {
       const payload = {
         ...form,
-        phone:   form.phone   || null,
-        address: form.address || null,
-        state:   form.state   || null,
-        country: form.country || null,
+        phone:      form.phone   || null,
+        address:    form.address || null,
+        state:      form.state   || null,
+        country:    form.country || null,
+        device_ids: selectedDevices.map(d => d.id),
       }
       const { data } = isEdit
         ? await customersAPI.update(customer.id, payload)
@@ -210,6 +352,76 @@ function CustomerModal({ customer, onClose, onSave }) {
                 </div>
               )}
             </div>
+
+            {/* ── Customer Devices ──────────────────────────────────── */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-4 rounded-full bg-emerald-500 flex-shrink-0" />
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Customer Devices</h3>
+                  {selectedDevices.length > 0 && (
+                    <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 px-1.5 py-0.5 rounded-full">
+                      {selectedDevices.length}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDevicePicker(true)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  Add Device
+                </button>
+              </div>
+
+              {selectedDevices.length === 0 ? (
+                <div
+                  className="flex flex-col items-center justify-center py-8 rounded-xl text-center cursor-pointer transition-colors hover:bg-gray-50"
+                  style={{ border: '1.5px dashed #e5e7eb' }}
+                  onClick={() => setShowDevicePicker(true)}
+                >
+                  <Monitor className="w-7 h-7 text-gray-300 mb-2" />
+                  <p className="text-sm font-medium text-gray-400">No devices attached</p>
+                  <p className="text-xs text-gray-300 mt-0.5">Click to attach customer devices</p>
+                </div>
+              ) : (
+                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #e5e7eb' }}>
+                  <div className="grid grid-cols-[28px_1fr_auto_32px] gap-3 px-4 py-2 items-center" style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                    <span />
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Name</span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">IP Address</span>
+                    <span />
+                  </div>
+                  <div className="divide-y" style={{ borderColor: '#f3f4f6' }}>
+                    {selectedDevices.map(d => (
+                      <div key={d.id} className="grid grid-cols-[28px_1fr_auto_32px] gap-3 px-4 py-2.5 items-center">
+                        <span className="text-base leading-none">{DEVICE_ICONS[d.device_type] ?? '📦'}</span>
+                        <p className="text-sm font-medium text-gray-800 truncate">{d.name}</p>
+                        <p className="text-xs font-mono text-gray-400">{d.ip_address}</p>
+                        <button
+                          type="button"
+                          onClick={() => removeDevice(d.id)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors flex-shrink-0"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-4 py-2.5" style={{ borderTop: '1px solid #f3f4f6' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowDevicePicker(true)}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-emerald-600 transition-colors"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      Add another device
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Footer */}
@@ -220,6 +432,17 @@ function CustomerModal({ customer, onClose, onSave }) {
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           </div>
         </form>
+
+        {showDevicePicker && (
+          <DevicePickerModal
+            onClose={() => setShowDevicePicker(false)}
+            onAdd={(picked) => setSelectedDevices(prev => {
+              const existingIds = new Set(prev.map(d => d.id))
+              return [...prev, ...picked.filter(d => !existingIds.has(d.id))]
+            })}
+            alreadySelectedIds={new Set(selectedDevices.map(d => d.id))}
+          />
+        )}
       </div>
     </div>,
     document.body
