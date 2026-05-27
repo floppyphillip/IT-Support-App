@@ -1222,7 +1222,6 @@ export default function Devices() {
   const [showAddLink, setShowAddLink] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
-  const [pingTarget, setPingTarget] = useState(null)
   const [endpointTarget, setEndpointTarget] = useState(null)
 
   const load = async () => {
@@ -1247,9 +1246,8 @@ export default function Devices() {
       {editTarget && (editTarget.tags?.includes('link')
         ? <LinkFormModal category="noc" device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />
         : <DeviceFormModal category="noc" device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />)}
-      {deleteTarget    && <DeleteConfirmModal device={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={load} />}
-      {pingTarget      && <PingModal device={pingTarget} onClose={() => { setPingTarget(null); load() }} />}
-      {endpointTarget  && <EndpointPopup device={endpointTarget.device} endpoint={endpointTarget} onClose={() => setEndpointTarget(null)} />}
+      {deleteTarget   && <DeleteConfirmModal device={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={load} />}
+      {endpointTarget && <EndpointPopup device={endpointTarget.device} endpoint={endpointTarget} onClose={() => setEndpointTarget(null)} />}
       <div className="flex items-center justify-between">
         <div><h1 className="page-title">NOC Devices</h1><p className="page-sub">{total} total</p></div>
         <AddDropdown onNetworkDevice={() => setShowAdd(true)} onLink={() => setShowAddLink(true)} />
@@ -1312,7 +1310,7 @@ export default function Devices() {
 
               <div className="flex gap-2">
                 <button className="btn-secondary flex-1 justify-center text-xs py-1.5"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPingTarget(d) }}>
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEndpointTarget({ device: d, label: DEVICE_ICONS[d.device_type] ?? '📦', ip: d.ip_address, name: d.name }) }}>
                   <Zap className="w-3 h-3" /> Ping
                 </button>
                 <button className="btn-secondary justify-center text-xs py-1.5 px-3"
