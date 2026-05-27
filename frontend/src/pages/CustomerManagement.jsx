@@ -537,86 +537,109 @@ function CustomerModal({ customer, onClose, onSave }) {
 
 function CustomerRow({ c, onEdit, onDelete }) {
   const [expanded, setExpanded] = useState(false)
-  const hasCustomFields = c.custom_fields?.length > 0
+  const customFieldCount = c.custom_fields?.length ?? 0
+  const deviceCount      = c.devices?.length ?? c.device_ids?.length ?? 0
 
   return (
-    <div className="border-b last:border-0" style={{ borderColor: '#e5e7eb' }}>
-      <div className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
-        {/* Avatar */}
-        <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 font-bold text-sm flex-shrink-0">
-          {c.customer_name?.[0]?.toUpperCase() ?? '?'}
-        </div>
-
-        {/* Main info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold text-gray-900 truncate">{c.customer_name}</p>
-            <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-              <Hash className="w-2.5 h-2.5" />{c.customer_id}
-            </span>
+    <>
+      <tr
+        className="border-b transition-colors hover:bg-gray-50"
+        style={{ borderColor: '#f3f4f6' }}
+      >
+        {/* Customer Name */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 font-bold text-xs flex-shrink-0">
+              {c.customer_name?.[0]?.toUpperCase() ?? '?'}
+            </div>
+            <span className="text-sm font-semibold text-gray-900">{c.customer_name ?? '—'}</span>
           </div>
-          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-            <span className="flex items-center gap-1 text-xs text-gray-400">
-              <Mail className="w-3 h-3 flex-shrink-0" /><span className="truncate">{c.email}</span>
-            </span>
-            {c.phone && (
-              <span className="flex items-center gap-1 text-xs text-gray-400">
-                <Phone className="w-3 h-3 flex-shrink-0" />{c.phone}
-              </span>
-            )}
-            {(c.state || c.country) && (
-              <span className="flex items-center gap-1 text-xs text-gray-400">
-                <MapPin className="w-3 h-3 flex-shrink-0" />
-                {[c.state, c.country].filter(Boolean).join(', ')}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Custom fields toggle */}
-        {hasCustomFields && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1 text-xs text-violet-500 hover:text-violet-700 hover:bg-violet-50 px-2 py-1 rounded-lg transition-colors flex-shrink-0"
-          >
-            <span className="font-semibold">{c.custom_fields.length} field{c.custom_fields.length !== 1 ? 's' : ''}</span>
-            {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-        )}
-
+        </td>
+        {/* Customer ID */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <span className="flex items-center gap-1 text-xs font-mono font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded w-fit">
+            <Hash className="w-3 h-3 flex-shrink-0" />{c.customer_id ?? '—'}
+          </span>
+        </td>
+        {/* Email Address */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <span className="flex items-center gap-1.5 text-xs text-gray-600">
+            <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />{c.email ?? '—'}
+          </span>
+        </td>
+        {/* Phone Number */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          {c.phone
+            ? <span className="flex items-center gap-1.5 text-xs text-gray-600"><Phone className="w-3 h-3 text-gray-400 flex-shrink-0" />{c.phone}</span>
+            : <span className="text-xs text-gray-300">—</span>}
+        </td>
+        {/* Physical Address */}
+        <td className="px-4 py-3" style={{ minWidth: 180 }}>
+          <span className="text-xs text-gray-600 line-clamp-1">{c.address || '—'}</span>
+        </td>
+        {/* State */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <span className="text-xs text-gray-600">{c.state || '—'}</span>
+        </td>
+        {/* Country */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <span className="text-xs text-gray-600">{c.country || '—'}</span>
+        </td>
+        {/* Customer Devices */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          {deviceCount > 0
+            ? <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full">{deviceCount} device{deviceCount !== 1 ? 's' : ''}</span>
+            : <span className="text-xs text-gray-300">—</span>}
+        </td>
+        {/* Other Details */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          {customFieldCount > 0
+            ? (
+              <button
+                onClick={() => setExpanded(v => !v)}
+                className="flex items-center gap-1 text-[10px] font-bold bg-violet-50 text-violet-600 border border-violet-200 px-2 py-0.5 rounded-full hover:bg-violet-100 transition-colors"
+              >
+                {customFieldCount} field{customFieldCount !== 1 ? 's' : ''}
+                {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+            )
+            : <span className="text-xs text-gray-300">—</span>}
+        </td>
         {/* Actions */}
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button onClick={() => onEdit(c)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors">
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => onDelete(c)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+        <td className="px-4 py-3 whitespace-nowrap">
+          <div className="flex items-center gap-1">
+            <button onClick={() => onEdit(c)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors" title="Edit">
+              <Edit2 className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => onDelete(c)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Delete">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </td>
+      </tr>
 
       {/* Expanded custom fields */}
-      {expanded && hasCustomFields && (
-        <div className="px-5 pb-4 pt-0">
-          <div className="ml-13 pl-[52px]">
-            <div className="rounded-xl overflow-hidden border border-gray-100">
-              <div className="grid grid-cols-2 px-4 py-2 bg-gray-50">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Field Name</span>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Field Title</span>
+      {expanded && customFieldCount > 0 && (
+        <tr style={{ borderColor: '#f3f4f6' }} className="border-b">
+          <td colSpan={10} className="px-6 pb-3 pt-0 bg-violet-50/40">
+            <div className="rounded-lg overflow-hidden border border-violet-100 w-fit max-w-full">
+              <div className="grid grid-cols-2 px-4 py-2 bg-violet-50">
+                <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">Field Name</span>
+                <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider pr-8">Field Title</span>
               </div>
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-violet-100 bg-white">
                 {c.custom_fields.map((f, i) => (
-                  <div key={i} className="grid grid-cols-2 px-4 py-2.5">
+                  <div key={i} className="grid grid-cols-2 px-4 py-2">
                     <span className="text-xs font-medium text-gray-700">{f.name}</span>
                     <span className="text-xs text-gray-500">{f.title}</span>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        </div>
+          </td>
+        </tr>
       )}
-    </div>
+    </>
   )
 }
 
@@ -700,7 +723,7 @@ export default function CustomerManagement() {
 
       {/* List */}
       {loading ? (
-        <SkeletonTable rows={5} cols={4} />
+        <SkeletonTable rows={5} cols={10} />
       ) : customers.length === 0 ? (
         <div className="card">
           <EmptyState
@@ -713,21 +736,28 @@ export default function CustomerManagement() {
         </div>
       ) : (
         <div className="card overflow-hidden">
-          {/* Table header */}
-          <div className="hidden md:grid grid-cols-[36px_1fr_auto] gap-4 px-5 py-3" style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-            <span />
-            <span className="th py-0">Customer</span>
-            <span className="th py-0">Actions</span>
-          </div>
-          <div>
-            {customers.map((c) => (
-              <CustomerRow
-                key={c.id}
-                c={c}
-                onEdit={setModal}
-                onDelete={handleDelete}
-              />
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" style={{ minWidth: 1050 }}>
+              <thead>
+                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                  {['Customer Name', 'Customer ID', 'Email Address', 'Phone Number', 'Physical Address', 'State', 'Country', 'Customer Devices', 'Other Details', 'Actions'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {customers.map((c) => (
+                  <CustomerRow
+                    key={c.id}
+                    c={c}
+                    onEdit={setModal}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
