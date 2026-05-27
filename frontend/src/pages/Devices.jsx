@@ -644,15 +644,20 @@ function EndpointPopup({ device, endpoint, onClose }) {
       }
     } else {
       const n = Math.max(1, Math.min(100, parseInt(count) || 4))
-      try {
-        const { data } = await devicesAPI.ping(device.id, n, endpoint.ip)
-        setResults([{ key: Date.now(), reachable: data.reachable, latency: data.latency_ms, ip: data.ip_address,
-          packets_sent: data.packets_sent, packets_received: data.packets_received, loss: data.packet_loss_pct }])
-        setSummary({ sent: data.packets_sent, received: data.packets_received,
-          loss: data.packet_loss_pct?.toFixed(0) ?? '100',
-          avg:  data.latency_ms != null ? data.latency_ms.toFixed(1) : '—' })
-      } catch (err) {
-        setResults([{ key: Date.now(), error: true, msg: err?.response?.data?.detail ?? err.message }])
+      let sent = 0, received = 0, latencies = []
+      for (let i = 0; i < n && !stopRef.current; i++) {
+        try {
+          const { data } = await devicesAPI.ping(device.id, 1, endpoint.ip)
+          sent++
+          if (data.reachable && data.latency_ms != null) { received++; latencies.push(data.latency_ms) }
+          setResults(prev => [...prev, { key: Date.now() + Math.random(), reachable: data.reachable, latency: data.latency_ms, ip: data.ip_address }])
+          setSummary(buildSummary(sent, received, latencies))
+        } catch {
+          sent++
+          setResults(prev => [...prev, { key: Date.now() + Math.random(), error: true }])
+          setSummary(buildSummary(sent, received, latencies))
+        }
+        if (i < n - 1 && !stopRef.current) await new Promise(r => setTimeout(r, 1000))
       }
     }
     setRunning(false); stopRef.current = false
