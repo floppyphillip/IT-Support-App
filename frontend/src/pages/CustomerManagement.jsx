@@ -570,47 +570,47 @@ function CustomerRow({ c, onEdit, onDelete }) {
         {/* Customer Name */}
         <td className="px-4 py-3 whitespace-nowrap">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 font-bold text-xs flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 font-bold text-[13px] flex-shrink-0">
               {c.customer_name?.[0]?.toUpperCase() ?? '?'}
             </div>
-            <span className="text-sm font-semibold text-gray-900">{c.customer_name ?? '—'}</span>
+            <span className="text-[15px] font-semibold text-gray-900">{c.customer_name ?? '—'}</span>
           </div>
         </td>
         {/* Customer ID */}
         <td className="px-4 py-3 whitespace-nowrap">
-          <span className="flex items-center gap-1 text-xs font-mono font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded w-fit">
+          <span className="flex items-center gap-1 text-[13px] font-mono font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded w-fit">
             <Hash className="w-3 h-3 flex-shrink-0" />{c.customer_id ?? '—'}
           </span>
         </td>
         {/* Email Address */}
         <td className="px-4 py-3 whitespace-nowrap">
-          <span className="flex items-center gap-1.5 text-xs text-gray-600">
+          <span className="flex items-center gap-1.5 text-[13px] text-gray-600">
             <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />{c.email ?? '—'}
           </span>
         </td>
         {/* Phone Number */}
         <td className="px-4 py-3 whitespace-nowrap">
           {c.phone
-            ? <span className="flex items-center gap-1.5 text-xs text-gray-600"><Phone className="w-3 h-3 text-gray-400 flex-shrink-0" />{c.phone}</span>
-            : <span className="text-xs text-gray-300">—</span>}
+            ? <span className="flex items-center gap-1.5 text-[13px] text-gray-600"><Phone className="w-3 h-3 text-gray-400 flex-shrink-0" />{c.phone}</span>
+            : <span className="text-[13px] text-gray-300">—</span>}
         </td>
         {/* Physical Address */}
         <td className="px-4 py-3" style={{ minWidth: 180 }}>
-          <span className="text-xs text-gray-600 line-clamp-1">{c.address || '—'}</span>
+          <span className="text-[13px] text-gray-600 line-clamp-1">{c.address || '—'}</span>
         </td>
         {/* State */}
         <td className="px-4 py-3 whitespace-nowrap">
-          <span className="text-xs text-gray-600">{c.state || '—'}</span>
+          <span className="text-[13px] text-gray-600">{c.state || '—'}</span>
         </td>
         {/* Country */}
         <td className="px-4 py-3 whitespace-nowrap">
-          <span className="text-xs text-gray-600">{c.country || '—'}</span>
+          <span className="text-[13px] text-gray-600">{c.country || '—'}</span>
         </td>
         {/* Customer Devices */}
         <td className="px-4 py-3 whitespace-nowrap">
           {deviceCount > 0
-            ? <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full">{deviceCount} device{deviceCount !== 1 ? 's' : ''}</span>
-            : <span className="text-xs text-gray-300">—</span>}
+            ? <span className="text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full">{deviceCount} device{deviceCount !== 1 ? 's' : ''}</span>
+            : <span className="text-[13px] text-gray-300">—</span>}
         </td>
         {/* Other Details */}
         <td className="px-4 py-3 whitespace-nowrap">
@@ -618,13 +618,13 @@ function CustomerRow({ c, onEdit, onDelete }) {
             ? (
               <button
                 onClick={() => setExpanded(v => !v)}
-                className="flex items-center gap-1 text-[10px] font-bold bg-violet-50 text-violet-600 border border-violet-200 px-2 py-0.5 rounded-full hover:bg-violet-100 transition-colors"
+                className="flex items-center gap-1 text-[11px] font-bold bg-violet-50 text-violet-600 border border-violet-200 px-2 py-0.5 rounded-full hover:bg-violet-100 transition-colors"
               >
                 {customFieldCount} field{customFieldCount !== 1 ? 's' : ''}
                 {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
             )
-            : <span className="text-xs text-gray-300">—</span>}
+            : <span className="text-[13px] text-gray-300">—</span>}
         </td>
         {/* Actions */}
         <td className="px-4 py-3 whitespace-nowrap">
@@ -645,14 +645,14 @@ function CustomerRow({ c, onEdit, onDelete }) {
           <td colSpan={10} className="px-6 pb-3 pt-0 bg-violet-50/40">
             <div className="rounded-lg overflow-hidden border border-violet-100 w-fit max-w-full">
               <div className="grid grid-cols-2 px-4 py-2 bg-violet-50">
-                <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">Field Name</span>
-                <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider pr-8">Field Title</span>
+                <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wider">Field Name</span>
+                <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wider pr-8">Field Title</span>
               </div>
               <div className="divide-y divide-violet-100 bg-white">
                 {c.custom_fields.map((f, i) => (
                   <div key={i} className="grid grid-cols-2 px-4 py-2">
-                    <span className="text-xs font-medium text-gray-700">{f.name}</span>
-                    <span className="text-xs text-gray-500">{f.title}</span>
+                    <span className="text-[13px] font-medium text-gray-700">{f.name}</span>
+                    <span className="text-[13px] text-gray-500">{f.title}</span>
                   </div>
                 ))}
               </div>
@@ -762,7 +762,7 @@ export default function CustomerManagement() {
               <thead>
                 <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                   {['Customer Name', 'Customer ID', 'Email Address', 'Phone Number', 'Physical Address', 'State', 'Country', 'Customer Devices', 'Other Details', 'Actions'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                    <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
                       {h}
                     </th>
                   ))}
