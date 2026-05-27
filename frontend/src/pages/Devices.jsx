@@ -948,7 +948,7 @@ function EndpointPopup({ device, endpoint, onClose }) {
 
 const LINK_TYPES = ['fiber', 'radio']
 const TOPOLOGY_OPTIONS = {
-  fiber: ['point_to_point', 'point_to_multipoint'],
+  fiber: ['point_to_point', 'gpon'],
   radio: ['point_to_point', 'point_to_multipoint'],
 }
 const LINK_EMPTY = {
@@ -1104,7 +1104,7 @@ function LinkFormModal({ onClose, onSaved, category = 'noc', device = null }) {
                     <label className="block text-[15px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>Endpoint B</label>
                     <button
                       type="button"
-                      disabled={form.topology !== 'point_to_multipoint'}
+                      disabled={!['point_to_multipoint', 'gpon'].includes(form.topology)}
                       onClick={addEndpointB}
                       className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                       style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}
