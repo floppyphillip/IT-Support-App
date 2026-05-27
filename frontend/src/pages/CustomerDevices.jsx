@@ -913,15 +913,15 @@ function EndpointPopup({ device, endpoint, onClose }) {
                     const { bg, label } = logMeta(log.alert_type)
                     return (
                       <div key={log.id} className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[18px] font-bold flex-shrink-0 mt-0.5"
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[13px] font-bold flex-shrink-0 mt-0.5"
                              style={{ background: bg }}>
                           {label}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[24px] font-semibold text-gray-800 truncate">{log.title}</p>
-                          <p className="text-[22px] mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>{log.message}</p>
+                          <p className="text-[17px] font-semibold text-gray-800 truncate">{log.title}</p>
+                          <p className="text-[15px] mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>{log.message}</p>
                         </div>
-                        <p className="text-[20px] font-mono flex-shrink-0 mt-0.5 text-right whitespace-nowrap" style={{ color: 'var(--text-4)' }}>
+                        <p className="text-[14px] font-mono flex-shrink-0 mt-0.5 text-right whitespace-nowrap" style={{ color: 'var(--text-4)' }}>
                           {fmtDate(log.created_at)}
                         </p>
                       </div>
