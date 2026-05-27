@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { customersAPI, devicesAPI } from '../api/client'
+import { customersAPI, devicesAPI, ticketsAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import {
   Plus, Search, Edit2, Trash2, X, UserCircle2,
@@ -556,15 +556,16 @@ function CustomerModal({ customer, onClose, onSave }) {
   )
 }
 
-function CustomerRow({ c, onEdit, onDelete }) {
+function CustomerRow({ c, onEdit, onDelete, alert }) {
   const [expanded, setExpanded] = useState(false)
   const customFieldCount = c.custom_fields?.length ?? 0
   const deviceCount      = c.devices?.length ?? c.device_ids?.length ?? 0
+  const hasAlert         = alert?.hasInactiveDevice || alert?.hasOpenTicket
 
   return (
     <>
       <tr
-        className="border-b transition-colors hover:bg-gray-50"
+        className={`border-b transition-colors ${hasAlert ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}`}
         style={{ borderColor: '#f3f4f6' }}
       >
         {/* Customer Name */}
@@ -671,13 +672,58 @@ export default function CustomerManagement() {
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState(null)
   const [deleting, setDeleting] = useState(null)
+  const [customerAlerts, setCustomerAlerts] = useState({})
 
   const load = async () => {
     setLoading(true)
     try {
-      const { data } = await customersAPI.list({ limit: 50, search: search || undefined })
-      setCustomers(data.items ?? [])
-      setTotal(data.total ?? 0)
+      const [customersRes, devicesRes, ...ticketResults] = await Promise.allSettled([
+        customersAPI.list({ limit: 50, search: search || undefined }),
+        devicesAPI.list({ category: 'customer', limit: 100 }),
+        ticketsAPI.list({ status: 'open', limit: 100 }),
+        ticketsAPI.list({ status: 'in_progress', limit: 100 }),
+        ticketsAPI.list({ status: 'escalated', limit: 100 }),
+      ])
+
+      const items = customersRes.status === 'fulfilled'
+        ? (customersRes.value.data.items ?? [])
+        : MOCK
+      const tot = customersRes.status === 'fulfilled'
+        ? (customersRes.value.data.total ?? 0)
+        : MOCK.length
+
+      // Map device_id → status for all customer-category devices
+      const deviceStatusMap = {}
+      if (devicesRes.status === 'fulfilled') {
+        const devs = Array.isArray(devicesRes.value.data)
+          ? devicesRes.value.data
+          : (devicesRes.value.data.items ?? [])
+        devs.forEach(d => { deviceStatusMap[d.id] = d.status })
+      }
+
+      // Set of device_ids that have at least one open/active ticket
+      const openTicketDeviceIds = new Set()
+      ticketResults.forEach(res => {
+        if (res.status !== 'fulfilled') return
+        const tickets = Array.isArray(res.value.data)
+          ? res.value.data
+          : (res.value.data.items ?? [])
+        tickets.forEach(t => { if (t.device_id) openTicketDeviceIds.add(t.device_id) })
+      })
+
+      // Compute per-customer alert flags
+      const alerts = {}
+      items.forEach(c => {
+        const ids = c.device_ids ?? []
+        alerts[c.id] = {
+          hasInactiveDevice: ids.some(id => deviceStatusMap[id] && deviceStatusMap[id] !== 'online'),
+          hasOpenTicket:     ids.some(id => openTicketDeviceIds.has(id)),
+        }
+      })
+
+      setCustomers(items)
+      setTotal(tot)
+      setCustomerAlerts(alerts)
     } catch {
       setCustomers(MOCK)
       setTotal(MOCK.length)
@@ -775,6 +821,7 @@ export default function CustomerManagement() {
                     c={c}
                     onEdit={setModal}
                     onDelete={handleDelete}
+                    alert={customerAlerts[c.id]}
                   />
                 ))}
               </tbody>
