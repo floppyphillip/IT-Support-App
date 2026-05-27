@@ -610,7 +610,11 @@ function CustomerRow({ c, onEdit, onDelete, alert }) {
         {/* Customer Devices */}
         <td className="px-4 py-3 whitespace-nowrap">
           {deviceCount > 0
-            ? <span className="text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full">{deviceCount} device{deviceCount !== 1 ? 's' : ''}</span>
+            ? <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                alert?.hasInactiveDevice
+                  ? 'bg-red-50 text-red-500 border-red-200'
+                  : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+              }`}>{deviceCount} device{deviceCount !== 1 ? 's' : ''}</span>
             : <span className="text-[13px] text-gray-300">—</span>}
         </td>
         {/* Other Details */}
