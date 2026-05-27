@@ -5,7 +5,7 @@ import { devicesAPI } from '../api/client'
 import StatusIndicator from '../components/StatusIndicator'
 import { SkeletonCard } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
-import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square, Pencil, Trash2, AlertTriangle, ChevronDown, Link2, Clock, Filter } from 'lucide-react'
+import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square, Pencil, Trash2, AlertTriangle, ChevronDown, Link2, Clock, Filter, Download } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { alertsAPI } from '../api/client'
 
@@ -808,6 +808,24 @@ function EndpointPopup({ device, endpoint, onClose }) {
     })
   }
 
+  const downloadLogs = () => {
+    const deviceLabel = device?.name ?? 'device'
+    const isFiltered = filterFrom || filterTo
+    const header = isFiltered
+      ? `State Log — ${deviceLabel}\nFiltered: ${filterFrom || 'start'} → ${filterTo || 'now'}\n${'─'.repeat(60)}\n\n`
+      : `State Log — ${deviceLabel}\n${'─'.repeat(60)}\n\n`
+    const lines = filteredLogs.map(log =>
+      `[${fmtDate(log.created_at)}] ${log.title ?? ''}\n  ${log.message ?? ''}`
+    )
+    const blob = new Blob([header + lines.join('\n\n')], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `state-log-${deviceLabel.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const filteredLogs = logs.filter(log => {
     if (!log.created_at) return true
     const ts = new Date(log.created_at).getTime()
@@ -935,6 +953,14 @@ function EndpointPopup({ device, endpoint, onClose }) {
               <span className="ml-auto text-[11px] font-mono" style={{ color: 'var(--text-4)' }}>
                 {filteredLogs.length} of {logs.length} events
               </span>
+              <button
+                onClick={downloadLogs}
+                disabled={filteredLogs.length === 0}
+                title="Download logs as .txt"
+                className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: 'transparent', color: 'var(--text-3)', borderColor: 'var(--border)' }}>
+                <Download className="w-3 h-3" /> Download
+              </button>
             </div>
 
             {/* Date/time pickers — shown when filter is open */}
