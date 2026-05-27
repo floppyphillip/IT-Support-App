@@ -386,7 +386,7 @@ function PingModal({ device, onClose }) {
     <>
       <div className="absolute inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => { if (!running) onClose() }} />
       <div className="absolute inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
-      <div className="w-full max-w-[614px] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
+      <div className="w-full max-w-[806px] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
            style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', pointerEvents: 'auto' }}>
         <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
           <div>
@@ -821,7 +821,7 @@ function EndpointPopup({ device, endpoint, onClose }) {
       <div className="absolute inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }}
            onClick={() => { if (!running) onClose() }} />
       <div className="absolute inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
-        <div className="w-full max-w-[614px] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
+        <div className="w-full max-w-[806px] flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
              style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', pointerEvents: 'auto' }}>
 
           {/* Header */}
