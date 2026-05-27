@@ -424,25 +424,49 @@ function CustomerModal({ customer, onClose, onSave }) {
                 <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #e5e7eb' }}>
                   <div className="grid grid-cols-[28px_1fr_auto_32px] gap-3 px-4 py-2 items-center" style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                     <span />
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Name</span>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">IP Address</span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Name / Endpoint</span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</span>
                     <span />
                   </div>
                   <div className="divide-y" style={{ borderColor: '#f3f4f6' }}>
-                    {selectedDevices.map(d => (
-                      <div key={d.id} className="grid grid-cols-[28px_1fr_auto_32px] gap-3 px-4 py-2.5 items-center">
-                        <span className="text-base leading-none">{DEVICE_ICONS[d.device_type] ?? '📦'}</span>
-                        <p className="text-sm font-medium text-gray-800 truncate">{d.name}</p>
-                        <p className="text-xs font-mono text-gray-400">{d.ip_address}</p>
-                        <button
-                          type="button"
-                          onClick={() => removeDevice(d.id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors flex-shrink-0"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                    {selectedDevices.map(d => {
+                      const link = d.tags?.includes('link')
+                      const linkType = d.extra_data?.link_type
+                      const endpointsB = d.extra_data?.endpoints_b?.filter(ip => ip?.trim()) ?? []
+                      return (
+                        <div key={d.id} className="grid grid-cols-[28px_1fr_auto_32px] gap-3 px-4 py-2.5 items-center">
+                          <span className="text-base leading-none">{link ? '🔗' : (DEVICE_ICONS[d.device_type] ?? '📦')}</span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-sm font-medium text-gray-800 truncate">{d.name}</p>
+                              {link && linkType && (
+                                <span className="text-[9px] font-bold px-1 py-0.5 rounded uppercase tracking-wide flex-shrink-0"
+                                  style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6' }}>
+                                  {linkType.replace(/_/g, ' ')}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs font-mono text-gray-400 truncate">
+                              {link
+                                ? `A: ${d.ip_address ?? '—'}${endpointsB.length > 0 ? ` → B: ${endpointsB[0]}${endpointsB.length > 1 ? ` +${endpointsB.length - 1}` : ''}` : ''}`
+                                : d.ip_address}
+                            </p>
+                          </div>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize flex-shrink-0 ${
+                            d.status === 'online'  ? 'bg-emerald-50 text-emerald-600' :
+                            d.status === 'offline' ? 'bg-red-50 text-red-400' :
+                                                    'bg-gray-100 text-gray-400'
+                          }`}>{d.status ?? 'unknown'}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeDevice(d.id)}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors flex-shrink-0"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
                   <div className="px-4 py-2.5" style={{ borderTop: '1px solid #f3f4f6' }}>
                     <button
