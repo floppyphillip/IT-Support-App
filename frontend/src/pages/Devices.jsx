@@ -5,8 +5,9 @@ import { devicesAPI } from '../api/client'
 import StatusIndicator from '../components/StatusIndicator'
 import { SkeletonCard } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
-import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square, Pencil, Trash2, AlertTriangle, ChevronDown, Link2 } from 'lucide-react'
+import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square, Pencil, Trash2, AlertTriangle, ChevronDown, Link2, Clock } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { alertsAPI } from '../api/client'
 
 const DEVICE_ICONS = {
   router: '🔀', switch: '🔌', server: '🖥️', workstation: '💻',
@@ -571,6 +572,247 @@ function PingModal({ device, onClose }) {
   )
 }
 
+const STATE_ALERT_TYPES = new Set([
+  'device_offline','device_recovered','ping_failure','high_latency',
+  'port_down','interface_error','vpn_tunnel_down','bgp_neighbor_down','ospf_adjacency_lost',
+])
+
+function EndpointPopup({ device, endpoint, onClose }) {
+  const [tab, setTab]             = useState('ping')
+  const [count, setCount]         = useState('4')
+  const [infinite, setInfinite]   = useState(false)
+  const [running, setRunning]     = useState(false)
+  const [results, setResults]     = useState([])
+  const [summary, setSummary]     = useState(null)
+  const [logs, setLogs]           = useState([])
+  const [logsLoading, setLogsLoading] = useState(false)
+  const [logsFetched, setLogsFetched] = useState(false)
+  const stopRef   = useRef(false)
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [results])
+
+  useEffect(() => {
+    if (tab === 'logs' && !logsFetched) loadLogs()
+  }, [tab])
+
+  const loadLogs = async () => {
+    setLogsLoading(true)
+    try {
+      const { data } = await alertsAPI.list({ device_id: device.id, limit: 100 })
+      const items = data.items ?? data ?? []
+      setLogs(items.filter(a => STATE_ALERT_TYPES.has(a.alert_type)))
+    } catch {
+      setLogs([])
+    } finally {
+      setLogsLoading(false)
+      setLogsFetched(true)
+    }
+  }
+
+  const buildSummary = (sent, received, latencies) => ({
+    sent, received,
+    loss: sent > 0 ? ((sent - received) / sent * 100).toFixed(0) : '0',
+    avg:  latencies.length ? (latencies.reduce((a, b) => a + b, 0) / latencies.length).toFixed(1) : '—',
+  })
+
+  const start = async () => {
+    setResults([]); setSummary(null); setRunning(true); stopRef.current = false
+    if (infinite) {
+      let sent = 0, received = 0, latencies = []
+      while (!stopRef.current) {
+        try {
+          const { data } = await devicesAPI.ping(device.id, 1, endpoint.ip)
+          sent++
+          if (data.reachable && data.latency_ms != null) { received++; latencies.push(data.latency_ms) }
+          setResults(prev => [...prev, { key: Date.now() + Math.random(), reachable: data.reachable, latency: data.latency_ms, ip: data.ip_address }])
+          setSummary(buildSummary(sent, received, latencies))
+        } catch {
+          sent++
+          setResults(prev => [...prev, { key: Date.now() + Math.random(), error: true }])
+          setSummary(buildSummary(sent, received, latencies))
+        }
+        if (!stopRef.current) await new Promise(r => setTimeout(r, 1000))
+      }
+    } else {
+      const n = Math.max(1, Math.min(100, parseInt(count) || 4))
+      try {
+        const { data } = await devicesAPI.ping(device.id, n, endpoint.ip)
+        setResults([{ key: Date.now(), reachable: data.reachable, latency: data.latency_ms, ip: data.ip_address,
+          packets_sent: data.packets_sent, packets_received: data.packets_received, loss: data.packet_loss_pct }])
+        setSummary({ sent: data.packets_sent, received: data.packets_received,
+          loss: data.packet_loss_pct?.toFixed(0) ?? '100',
+          avg:  data.latency_ms != null ? data.latency_ms.toFixed(1) : '—' })
+      } catch (err) {
+        setResults([{ key: Date.now(), error: true, msg: err?.response?.data?.detail ?? err.message }])
+      }
+    }
+    setRunning(false); stopRef.current = false
+  }
+
+  const stop = () => { stopRef.current = true }
+
+  const lossColor = (loss) => {
+    const n = parseFloat(loss)
+    return n === 0 ? 'text-emerald-400' : n < 50 ? 'text-amber-400' : 'text-red-400'
+  }
+
+  const logMeta = (alertType) => {
+    if (alertType === 'device_recovered')                     return { bg: '#10b981', label: 'UP' }
+    if (['device_offline','ping_failure'].includes(alertType)) return { bg: '#ef4444', label: 'DN' }
+    if (alertType === 'high_latency')                         return { bg: '#f59e0b', label: '~~' }
+    return { bg: '#64748b', label: '!' }
+  }
+
+  const fmtDate = (ts) => {
+    if (!ts) return '—'
+    return new Date(ts).toLocaleString('en-GB', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    })
+  }
+
+  return createPortal(
+    <>
+      <div className="absolute inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }}
+           onClick={() => { if (!running) onClose() }} />
+      <div className="absolute inset-0 z-50 flex items-stretch justify-center px-6" style={{ pointerEvents: 'none' }}>
+        <div className="w-full max-w-lg flex flex-col rounded-2xl shadow-2xl border overflow-hidden"
+             style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)', pointerEvents: 'auto' }}>
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-500/10 border-2 border-blue-400 flex items-center justify-center text-xs font-bold text-blue-400 flex-shrink-0">
+                {endpoint.label}
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900">{endpoint.name || `Point ${endpoint.label}`}</p>
+                <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-3)' }}>{endpoint.ip} · {device.name}</p>
+              </div>
+            </div>
+            <button onClick={onClose} disabled={running}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors disabled:opacity-30">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex flex-shrink-0 border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+            {[['ping', <Zap className="w-3 h-3" />, 'Ping'], ['logs', <Clock className="w-3 h-3" />, 'State Log']].map(([key, icon, label]) => (
+              <button key={key} onClick={() => setTab(key)}
+                className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors"
+                style={{
+                  color: tab === key ? 'var(--blue)' : 'var(--text-3)',
+                  borderBottom: tab === key ? '2px solid var(--blue)' : '2px solid transparent',
+                  marginBottom: -1,
+                }}>
+                {icon}{label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Ping tab ── */}
+          {tab === 'ping' && (<>
+            <div className="flex items-center gap-4 px-5 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>Count</label>
+                <input type="number" min="1" max="100" className="input w-16 text-center font-mono py-1 text-xs"
+                  value={count} onChange={e => setCount(e.target.value)} disabled={infinite || running} />
+              </div>
+              <Toggle label="Infinite" checked={infinite} onChange={v => setInfinite(v)} />
+              <div className="ml-auto">
+                {running
+                  ? <button onClick={stop} className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"><Square className="w-3 h-3" /> Stop</button>
+                  : <button onClick={start} className="btn-primary text-xs py-1.5 px-3"><Play className="w-3 h-3" /> Start</button>}
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed" style={{ background: 'var(--bg)', minHeight: 160 }}>
+              {results.length === 0 && !running && (
+                <p className="text-gray-400 text-center pt-12">Set count and press Start</p>
+              )}
+              {results.map(r => (
+                <div key={r.key} className={r.error ? 'text-red-400' : r.reachable ? 'text-emerald-400' : 'text-amber-400'}>
+                  {r.error
+                    ? `Error: ${r.msg ?? 'request failed'}`
+                    : r.reachable
+                      ? `Reply from ${r.ip}: time=${r.latency != null ? r.latency.toFixed(1) : '?'}ms`
+                      : `Request timeout for icmp_seq from ${r.ip}`}
+                </div>
+              ))}
+              {running && <div className="text-blue-400 flex items-center gap-1.5 mt-1"><Loader2 className="w-3 h-3 animate-spin" /> sending…</div>}
+              <div ref={bottomRef} />
+            </div>
+            <div className="border-t px-5 py-3 flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+              {summary ? (
+                <div className="grid grid-cols-4 gap-3 text-center">
+                  {[['Sent', summary.sent, 'text-gray-900'], ['Recv', summary.received, 'text-emerald-400'],
+                    ['Loss', `${summary.loss}%`, lossColor(summary.loss)],
+                    ['Avg RTT', summary.avg !== '—' ? `${summary.avg}ms` : '—', 'text-blue-400']].map(([lbl, val, cls]) => (
+                    <div key={lbl}>
+                      <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: 'var(--text-4)' }}>{lbl}</p>
+                      <p className={`font-mono text-sm font-bold ${cls}`}>{val}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-center" style={{ color: 'var(--text-4)' }}>— stats appear after first ping —</p>
+              )}
+            </div>
+          </>)}
+
+          {/* ── Logs tab ── */}
+          {tab === 'logs' && (
+            <div className="flex-1 overflow-y-auto" style={{ minHeight: 280 }}>
+              {logsLoading ? (
+                <div className="flex items-center justify-center gap-2 py-16 text-sm" style={{ color: 'var(--text-3)' }}>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading state log…
+                </div>
+              ) : logs.length === 0 ? (
+                <div className="text-center py-16">
+                  <Clock size={28} className="mx-auto mb-2 opacity-30 text-gray-400" />
+                  <p className="text-sm font-medium text-gray-400">No state changes recorded</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-4)' }}>Events appear when the link changes state</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {logs.map(log => {
+                    const { bg, label } = logMeta(log.alert_type)
+                    return (
+                      <div key={log.id} className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0 mt-0.5"
+                             style={{ background: bg }}>
+                          {label}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-800 truncate">{log.title}</p>
+                          <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>{log.message}</p>
+                        </div>
+                        <p className="text-[10px] font-mono flex-shrink-0 mt-0.5 text-right whitespace-nowrap" style={{ color: 'var(--text-4)' }}>
+                          {fmtDate(log.created_at)}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </>,
+    document.getElementById('overlay-root')
+  )
+}
+
 const LINK_TYPES = ['fiber', 'radio']
 const TOPOLOGY_OPTIONS = {
   fiber: ['point_to_point', 'point_to_multipoint'],
@@ -816,7 +1058,7 @@ const CARD_BORDER = {
   unknown:     'rgba(239,68,68,0.35)',
 }
 
-function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
+function LinkCard({ d, detailPath, onNodeClick, onEdit, onDelete }) {
   const status    = d.status ?? 'unknown'
   const lineColor = LINE_COLOR[status] ?? LINE_COLOR.unknown
   const nodeBCls  = NODE_B_CLS[status]  ?? NODE_B_CLS.unknown
@@ -850,9 +1092,12 @@ function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
 
       {/* Topology diagram */}
       <div className="flex gap-2 my-4">
-        {/* Node A — vertically centered */}
-        <div className="flex flex-col items-center justify-center flex-shrink-0" style={{ width: 64 }}>
-          <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-1 ${nodeBCls}`}>
+        {/* Node A — clickable */}
+        <div className="flex flex-col items-center justify-center flex-shrink-0 cursor-pointer"
+             style={{ width: 64 }}
+             title="Click to ping or view state log"
+             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNodeClick(d, { label: 'A', ip: d.ip_address, name: nameA || '' }) }}>
+          <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-1 hover:ring-2 hover:ring-current hover:ring-offset-1 transition-all ${nodeBCls}`}>
             A
           </div>
           {nameA && <p className="text-[18px] font-medium truncate w-full text-center" style={{ color: lineColor }}>{nameA}</p>}
@@ -882,8 +1127,11 @@ function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
                   <p className="text-[9px] font-mono mt-1 truncate" style={{ color: lineColor }}>{bandwidth}</p>
                 )}
               </div>
-              <div className="flex flex-col items-center flex-shrink-0" style={{ width: 60 }}>
-                <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-0.5 ${nodeBCls}`}>
+              <div className="flex flex-col items-center flex-shrink-0 cursor-pointer"
+                   style={{ width: 60 }}
+                   title="Click to ping or view state log"
+                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNodeClick(d, { label: endpointsB.length > 1 ? `B${i + 1}` : 'B', ip: bIp, name: namesB[i] || '' }) }}>
+                <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-0.5 hover:ring-2 hover:ring-current hover:ring-offset-1 transition-all ${nodeBCls}`}>
                   {endpointsB.length > 1 ? `B${i + 1}` : 'B'}
                 </div>
                 {namesB[i] && <p className="text-[18px] font-medium truncate w-full text-center" style={{ color: lineColor }}>{namesB[i]}</p>}
@@ -908,13 +1156,9 @@ function LinkCard({ d, detailPath, onPing, onEdit, onDelete }) {
 
       {/* Actions */}
       <div className="flex gap-2">
-        <button className="btn-secondary flex-1 justify-center text-xs py-1.5"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPing(d) }}>
-          <Zap className="w-3 h-3" /> Ping
-        </button>
-        <button className="btn-secondary justify-center text-xs py-1.5 px-3" title="Edit"
+        <button className="btn-secondary flex-1 justify-center text-xs py-1.5" title="Edit"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(d) }}>
-          <Pencil className="w-3 h-3" />
+          <Pencil className="w-3 h-3" /> Edit
         </button>
         <button className="flex items-center justify-center text-xs py-1.5 px-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all"
           title="Delete"
@@ -974,6 +1218,7 @@ export default function Devices() {
   const [editTarget, setEditTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [pingTarget, setPingTarget] = useState(null)
+  const [endpointTarget, setEndpointTarget] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -997,8 +1242,9 @@ export default function Devices() {
       {editTarget && (editTarget.tags?.includes('link')
         ? <LinkFormModal category="noc" device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />
         : <DeviceFormModal category="noc" device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />)}
-      {deleteTarget && <DeleteConfirmModal device={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={load} />}
-      {pingTarget   && <PingModal device={pingTarget} onClose={() => { setPingTarget(null); load() }} />}
+      {deleteTarget    && <DeleteConfirmModal device={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={load} />}
+      {pingTarget      && <PingModal device={pingTarget} onClose={() => { setPingTarget(null); load() }} />}
+      {endpointTarget  && <EndpointPopup device={endpointTarget.device} endpoint={endpointTarget} onClose={() => setEndpointTarget(null)} />}
       <div className="flex items-center justify-between">
         <div><h1 className="page-title">NOC Devices</h1><p className="page-sub">{total} total</p></div>
         <AddDropdown onNetworkDevice={() => setShowAdd(true)} onLink={() => setShowAddLink(true)} />
@@ -1023,7 +1269,7 @@ export default function Devices() {
           {devices.map((d) => d.tags?.includes('link') ? (
             <LinkCard
               key={d.id} d={d} detailPath={`/devices/${d.id}`}
-              onPing={() => setPingTarget(d)}
+              onNodeClick={(device, ep) => setEndpointTarget({ device, ...ep })}
               onEdit={() => setEditTarget(d)}
               onDelete={() => setDeleteTarget(d)}
             />
