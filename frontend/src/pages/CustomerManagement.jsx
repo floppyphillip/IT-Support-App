@@ -35,11 +35,20 @@ function DevicePickerModal({ onClose, onAdd, alreadySelectedIds }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const filtered = allDevices.filter(d =>
-    !alreadySelectedIds.has(d.id) &&
-    (d.name?.toLowerCase().includes(search.toLowerCase()) ||
-     d.ip_address?.toLowerCase().includes(search.toLowerCase()))
-  )
+  const isLink = (d) => d.tags?.includes('link')
+
+  const filtered = allDevices.filter(d => {
+    if (alreadySelectedIds.has(d.id)) return false
+    const q = search.toLowerCase()
+    if (!q) return true
+    return (
+      d.name?.toLowerCase().includes(q) ||
+      d.ip_address?.toLowerCase().includes(q) ||
+      d.extra_data?.link_type?.toLowerCase().includes(q) ||
+      d.extra_data?.topology?.toLowerCase().includes(q) ||
+      d.extra_data?.provider?.toLowerCase().includes(q)
+    )
+  })
 
   const toggle = (id) => setSelected(prev => {
     const next = new Set(prev)
@@ -99,35 +108,61 @@ function DevicePickerModal({ onClose, onAdd, alreadySelectedIds }) {
             </div>
           ) : (
             <div className="divide-y" style={{ borderColor: '#f3f4f6' }}>
-              {filtered.map(d => (
-                <div
-                  key={d.id}
-                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${selected.has(d.id) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-                  onClick={() => toggle(d.id)}
-                >
-                  {/* Checkbox */}
-                  <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${selected.has(d.id) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
-                    {selected.has(d.id) && <Check className="w-2.5 h-2.5 text-white" />}
+              {filtered.map(d => {
+                const link = isLink(d)
+                const linkType = d.extra_data?.link_type
+                const topology = d.extra_data?.topology
+                const endpointsB = d.extra_data?.endpoints_b?.filter(ip => ip?.trim()) ?? []
+                return (
+                  <div
+                    key={d.id}
+                    className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${selected.has(d.id) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                    onClick={() => toggle(d.id)}
+                  >
+                    {/* Checkbox */}
+                    <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${selected.has(d.id) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
+                      {selected.has(d.id) && <Check className="w-2.5 h-2.5 text-white" />}
+                    </div>
+                    {/* Icon */}
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: link ? 'rgba(139,92,246,0.08)' : '#f3f4f6' }}>
+                      {link ? '🔗' : (DEVICE_ICONS[d.device_type] ?? '📦')}
+                    </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-sm font-medium text-gray-800 truncate">{d.name}</p>
+                        {link && (
+                          <span className="text-[9px] font-bold px-1 py-0.5 rounded uppercase tracking-wide flex-shrink-0"
+                            style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6' }}>
+                            {linkType?.replace(/_/g, ' ') ?? 'link'}
+                          </span>
+                        )}
+                        {link && topology && (
+                          <span className="text-[9px] font-bold px-1 py-0.5 rounded uppercase tracking-wide flex-shrink-0"
+                            style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>
+                            {topology.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                      </div>
+                      {link ? (
+                        <p className="text-xs font-mono text-gray-400 truncate">
+                          A: {d.ip_address ?? '—'}{endpointsB.length > 0 ? ` → B: ${endpointsB[0]}${endpointsB.length > 1 ? ` +${endpointsB.length - 1}` : ''}` : ''}
+                        </p>
+                      ) : (
+                        <p className="text-xs font-mono text-gray-400 truncate">{d.ip_address}</p>
+                      )}
+                    </div>
+                    {/* Status pill */}
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize flex-shrink-0 ${
+                      d.status === 'online'  ? 'bg-emerald-50 text-emerald-600' :
+                      d.status === 'offline' ? 'bg-red-50 text-red-400' :
+                                              'bg-gray-100 text-gray-400'
+                    }`}>
+                      {d.status ?? 'unknown'}
+                    </span>
                   </div>
-                  {/* Icon */}
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: '#f3f4f6' }}>
-                    {DEVICE_ICONS[d.device_type] ?? '📦'}
-                  </div>
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{d.name}</p>
-                    <p className="text-xs font-mono text-gray-400 truncate">{d.ip_address}</p>
-                  </div>
-                  {/* Status pill */}
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize flex-shrink-0 ${
-                    d.status === 'online'  ? 'bg-emerald-50 text-emerald-600' :
-                    d.status === 'offline' ? 'bg-red-50 text-red-400' :
-                                            'bg-gray-100 text-gray-400'
-                  }`}>
-                    {d.status ?? 'unknown'}
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
