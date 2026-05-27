@@ -233,8 +233,24 @@ function CustomerModal({ customer, onClose, onSave }) {
   )
   const [saving, setSaving]               = useState(false)
   const [showDevicePicker, setShowDevicePicker] = useState(false)
-  const [selectedDevices, setSelectedDevices]   = useState(customer?.devices ?? [])
+  const [selectedDevices, setSelectedDevices]   = useState([])
+  const [devicesLoading, setDevicesLoading]     = useState(false)
   const set = (f) => (e) => setForm((p) => ({ ...p, [f]: e.target.value }))
+
+  // When editing, re-fetch the actual device objects for the stored IDs
+  useEffect(() => {
+    const storedIds = customer?.device_ids ?? []
+    if (!isEdit || storedIds.length === 0) return
+    setDevicesLoading(true)
+    devicesAPI.list({ category: 'customer', limit: 100 })
+      .then(({ data }) => {
+        const items = Array.isArray(data) ? data : (data.items ?? [])
+        const idSet = new Set(storedIds)
+        setSelectedDevices(items.filter(d => idSet.has(d.id)))
+      })
+      .catch(() => {})
+      .finally(() => setDevicesLoading(false))
+  }, [])
 
   const removeDevice = (id) => setSelectedDevices(prev => prev.filter(d => d.id !== id))
 
@@ -437,7 +453,12 @@ function CustomerModal({ customer, onClose, onSave }) {
                 </button>
               </div>
 
-              {selectedDevices.length === 0 ? (
+              {devicesLoading ? (
+                <div className="flex items-center justify-center py-8 gap-2 text-xs text-gray-400">
+                  <div className="w-4 h-4 border-2 border-gray-200 border-t-emerald-500 rounded-full animate-spin" />
+                  Loading devices…
+                </div>
+              ) : selectedDevices.length === 0 ? (
                 <div
                   className="flex flex-col items-center justify-center py-8 rounded-xl text-center cursor-pointer transition-colors hover:bg-gray-50"
                   style={{ border: '1.5px dashed #e5e7eb' }}

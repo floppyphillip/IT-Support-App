@@ -17,6 +17,7 @@ class CustomerCreate(BaseModel):
     state: Optional[str] = None
     country: Optional[str] = None
     custom_fields: list[CustomField] = []
+    device_ids: list[str] = []
 
 
 class CustomerUpdate(BaseModel):
@@ -28,6 +29,7 @@ class CustomerUpdate(BaseModel):
     state: Optional[str] = None
     country: Optional[str] = None
     custom_fields: Optional[list[CustomField]] = None
+    device_ids: Optional[list[str]] = None
 
 
 class CustomerResponse(BaseModel):
@@ -40,6 +42,7 @@ class CustomerResponse(BaseModel):
     state: Optional[str] = None
     country: Optional[str] = None
     custom_fields: list[CustomField] = []
+    device_ids: list[str] = []
     created_at: datetime
     updated_at: Optional[datetime] = None
     model_config = {"from_attributes": True}
