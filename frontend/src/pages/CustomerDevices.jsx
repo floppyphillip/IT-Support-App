@@ -5,7 +5,7 @@ import { devicesAPI } from '../api/client'
 import StatusIndicator from '../components/StatusIndicator'
 import { SkeletonCard } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
-import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square, Pencil, Trash2, AlertTriangle, ChevronDown, Link2, Clock } from 'lucide-react'
+import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square, Pencil, Trash2, AlertTriangle, ChevronDown, Link2, Clock, Filter } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { alertsAPI } from '../api/client'
 
@@ -707,6 +707,9 @@ function EndpointPopup({ device, endpoint, onClose }) {
   const [logs, setLogs]           = useState([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logsFetched, setLogsFetched] = useState(false)
+  const [showFilter, setShowFilter] = useState(false)
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo, setFilterTo]     = useState('')
   const stopRef   = useRef(false)
   const bottomRef = useRef(null)
 
@@ -805,6 +808,14 @@ function EndpointPopup({ device, endpoint, onClose }) {
     })
   }
 
+  const filteredLogs = logs.filter(log => {
+    if (!log.created_at) return true
+    const ts = new Date(log.created_at).getTime()
+    if (filterFrom && ts < new Date(filterFrom).getTime()) return false
+    if (filterTo   && ts > new Date(filterTo).getTime())   return false
+    return true
+  })
+
   return createPortal(
     <>
       <div className="absolute inset-0 z-40" style={{ background: 'rgba(0,0,0,0.5)' }}
@@ -895,21 +906,72 @@ function EndpointPopup({ device, endpoint, onClose }) {
           </>)}
 
           {/* ── Logs tab ── */}
-          {tab === 'logs' && (
+          {tab === 'logs' && (<>
+            {/* Filter toolbar */}
+            <div className="flex items-center gap-2 px-5 py-2 border-b flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+              <button
+                onClick={() => setShowFilter(f => !f)}
+                className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-all"
+                style={{
+                  background: (showFilter || filterFrom || filterTo) ? 'rgba(59,130,246,0.1)' : 'transparent',
+                  color: (showFilter || filterFrom || filterTo) ? 'var(--blue)' : 'var(--text-3)',
+                  borderColor: (showFilter || filterFrom || filterTo) ? 'rgba(59,130,246,0.25)' : 'var(--border)',
+                }}>
+                <Filter className="w-3 h-3" /> Filter
+              </button>
+              {(filterFrom || filterTo) && (
+                <button onClick={() => { setFilterFrom(''); setFilterTo('') }}
+                  className="text-[11px] text-red-400 hover:text-red-500 transition-colors">
+                  Clear
+                </button>
+              )}
+              <span className="ml-auto text-[11px] font-mono" style={{ color: 'var(--text-4)' }}>
+                {filteredLogs.length} of {logs.length} events
+              </span>
+            </div>
+
+            {/* Date/time pickers — shown when filter is open */}
+            {showFilter && (
+              <div className="flex items-center gap-3 px-5 py-2.5 border-b flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+                <div className="flex items-center gap-2 flex-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: 'var(--text-4)' }}>From</label>
+                  <input type="datetime-local" className="input flex-1 text-xs font-mono py-1"
+                    value={filterFrom} onChange={e => setFilterFrom(e.target.value)} />
+                </div>
+                <div className="flex items-center gap-2 flex-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: 'var(--text-4)' }}>To</label>
+                  <input type="datetime-local" className="input flex-1 text-xs font-mono py-1"
+                    value={filterTo} onChange={e => setFilterTo(e.target.value)} />
+                </div>
+              </div>
+            )}
+
             <div className="flex-1 overflow-y-auto" style={{ minHeight: 280 }}>
               {logsLoading ? (
                 <div className="flex items-center justify-center gap-2 py-16 text-sm" style={{ color: 'var(--text-3)' }}>
                   <Loader2 className="w-4 h-4 animate-spin" /> Loading state log…
                 </div>
-              ) : logs.length === 0 ? (
+              ) : filteredLogs.length === 0 ? (
                 <div className="text-center py-16">
                   <Clock size={28} className="mx-auto mb-2 opacity-30 text-gray-400" />
-                  <p className="text-sm font-medium text-gray-400">No state changes recorded</p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-4)' }}>Events appear when the link changes state</p>
+                  {logs.length === 0 ? (
+                    <>
+                      <p className="text-sm font-medium text-gray-400">No state changes recorded</p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-4)' }}>Events appear when the link changes state</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-gray-400">No events in this time range</p>
+                      <button onClick={() => { setFilterFrom(''); setFilterTo('') }}
+                        className="text-xs text-blue-400 hover:underline mt-2 block mx-auto">
+                        Clear filter
+                      </button>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {logs.map(log => {
+                  {filteredLogs.map(log => {
                     const { bg, label } = logMeta(log.alert_type)
                     return (
                       <div key={log.id} className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
@@ -930,7 +992,7 @@ function EndpointPopup({ device, endpoint, onClose }) {
                 </div>
               )}
             </div>
-          )}
+          </>)}
         </div>
       </div>
     </>,
