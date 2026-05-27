@@ -1102,7 +1102,7 @@ function LinkCard({ d, detailPath, onNodeClick, onEdit, onDelete }) {
 
   return (
     <Link to={detailPath}
-      className="card p-4 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group block"
+      className="card p-3 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group block"
       style={{ borderColor: CARD_BORDER[status] }}>
 
       {/* Header */}
@@ -1118,16 +1118,16 @@ function LinkCard({ d, detailPath, onNodeClick, onEdit, onDelete }) {
       </div>
 
       {/* Topology diagram */}
-      <div className="flex gap-2 my-4">
+      <div className="flex gap-2 my-3">
         {/* Node A — clickable */}
         <div className="flex flex-col items-center justify-center flex-shrink-0 cursor-pointer"
-             style={{ width: 64 }}
+             style={{ width: 52 }}
              title="Click to ping or view state log"
              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNodeClick(d, { label: 'A', ip: d.ip_address, name: nameA || '' }) }}>
-          <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-1 hover:ring-2 hover:ring-current hover:ring-offset-1 transition-all ${nodeBCls}`}>
+          <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-1 hover:ring-2 hover:ring-current hover:ring-offset-1 transition-all ${nodeBCls}`}>
             A
           </div>
-          {nameA && <p className="text-[18px] font-medium truncate w-full text-center" style={{ color: lineColor }}>{nameA}</p>}
+          {nameA && <p className="text-[14px] font-medium truncate w-full text-center" style={{ color: lineColor }}>{nameA}</p>}
           <p className="text-[10px] font-mono text-gray-500 truncate w-full text-center">{d.ip_address}</p>
         </div>
 
@@ -1155,13 +1155,13 @@ function LinkCard({ d, detailPath, onNodeClick, onEdit, onDelete }) {
                 )}
               </div>
               <div className="flex flex-col items-center flex-shrink-0 cursor-pointer"
-                   style={{ width: 60 }}
+                   style={{ width: 48 }}
                    title="Click to ping or view state log"
                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNodeClick(d, { label: endpointsB.length > 1 ? `B${i + 1}` : 'B', ip: bIp, name: namesB[i] || '' }) }}>
-                <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-0.5 hover:ring-2 hover:ring-current hover:ring-offset-1 transition-all ${nodeBCls}`}>
+                <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold mb-0.5 hover:ring-2 hover:ring-current hover:ring-offset-1 transition-all ${nodeBCls}`}>
                   {endpointsB.length > 1 ? `B${i + 1}` : 'B'}
                 </div>
-                {namesB[i] && <p className="text-[18px] font-medium truncate w-full text-center" style={{ color: lineColor }}>{namesB[i]}</p>}
+                {namesB[i] && <p className="text-[14px] font-medium truncate w-full text-center" style={{ color: lineColor }}>{namesB[i]}</p>}
                 <p className="text-[10px] font-mono text-gray-500 truncate w-full text-center">{bIp}</p>
               </div>
             </div>
@@ -1284,7 +1284,7 @@ export default function CustomerDevices() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} rows={3} />)}
         </div>
       ) : devices.length === 0 ? (
@@ -1292,7 +1292,7 @@ export default function CustomerDevices() {
           <EmptyState icon={Server} title="No customer devices found" description="Add your first customer device to start monitoring." />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {devices.map((d) => d.tags?.includes('link') ? (
             <LinkCard
               key={d.id} d={d} detailPath={`/customer-devices/${d.id}`}
@@ -1301,11 +1301,11 @@ export default function CustomerDevices() {
               onDelete={() => setDeleteTarget(d)}
             />
           ) : (
-            <Link key={d.id} to={`/customer-devices/${d.id}`} className="card p-5 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group"
+            <Link key={d.id} to={`/customer-devices/${d.id}`} className="card p-4 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group"
               style={{ borderColor: CARD_BORDER[d.status] }}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: '#f3f4f6' }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: '#f3f4f6' }}>
                     {DEVICE_ICONS[d.device_type] ?? '📦'}
                   </div>
                   <div>
@@ -1315,7 +1315,7 @@ export default function CustomerDevices() {
                 </div>
                 <StatusIndicator status={d.status} dot />
               </div>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-gray-400 mb-4">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-gray-400 mb-3">
                 {d.last_ping_ms != null && <span className="flex items-center gap-1"><Activity className="w-3 h-3 text-blue-400" />{d.last_ping_ms}ms</span>}
                 {d.cpu_usage != null && <span className="flex items-center gap-1"><Cpu className="w-3 h-3 text-violet-400" />{d.cpu_usage.toFixed(0)}%</span>}
                 {d.memory_usage != null && <span className="flex items-center gap-1"><HardDrive className="w-3 h-3 text-emerald-400" />{d.memory_usage.toFixed(0)}%</span>}
