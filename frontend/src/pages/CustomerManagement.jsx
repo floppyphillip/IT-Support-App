@@ -25,15 +25,23 @@ const EMPTY_FORM = {
 function DevicePickerModal({ onClose, onAdd, alreadySelectedIds }) {
   const [allDevices, setAllDevices] = useState([])
   const [loading, setLoading]       = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [search, setSearch]         = useState('')
   const [selected, setSelected]     = useState(new Set())
 
-  useEffect(() => {
-    devicesAPI.list({ category: 'customer', limit: 200 })
-      .then(({ data }) => setAllDevices(data.items ?? data ?? []))
-      .catch(() => setAllDevices([]))
+  const loadDevices = () => {
+    setLoading(true)
+    setFetchError(false)
+    devicesAPI.list({ category: 'customer', limit: 500 })
+      .then(({ data }) => {
+        const items = Array.isArray(data) ? data : (data.items ?? [])
+        setAllDevices(items)
+      })
+      .catch(() => setFetchError(true))
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { loadDevices() }, [])
 
   const isLink = (d) => d.tags?.includes('link')
 
@@ -69,7 +77,7 @@ function DevicePickerModal({ onClose, onAdd, alreadySelectedIds }) {
     >
       <div
         className="w-full max-w-md rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-        style={{ background: '#fff', border: '1px solid #e5e7eb', maxHeight: '70vh' }}
+        style={{ background: '#fff', border: '1px solid #e5e7eb', height: '65vh', maxHeight: '700px' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid #e5e7eb' }}>
@@ -99,12 +107,31 @@ function DevicePickerModal({ onClose, onAdd, alreadySelectedIds }) {
         {/* Device list */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="py-12 text-center text-sm text-gray-400">Loading devices…</div>
-          ) : filtered.length === 0 ? (
-            <div className="py-12 text-center">
+            <div className="flex flex-col items-center justify-center h-full gap-2 text-sm text-gray-400">
+              <div className="w-5 h-5 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
+              Loading devices…
+            </div>
+          ) : fetchError ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-6">
               <Server className="w-8 h-8 mx-auto mb-2 text-gray-200" />
-              <p className="text-sm text-gray-400">{search ? 'No matching devices' : 'No available devices'}</p>
-              {!search && <p className="text-xs text-gray-300 mt-1">Add devices in Customer Devices under Tools</p>}
+              <p className="text-sm font-medium text-gray-400 mb-1">Could not load devices</p>
+              <p className="text-xs text-gray-300 mb-3">Check that the backend is running</p>
+              <button onClick={loadDevices} className="text-xs text-blue-500 hover:underline">Retry</button>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-6">
+              <Server className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+              <p className="text-sm font-medium text-gray-400">
+                {search ? 'No matching devices' : 'No devices found'}
+              </p>
+              <p className="text-xs text-gray-300 mt-1">
+                {search ? 'Try a different search term' : 'Add devices in Customer Devices under Tools first'}
+              </p>
+              {search && (
+                <button onClick={() => setSearch('')} className="text-xs text-blue-500 hover:underline mt-2">
+                  Clear search
+                </button>
+              )}
             </div>
           ) : (
             <div className="divide-y" style={{ borderColor: '#f3f4f6' }}>
