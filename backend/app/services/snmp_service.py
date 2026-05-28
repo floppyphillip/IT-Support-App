@@ -130,6 +130,135 @@ async def poll_device(
         return {"success": False, "error": str(exc), "ip_address": ip_address}
 
 
+async def walk_storage_table(
+    ip_address: str,
+    community: str | None = None,
+    version: str = "2c",
+) -> dict[str, Any]:
+    """Walk hrStorageTable and return memory_pct and disk_pct.
+
+    Walks hrStorageType, hrStorageSize, hrStorageUsed columns and matches
+    entries by index. Returns the first RAM entry as memory and the first
+    fixed-disk or other-storage entry as disk.
+    """
+    community = community or settings.SNMP_COMMUNITY
+    loop = asyncio.get_event_loop()
+
+    OID_TYPE = "1.3.6.1.2.1.25.2.3.1.2"  # hrStorageType
+    OID_SIZE = "1.3.6.1.2.1.25.2.3.1.5"  # hrStorageSize
+    OID_USED = "1.3.6.1.2.1.25.2.3.1.6"  # hrStorageUsed
+
+    # hrStorageType OID values
+    TYPE_RAM  = "1.3.6.1.2.1.25.2.1.2"
+    TYPE_DISK = "1.3.6.1.2.1.25.2.1.4"
+
+    def _walk():
+        try:
+            from pysnmp.hlapi import (  # type: ignore[import]
+                CommunityData, ContextData, ObjectIdentity, ObjectType,
+                SnmpEngine, UdpTransportTarget, nextCmd,
+            )
+        except ImportError:
+            return {}
+
+        mp_model  = 0 if version == "1" else 1
+        engine    = SnmpEngine()
+        auth      = CommunityData(community, mpModel=mp_model)
+        transport = UdpTransportTarget(
+            (ip_address, settings.SNMP_PORT),
+            timeout=settings.SNMP_TIMEOUT,
+            retries=1,
+        )
+        context = ContextData()
+
+        def _walk_col(base_oid: str) -> dict[int, str]:
+            col: dict[int, str] = {}
+            try:
+                for err_ind, err_st, _, var_binds in nextCmd(
+                    engine, auth, transport, context,
+                    ObjectType(ObjectIdentity(base_oid)),
+                    lexicographicMode=False,
+                    maxRows=64,
+                ):
+                    if err_ind or err_st:
+                        break
+                    for obj, val in var_binds:
+                        parts = str(obj).rsplit(".", 1)
+                        if len(parts) == 2:
+                            try:
+                                idx = int(parts[1])
+                                raw = str(val).strip()
+                                if raw and "noSuch" not in raw:
+                                    col[idx] = raw
+                            except ValueError:
+                                pass
+            except Exception as exc:
+                logger.warning(f"hrStorage walk error ({ip_address}, {base_oid}): {exc}")
+            return col
+
+        types = _walk_col(OID_TYPE)
+        sizes = _walk_col(OID_SIZE)
+        useds = _walk_col(OID_USED)
+
+        logger.info(f"hrStorageTable walk {ip_address}: {len(types)} entries — indices={sorted(types)}")
+
+        memory_pct: float | None = None
+        disk_pct:   float | None = None
+
+        for idx, type_oid in types.items():
+            size_raw = sizes.get(idx)
+            used_raw = useds.get(idx)
+            if not size_raw or not used_raw:
+                continue
+            try:
+                s = int(float(size_raw))
+                u = int(float(used_raw))
+                if s <= 0:
+                    continue
+                pct = round(u / s * 100, 1)
+                if TYPE_RAM in type_oid:
+                    if memory_pct is None:
+                        memory_pct = pct
+                        logger.info(f"hrStorage RAM idx={idx} used={u} size={s} → {pct}%")
+                elif memory_pct is not None and disk_pct is None:
+                    # First non-RAM entry after finding RAM = disk/flash
+                    disk_pct = pct
+                    logger.info(f"hrStorage disk idx={idx} used={u} size={s} → {pct}%")
+            except (ValueError, TypeError):
+                continue
+
+        # Fallback: if type OIDs are not populated, use first two size/used pairs
+        if memory_pct is None and sizes:
+            sorted_idx = sorted(sizes)
+            for idx in sorted_idx:
+                size_raw = sizes.get(idx)
+                used_raw = useds.get(idx)
+                if not size_raw or not used_raw:
+                    continue
+                try:
+                    s, u = int(float(size_raw)), int(float(used_raw))
+                    if s > 0:
+                        pct = round(u / s * 100, 1)
+                        if memory_pct is None:
+                            memory_pct = pct
+                            logger.info(f"hrStorage fallback memory idx={idx} → {pct}%")
+                        elif disk_pct is None:
+                            disk_pct = pct
+                            logger.info(f"hrStorage fallback disk idx={idx} → {pct}%")
+                        if disk_pct is not None:
+                            break
+                except (ValueError, TypeError):
+                    continue
+
+        return {"memory_pct": memory_pct, "disk_pct": disk_pct}
+
+    try:
+        return await loop.run_in_executor(None, _walk)
+    except Exception as exc:
+        logger.error(f"hrStorageTable walk failed ({ip_address}): {exc}")
+        return {}
+
+
 async def get_interface_table(
     ip_address: str,
     community: str | None = None,

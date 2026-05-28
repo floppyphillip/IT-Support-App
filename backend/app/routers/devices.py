@@ -15,7 +15,7 @@ from app.schemas.device import (
 )
 from pydantic import BaseModel
 from app.services.ping_service import ping_host
-from app.services.snmp_service import poll_device, get_interface_table, poll_interface_traffic, snmp_diagnose
+from app.services.snmp_service import poll_device, walk_storage_table, get_interface_table, poll_interface_traffic, snmp_diagnose
 from app.services.ssh_service import backup_device_config
 from app.utils.security import (
     get_current_user_id, require_superadmin_or_engineer,
@@ -186,85 +186,53 @@ async def snmp_poll_device(
             except (ValueError, TypeError):
                 pass
 
-    # ── Memory ───────────────────────────────────────────────────────────────
-    if vendor == "mikrotik":
-        # MikroTik implements standard HOST-RESOURCES-MIB: index 1 = RAM
-        try:
-            mem_used = result.get("hrStorageUsed_1")
-            mem_size = result.get("hrStorageSize_1")
-            if mem_used is not None and mem_size is not None:
-                u, s = int(float(mem_used)), int(float(mem_size))
-                if s > 0:
-                    device.memory_usage = round(u / s * 100, 1)
-                    logger.info(f"MikroTik memory: used={u} size={s} → {device.memory_usage}%")
-                else:
-                    logger.warning(f"MikroTik memory hrStorageSize_1=0 for {device.ip_address}")
-            else:
-                logger.warning(f"MikroTik memory hrStorage index 1 not available for {device.ip_address}: "
-                               f"used={mem_used} size={mem_size}")
-        except (ValueError, TypeError) as e:
-            logger.warning(f"MikroTik memory parse error for {device.ip_address}: {e}")
-    elif vendor == "cisco":
-        try:
-            used = result.get("ciscoMemPoolUsed")
-            free = result.get("ciscoMemPoolFree")
-            if used and free:
-                total = int(used) + int(free)
-                if total > 0:
-                    device.memory_usage = round(int(used) / total * 100, 1)
-        except (ValueError, TypeError):
-            pass
-    elif vendor == "fortinet":
-        try:
-            pct = result.get("fgSysMemUsage")
-            if pct is not None:
-                device.memory_usage = float(pct)
-        except (ValueError, TypeError):
-            pass
-    elif vendor == "juniper":
-        try:
-            pct = result.get("jnxOperatingBuffer")
-            if pct is not None:
-                device.memory_usage = float(pct)
-        except (ValueError, TypeError):
-            pass
-    elif vendor == "huawei":
-        try:
-            pct = result.get("hwEntityMemUsage")
-            if pct is not None:
-                device.memory_usage = float(pct)
-        except (ValueError, TypeError):
-            pass
-    else:
-        # Standard HOST-RESOURCES-MIB: storage index 1 = RAM on net-snmp agents
-        try:
-            mem_used = result.get("hrStorageUsed_1")
-            mem_size = result.get("hrStorageSize_1")
-            if mem_used is not None and mem_size and int(mem_size) > 0:
-                device.memory_usage = round(float(mem_used) / float(mem_size) * 100, 1)
-        except (ValueError, TypeError):
-            pass
+    # ── Memory & Disk via hrStorageTable walk (MikroTik + fallback for all) ──
+    storage = await walk_storage_table(
+        ip_address=device.ip_address,
+        community=device.snmp_community,
+        version=device.snmp_version or "2c",
+    )
+    if storage.get("memory_pct") is not None:
+        device.memory_usage = storage["memory_pct"]
+    if storage.get("disk_pct") is not None:
+        device.disk_usage = storage["disk_pct"]
 
-    # ── Disk ─────────────────────────────────────────────────────────────────
-    if vendor == "mikrotik":
-        # MikroTik: index 2 = internal flash/disk storage
-        try:
-            disk_used = result.get("hrStorageUsed_2")
-            disk_size = result.get("hrStorageSize_2")
-            if disk_used is not None and disk_size is not None:
-                u, s = int(float(disk_used)), int(float(disk_size))
-                if s > 0:
-                    device.disk_usage = round(u / s * 100, 1)
-                    logger.info(f"MikroTik disk: used={u} size={s} → {device.disk_usage}%")
-                else:
-                    logger.warning(f"MikroTik disk hrStorageSize_2=0 for {device.ip_address}")
-            else:
-                logger.warning(f"MikroTik disk hrStorage index 2 not available for {device.ip_address}: "
-                               f"used={disk_used} size={disk_size}")
-        except (ValueError, TypeError) as e:
-            logger.warning(f"MikroTik disk parse error for {device.ip_address}: {e}")
-    else:
-        # Standard: storage index 31 or 32 = physical disk on Windows/Linux
+    # ── Memory (vendor-specific GET, only if walk didn't populate it) ─────────
+    if device.memory_usage is None:
+        if vendor == "cisco":
+            try:
+                used = result.get("ciscoMemPoolUsed")
+                free = result.get("ciscoMemPoolFree")
+                if used and free:
+                    total = int(used) + int(free)
+                    if total > 0:
+                        device.memory_usage = round(int(used) / total * 100, 1)
+            except (ValueError, TypeError):
+                pass
+        elif vendor == "fortinet":
+            try:
+                pct = result.get("fgSysMemUsage")
+                if pct is not None:
+                    device.memory_usage = float(pct)
+            except (ValueError, TypeError):
+                pass
+        elif vendor == "juniper":
+            try:
+                pct = result.get("jnxOperatingBuffer")
+                if pct is not None:
+                    device.memory_usage = float(pct)
+            except (ValueError, TypeError):
+                pass
+        elif vendor == "huawei":
+            try:
+                pct = result.get("hwEntityMemUsage")
+                if pct is not None:
+                    device.memory_usage = float(pct)
+            except (ValueError, TypeError):
+                pass
+
+    # ── Disk (vendor-specific GET, only if walk didn't populate it) ───────────
+    if device.disk_usage is None:
         for disk_idx in (31, 32):
             try:
                 disk_used = result.get(f"hrStorageUsed_{disk_idx}")
