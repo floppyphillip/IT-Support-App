@@ -955,6 +955,7 @@ const LINK_EMPTY = {
   name: '', link_type: 'fiber', topology: 'point_to_point',
   name_a: '', endpoint_a: '', names_b: [''], endpoints_b: [''],
   bandwidth: '', provider: '', circuit_id: '', location: '', monitoring_enabled: true,
+  snmp_enabled: false, snmp_community: 'public', snmp_version: '2c',
 }
 
 function LinkFormModal({ onClose, onSaved, category = 'noc', device = null }) {
@@ -985,6 +986,9 @@ function LinkFormModal({ onClose, onSaved, category = 'noc', device = null }) {
     circuit_id:         device.serial_number ?? '',
     location:           device.location ?? '',
     monitoring_enabled: device.monitoring_enabled ?? true,
+    snmp_enabled:       device.snmp_enabled   ?? false,
+    snmp_community:     device.snmp_community ?? 'public',
+    snmp_version:       device.snmp_version   ?? '2c',
   } : LINK_EMPTY)
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -1006,6 +1010,9 @@ function LinkFormModal({ onClose, onSaved, category = 'noc', device = null }) {
         serial_number:     form.circuit_id.trim()  || undefined,
         location:          form.location.trim()    || undefined,
         monitoring_enabled: form.monitoring_enabled,
+        snmp_enabled:    form.snmp_enabled,
+        snmp_community:  form.snmp_enabled ? form.snmp_community || undefined : undefined,
+        snmp_version:    form.snmp_enabled ? form.snmp_version   || undefined : undefined,
         extra_data: {
           link_type:   form.link_type,
           topology:    form.topology,
@@ -1153,6 +1160,28 @@ function LinkFormModal({ onClose, onSaved, category = 'noc', device = null }) {
               <p className="text-[15px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-4)' }}>Monitoring</p>
               <Toggle label="Enable monitoring (ICMP ping on Endpoint A)" checked={form.monitoring_enabled}
                 onChange={v => set('monitoring_enabled', v)} />
+            </section>
+
+            <section className="border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+              <Toggle label="SNMP polling" checked={form.snmp_enabled}
+                onChange={v => set('snmp_enabled', v)} />
+              {form.snmp_enabled && (
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Community String</label>
+                    <input className="input w-full font-mono" placeholder="public"
+                      value={form.snmp_community} onChange={e => set('snmp_community', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>SNMP Version</label>
+                    <select className="input w-full" value={form.snmp_version} onChange={e => set('snmp_version', e.target.value)}>
+                      <option value="1">v1</option>
+                      <option value="2c">v2c</option>
+                      <option value="3">v3</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </section>
           </div>
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
@@ -1389,6 +1418,32 @@ function LinkRow({ d, onNodeClick, onEdit, onDelete }) {
       <td className="px-4 py-3 whitespace-nowrap">
         <span className="text-[12px] font-mono text-gray-500">{bandwidth || '—'}</span>
       </td>
+      {/* SNMP Metrics */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        {d.snmp_enabled ? (
+          <div className="flex flex-col gap-0.5">
+            {d.cpu_usage != null && (
+              <span className="flex items-center gap-1 text-[12px] font-mono">
+                <Cpu className="w-3 h-3 text-violet-400 flex-shrink-0" />
+                <span className={d.cpu_usage > 90 ? 'text-red-400' : d.cpu_usage > 70 ? 'text-amber-400' : 'text-gray-500'}>
+                  {d.cpu_usage.toFixed(0)}%
+                </span>
+              </span>
+            )}
+            {d.memory_usage != null && (
+              <span className="flex items-center gap-1 text-[12px] font-mono">
+                <HardDrive className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                <span className="text-gray-500">{d.memory_usage.toFixed(0)}%</span>
+              </span>
+            )}
+            {d.cpu_usage == null && d.memory_usage == null && (
+              <span className="text-[12px] text-gray-300">polling…</span>
+            )}
+          </div>
+        ) : (
+          <span className="text-[12px] text-gray-300">—</span>
+        )}
+      </td>
       {/* Location */}
       <td className="px-4 py-3" style={{ minWidth: 120 }}>
         <span className="text-[13px] text-gray-600 line-clamp-1">{d.location || '—'}</span>
@@ -1587,7 +1642,7 @@ export default function Devices() {
                   <table className="w-full text-sm" style={{ minWidth: 1100 }}>
                     <thead>
                       <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                        {['Name','Link Type','Topology','Endpoint A','Endpoint B','Provider','Circuit ID','Bandwidth','Location','Status','Actions'].map(h => (
+                        {['Name','Link Type','Topology','Endpoint A','Endpoint B','Provider','Circuit ID','Bandwidth','SNMP','Location','Status','Actions'].map(h => (
                           <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
                             {h}
                           </th>
