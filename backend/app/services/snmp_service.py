@@ -37,11 +37,18 @@ OIDS = {
 # Vendor-specific supplemental OIDs — merged in per vendor
 VENDOR_OIDS: dict[str, dict[str, str]] = {
     "mikrotik": {
-        # MIKROTIK-MIB memory and storage (bytes)
-        "mtxrTotalMemory":   "1.3.6.1.4.1.14988.1.1.7.4.0",
-        "mtxrFreeMemory":    "1.3.6.1.4.1.14988.1.1.7.5.0",
-        "mtxrTotalHddSpace": "1.3.6.1.4.1.14988.1.1.7.6.0",
-        "mtxrFreeHddSpace":  "1.3.6.1.4.1.14988.1.1.7.7.0",
+        # MIKROTIK-MIB — OID numbering differs by RouterOS version; poll all variants
+        # v1 layout (older RouterOS — .7.1.0=total, .7.3.0=free, .7.4.0=hddTotal, .7.5.0=hddFree)
+        "mtxrMemTotal_v1":   "1.3.6.1.4.1.14988.1.1.7.1.0",
+        "mtxrMemUsed_v1":    "1.3.6.1.4.1.14988.1.1.7.2.0",
+        "mtxrMemFree_v1":    "1.3.6.1.4.1.14988.1.1.7.3.0",
+        "mtxrHddTotal_v1":   "1.3.6.1.4.1.14988.1.1.7.4.0",
+        "mtxrHddFree_v1":    "1.3.6.1.4.1.14988.1.1.7.5.0",
+        # v2 layout (newer RouterOS — .7.4.0=total, .7.5.0=free, .7.6.0=hddTotal, .7.7.0=hddFree)
+        "mtxrMemTotal_v2":   "1.3.6.1.4.1.14988.1.1.7.4.0",
+        "mtxrMemFree_v2":    "1.3.6.1.4.1.14988.1.1.7.5.0",
+        "mtxrHddTotal_v2":   "1.3.6.1.4.1.14988.1.1.7.6.0",
+        "mtxrHddFree_v2":    "1.3.6.1.4.1.14988.1.1.7.7.0",
     },
     "cisco": {
         # CISCO-MEMORY-POOL-MIB — processor pool index 1
@@ -111,8 +118,15 @@ async def poll_device(
                 result[name] = None
             else:
                 for _, val in var_binds:
-                    result[name] = parse_snmp_oid_value(val)
+                    raw_str = parse_snmp_oid_value(val)
+                    # Treat noSuchObject / noSuchInstance as missing
+                    if "noSuch" in raw_str or "noSuch" in type(val).__name__:
+                        result[name] = None
+                    else:
+                        result[name] = raw_str
 
+        non_null = {k: v for k, v in result.items() if v is not None and k not in ("success", "ip_address")}
+        logger.info(f"SNMP poll {ip_address} vendor={vendor}: {non_null}")
         return result
 
     try:

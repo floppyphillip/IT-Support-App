@@ -188,13 +188,40 @@ async def snmp_poll_device(
 
     # ── Memory ───────────────────────────────────────────────────────────────
     if vendor == "mikrotik":
-        try:
-            total = result.get("mtxrTotalMemory")
-            free  = result.get("mtxrFreeMemory")
-            if total and free and int(total) > 0:
-                device.memory_usage = round((int(total) - int(free)) / int(total) * 100, 1)
-        except (ValueError, TypeError):
-            pass
+        # Try all OID layout variants — whichever yields valid non-zero values wins
+        mem_set = False
+        for total_key, free_key in [
+            ("mtxrMemTotal_v1", "mtxrMemFree_v1"),
+            ("mtxrMemTotal_v2", "mtxrMemFree_v2"),
+            # v1 also exposes a direct "used" value
+            ("mtxrMemTotal_v1", "mtxrMemUsed_v1"),
+        ]:
+            try:
+                total_raw = result.get(total_key)
+                other_raw = result.get(free_key)
+                if total_raw is None or other_raw is None:
+                    continue
+                total_int = int(float(total_raw))
+                other_int = int(float(other_raw))
+                if total_int <= 0:
+                    continue
+                # If the second key is "used", use it directly; otherwise it's free
+                if "Used" in free_key or "Used" in free_key:
+                    used_int = other_int
+                else:
+                    used_int = total_int - other_int
+                if used_int < 0:
+                    continue
+                device.memory_usage = round(used_int / total_int * 100, 1)
+                logger.info(f"MikroTik memory: {total_key}={total_int} {free_key}={other_int} → {device.memory_usage}%")
+                mem_set = True
+                break
+            except (ValueError, TypeError):
+                continue
+        if not mem_set:
+            logger.warning(f"MikroTik memory OIDs returned no usable values for {device.ip_address}: "
+                           f"v1_total={result.get('mtxrMemTotal_v1')} v1_free={result.get('mtxrMemFree_v1')} "
+                           f"v2_total={result.get('mtxrMemTotal_v2')} v2_free={result.get('mtxrMemFree_v2')}")
     elif vendor == "cisco":
         try:
             used = result.get("ciscoMemPoolUsed")
@@ -238,13 +265,33 @@ async def snmp_poll_device(
 
     # ── Disk ─────────────────────────────────────────────────────────────────
     if vendor == "mikrotik":
-        try:
-            total = result.get("mtxrTotalHddSpace")
-            free  = result.get("mtxrFreeHddSpace")
-            if total and free and int(total) > 0:
-                device.disk_usage = round((int(total) - int(free)) / int(total) * 100, 1)
-        except (ValueError, TypeError):
-            pass
+        disk_set = False
+        for total_key, free_key in [
+            ("mtxrHddTotal_v1", "mtxrHddFree_v1"),
+            ("mtxrHddTotal_v2", "mtxrHddFree_v2"),
+        ]:
+            try:
+                total_raw = result.get(total_key)
+                free_raw  = result.get(free_key)
+                if total_raw is None or free_raw is None:
+                    continue
+                total_int = int(float(total_raw))
+                free_int  = int(float(free_raw))
+                if total_int <= 0:
+                    continue
+                used_int = total_int - free_int
+                if used_int < 0:
+                    continue
+                device.disk_usage = round(used_int / total_int * 100, 1)
+                logger.info(f"MikroTik disk: {total_key}={total_int} {free_key}={free_int} → {device.disk_usage}%")
+                disk_set = True
+                break
+            except (ValueError, TypeError):
+                continue
+        if not disk_set:
+            logger.warning(f"MikroTik disk OIDs returned no usable values for {device.ip_address}: "
+                           f"v1={result.get('mtxrHddTotal_v1')}/{result.get('mtxrHddFree_v1')} "
+                           f"v2={result.get('mtxrHddTotal_v2')}/{result.get('mtxrHddFree_v2')}")
     else:
         # Standard: storage index 31 or 32 = physical disk on Windows/Linux
         for disk_idx in (31, 32):
