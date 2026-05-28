@@ -10,19 +10,20 @@ from app.utils.network_parser import parse_snmp_oid_value
 
 logger = get_logger(__name__)
 
-# Standard SNMP OIDs
+# Standard SNMP OIDs — polled for all devices
 OIDS = {
     "sysDescr":           "1.3.6.1.2.1.1.1.0",
     "sysUpTime":          "1.3.6.1.2.1.1.3.0",
     "sysName":            "1.3.6.1.2.1.1.5.0",
     "sysLocation":        "1.3.6.1.2.1.1.6.0",
     "ifNumber":           "1.3.6.1.2.1.2.1.0",
-    # CPU — standard instance .1 (first processor); some Cisco/IOS-XE use .196608
+    # CPU — standard instance .1 (first processor)
     "hrProcessorLoad":    "1.3.6.1.2.1.25.3.3.1.2.1",
+    # Cisco/IOS-XE use a different instance
     "hrProcessorLoad_alt":"1.3.6.1.2.1.25.3.3.1.2.196608",
     # Memory — total physical RAM in KB
     "hrMemorySize":       "1.3.6.1.2.1.25.2.2.0",
-    # Storage index 1 = RAM on most agents (net-snmp, Cisco, MikroTik)
+    # Storage index 1 = RAM on most standard agents (Cisco, Juniper, Linux net-snmp)
     "hrStorageUsed_1":    "1.3.6.1.2.1.25.2.3.1.6.1",
     "hrStorageSize_1":    "1.3.6.1.2.1.25.2.3.1.5.1",
     # Storage index 31 = first physical disk on Windows / many Linux agents
@@ -33,6 +34,40 @@ OIDS = {
     "hrStorageSize_32":   "1.3.6.1.2.1.25.2.3.1.5.32",
 }
 
+# Vendor-specific supplemental OIDs — merged in per vendor
+VENDOR_OIDS: dict[str, dict[str, str]] = {
+    "mikrotik": {
+        # MIKROTIK-MIB memory and storage (bytes)
+        "mtxrTotalMemory":   "1.3.6.1.4.1.14988.1.1.7.4.0",
+        "mtxrFreeMemory":    "1.3.6.1.4.1.14988.1.1.7.5.0",
+        "mtxrTotalHddSpace": "1.3.6.1.4.1.14988.1.1.7.6.0",
+        "mtxrFreeHddSpace":  "1.3.6.1.4.1.14988.1.1.7.7.0",
+    },
+    "cisco": {
+        # CISCO-MEMORY-POOL-MIB — processor pool index 1
+        "ciscoMemPoolUsed":  "1.3.6.1.4.1.9.9.48.1.1.1.5.1",
+        "ciscoMemPoolFree":  "1.3.6.1.4.1.9.9.48.1.1.1.6.1",
+    },
+    "juniper": {
+        # JUNIPER-MIB — first FRU (routing engine) index 1
+        "jnxOperatingCPU":    "1.3.6.1.4.1.2636.3.1.13.1.8.9.1.0.0",
+        "jnxOperatingBuffer": "1.3.6.1.4.1.2636.3.1.13.1.11.9.1.0.0",
+    },
+    "huawei": {
+        # HUAWEI-ENTITY-EXTENT-MIB — index 256 is often the main board
+        "hwEntityCpuUsage": "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.5.256",
+        "hwEntityMemUsage": "1.3.6.1.4.1.2011.5.25.31.1.1.1.1.7.256",
+    },
+    "fortinet": {
+        "fgSysCpuUsage": "1.3.6.1.4.1.12356.101.4.1.4.0",
+        "fgSysMemUsage": "1.3.6.1.4.1.12356.101.4.1.5.0",
+    },
+    "paloalto": {
+        "panSysCPULoadAverage": "1.3.6.1.4.1.25461.2.1.2.1.13",
+        "panSysSessionUtilization": "1.3.6.1.4.1.25461.2.1.2.1.9",
+    },
+}
+
 
 async def poll_device(
     ip_address: str,
@@ -40,11 +75,15 @@ async def poll_device(
     port: int | None = None,
     version: str = "2c",
     oids: dict[str, str] | None = None,
+    vendor: str | None = None,
 ) -> dict[str, Any]:
     """Poll SNMP OIDs from a device asynchronously."""
     community = community or settings.SNMP_COMMUNITY
     port = port or settings.SNMP_PORT
-    target_oids = oids or OIDS
+    base = oids or OIDS
+    # Merge vendor-specific OIDs on top of the standard set
+    extra = VENDOR_OIDS.get(vendor or "", {})
+    target_oids = {**base, **extra} if extra else base
 
     loop = asyncio.get_event_loop()
 

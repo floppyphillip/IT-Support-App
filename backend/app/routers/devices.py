@@ -153,10 +153,13 @@ async def snmp_poll_device(
     if not device.snmp_enabled:
         raise HTTPException(status_code=400, detail="SNMP not enabled for this device")
 
+    vendor = device.vendor.value if hasattr(device.vendor, "value") else (device.vendor or "")
+
     result = await poll_device(
         ip_address=device.ip_address,
         community=device.snmp_community,
         version=device.snmp_version or "2c",
+        vendor=vendor,
     )
 
     # Merge poll results into extra_data — preserve existing keys (e.g. snmp_oids from OID picker)
@@ -164,35 +167,95 @@ async def snmp_poll_device(
     snmp_snapshot = {k: v for k, v in result.items() if k not in ("success", "ip_address", "error")}
     device.extra_data = {**existing_extra, **snmp_snapshot}
 
-    # CPU — try standard instance .1 first, fall back to Cisco-style .196608
-    for cpu_key in ("hrProcessorLoad", "hrProcessorLoad_alt"):
-        raw_cpu = result.get(cpu_key)
-        if raw_cpu is not None:
+    # ── CPU ──────────────────────────────────────────────────────────────────
+    # Vendor-specific CPU keys take priority; fall back to standard hrProcessorLoad
+    cpu_key_priority = {
+        "cisco":    ["hrProcessorLoad", "hrProcessorLoad_alt"],
+        "juniper":  ["jnxOperatingCPU", "hrProcessorLoad"],
+        "huawei":   ["hwEntityCpuUsage", "hrProcessorLoad"],
+        "fortinet": ["fgSysCpuUsage", "hrProcessorLoad"],
+        "paloalto": ["panSysCPULoadAverage", "hrProcessorLoad"],
+    }.get(vendor, ["hrProcessorLoad", "hrProcessorLoad_alt"])
+
+    for cpu_key in cpu_key_priority:
+        raw = result.get(cpu_key)
+        if raw is not None:
             try:
-                device.cpu_usage = float(raw_cpu)
+                device.cpu_usage = float(raw)
                 break
             except (ValueError, TypeError):
                 pass
 
-    # Memory — compute % from storage index 1 (RAM on most agents)
-    try:
-        mem_used = result.get("hrStorageUsed_1")
-        mem_size = result.get("hrStorageSize_1")
-        if mem_used is not None and mem_size and int(mem_size) > 0:
-            device.memory_usage = round(float(mem_used) / float(mem_size) * 100, 1)
-    except (ValueError, TypeError):
-        pass
-
-    # Disk — try storage index 31 then 32 (common physical disk indices)
-    for disk_idx in (31, 32):
+    # ── Memory ───────────────────────────────────────────────────────────────
+    if vendor == "mikrotik":
         try:
-            disk_used = result.get(f"hrStorageUsed_{disk_idx}")
-            disk_size = result.get(f"hrStorageSize_{disk_idx}")
-            if disk_used is not None and disk_size and int(disk_size) > 0:
-                device.disk_usage = round(float(disk_used) / float(disk_size) * 100, 1)
-                break
+            total = result.get("mtxrTotalMemory")
+            free  = result.get("mtxrFreeMemory")
+            if total and free and int(total) > 0:
+                device.memory_usage = round((int(total) - int(free)) / int(total) * 100, 1)
         except (ValueError, TypeError):
             pass
+    elif vendor == "cisco":
+        try:
+            used = result.get("ciscoMemPoolUsed")
+            free = result.get("ciscoMemPoolFree")
+            if used and free:
+                total = int(used) + int(free)
+                if total > 0:
+                    device.memory_usage = round(int(used) / total * 100, 1)
+        except (ValueError, TypeError):
+            pass
+    elif vendor == "fortinet":
+        try:
+            pct = result.get("fgSysMemUsage")
+            if pct is not None:
+                device.memory_usage = float(pct)
+        except (ValueError, TypeError):
+            pass
+    elif vendor == "juniper":
+        try:
+            pct = result.get("jnxOperatingBuffer")
+            if pct is not None:
+                device.memory_usage = float(pct)
+        except (ValueError, TypeError):
+            pass
+    elif vendor == "huawei":
+        try:
+            pct = result.get("hwEntityMemUsage")
+            if pct is not None:
+                device.memory_usage = float(pct)
+        except (ValueError, TypeError):
+            pass
+    else:
+        # Standard HOST-RESOURCES-MIB: storage index 1 = RAM on net-snmp agents
+        try:
+            mem_used = result.get("hrStorageUsed_1")
+            mem_size = result.get("hrStorageSize_1")
+            if mem_used is not None and mem_size and int(mem_size) > 0:
+                device.memory_usage = round(float(mem_used) / float(mem_size) * 100, 1)
+        except (ValueError, TypeError):
+            pass
+
+    # ── Disk ─────────────────────────────────────────────────────────────────
+    if vendor == "mikrotik":
+        try:
+            total = result.get("mtxrTotalHddSpace")
+            free  = result.get("mtxrFreeHddSpace")
+            if total and free and int(total) > 0:
+                device.disk_usage = round((int(total) - int(free)) / int(total) * 100, 1)
+        except (ValueError, TypeError):
+            pass
+    else:
+        # Standard: storage index 31 or 32 = physical disk on Windows/Linux
+        for disk_idx in (31, 32):
+            try:
+                disk_used = result.get(f"hrStorageUsed_{disk_idx}")
+                disk_size = result.get(f"hrStorageSize_{disk_idx}")
+                if disk_used is not None and disk_size and int(disk_size) > 0:
+                    device.disk_usage = round(float(disk_used) / float(disk_size) * 100, 1)
+                    break
+            except (ValueError, TypeError):
+                pass
 
     await db.commit()
     await db.refresh(device)
