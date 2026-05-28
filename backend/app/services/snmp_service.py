@@ -113,8 +113,8 @@ async def poll_device(
             else:
                 for _, val in var_binds:
                     raw_str = parse_snmp_oid_value(val)
-                    # Treat noSuchObject / noSuchInstance as missing
-                    if "noSuch" in raw_str or "noSuch" in type(val).__name__:
+                    type_name = type(val).__name__.lower()
+                    if not raw_str or "nosuch" in type_name or "nosuch" in raw_str.lower():
                         result[name] = None
                     else:
                         result[name] = raw_str
