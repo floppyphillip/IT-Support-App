@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.database import get_db
 from app.models.device import Device, DeviceStatus
@@ -101,6 +102,13 @@ async def update_device(
 ):
     device = await _get_device_or_404(db, device_id)
     data = payload.model_dump(exclude_none=True, exclude={"ssh_password"})
+    # Merge extra_data so that snmp_oids from the form doesn't erase SNMP poll data
+    if "extra_data" in data:
+        new_extra = data.pop("extra_data")
+        merged = {**(device.extra_data or {}), **(new_extra or {})}
+        device.extra_data = merged
+        flag_modified(device, "extra_data")
+        logger.debug(f"update_device {device_id}: snmp_oids={merged.get('snmp_oids')}")
     for field, value in data.items():
         setattr(device, field, value)
     _apply_ssh_password(device, payload.ssh_password)
@@ -164,8 +172,11 @@ async def snmp_poll_device(
 
     # Merge poll results into extra_data — preserve existing keys (e.g. snmp_oids from OID picker)
     existing_extra = device.extra_data or {}
+    logger.info(f"SNMP merge {device.ip_address}: snmp_oids BEFORE={existing_extra.get('snmp_oids')}")
     snmp_snapshot = {k: v for k, v in result.items() if k not in ("success", "ip_address", "error")}
     device.extra_data = {**existing_extra, **snmp_snapshot}
+    flag_modified(device, "extra_data")
+    logger.info(f"SNMP merge {device.ip_address}: snmp_oids AFTER={device.extra_data.get('snmp_oids')}")
 
     # ── CPU ──────────────────────────────────────────────────────────────────
     # Vendor-specific CPU keys take priority; fall back to standard hrProcessorLoad
