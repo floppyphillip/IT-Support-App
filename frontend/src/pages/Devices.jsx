@@ -17,13 +17,312 @@ const DEVICE_ICONS = {
 const DEVICE_TYPES = ['router','switch','firewall','server','workstation','access_point','nas','camera','other']
 const VENDORS      = ['cisco','mikrotik','juniper','huawei','linux','windows','paloalto','fortinet','other']
 
+// SNMP OID / MIB reference table — grouped by vendor
+// Each entry: { oid, mib, name, desc }
+const VENDOR_OIDS = {
+  common: [
+    { oid: '1.3.6.1.2.1.1.1.0',    mib: 'SNMPv2-MIB',           name: 'sysDescr',                desc: 'System description' },
+    { oid: '1.3.6.1.2.1.1.3.0',    mib: 'SNMPv2-MIB',           name: 'sysUpTime',               desc: 'System uptime' },
+    { oid: '1.3.6.1.2.1.1.4.0',    mib: 'SNMPv2-MIB',           name: 'sysContact',              desc: 'System contact' },
+    { oid: '1.3.6.1.2.1.1.5.0',    mib: 'SNMPv2-MIB',           name: 'sysName',                 desc: 'System name' },
+    { oid: '1.3.6.1.2.1.1.6.0',    mib: 'SNMPv2-MIB',           name: 'sysLocation',             desc: 'System location' },
+    { oid: '1.3.6.1.2.1.2.1.0',    mib: 'IF-MIB',               name: 'ifNumber',                desc: 'Number of interfaces' },
+    { oid: '1.3.6.1.2.1.2.2.1.2',  mib: 'IF-MIB',               name: 'ifDescr',                 desc: 'Interface description' },
+    { oid: '1.3.6.1.2.1.2.2.1.5',  mib: 'IF-MIB',               name: 'ifSpeed',                 desc: 'Interface speed (bps)' },
+    { oid: '1.3.6.1.2.1.2.2.1.7',  mib: 'IF-MIB',               name: 'ifAdminStatus',           desc: 'Interface admin status' },
+    { oid: '1.3.6.1.2.1.2.2.1.8',  mib: 'IF-MIB',               name: 'ifOperStatus',            desc: 'Interface operational status' },
+    { oid: '1.3.6.1.2.1.2.2.1.10', mib: 'IF-MIB',               name: 'ifInOctets',              desc: 'Incoming traffic (bytes)' },
+    { oid: '1.3.6.1.2.1.2.2.1.16', mib: 'IF-MIB',               name: 'ifOutOctets',             desc: 'Outgoing traffic (bytes)' },
+    { oid: '1.3.6.1.2.1.2.2.1.14', mib: 'IF-MIB',               name: 'ifInErrors',              desc: 'Interface inbound errors' },
+    { oid: '1.3.6.1.2.1.2.2.1.20', mib: 'IF-MIB',               name: 'ifOutErrors',             desc: 'Interface outbound errors' },
+    { oid: '1.3.6.1.2.1.25.3.3.1.2', mib: 'HOST-RESOURCES-MIB', name: 'hrProcessorLoad',         desc: 'CPU load (%)' },
+    { oid: '1.3.6.1.2.1.25.2.2.0',   mib: 'HOST-RESOURCES-MIB', name: 'hrMemorySize',            desc: 'Total physical memory (KB)' },
+    { oid: '1.3.6.1.2.1.25.2.3.1.5', mib: 'HOST-RESOURCES-MIB', name: 'hrStorageSize',           desc: 'Storage total size' },
+    { oid: '1.3.6.1.2.1.25.2.3.1.6', mib: 'HOST-RESOURCES-MIB', name: 'hrStorageUsed',           desc: 'Storage used' },
+    { oid: '1.3.6.1.2.1.4.3.0',    mib: 'IP-MIB',               name: 'ipInReceives',            desc: 'Total IP datagrams received' },
+    { oid: '1.3.6.1.2.1.4.10.0',   mib: 'IP-MIB',               name: 'ipOutRequests',           desc: 'Total IP datagrams sent' },
+  ],
+  cisco: [
+    { oid: '1.3.6.1.4.1.9.9.109.1.1.1.1.5',   mib: 'CISCO-PROCESS-MIB',     name: 'cpmCPUTotal1minRev',          desc: 'CPU utilisation 1-min (%)' },
+    { oid: '1.3.6.1.4.1.9.9.109.1.1.1.1.7',   mib: 'CISCO-PROCESS-MIB',     name: 'cpmCPUTotal5minRev',          desc: 'CPU utilisation 5-min (%)' },
+    { oid: '1.3.6.1.4.1.9.9.109.1.1.1.1.8',   mib: 'CISCO-PROCESS-MIB',     name: 'cpmCPUInterruptLoad',         desc: 'CPU interrupt load' },
+    { oid: '1.3.6.1.4.1.9.9.48.1.1.1.5',      mib: 'CISCO-MEMORY-POOL-MIB', name: 'ciscoMemoryPoolUsed',         desc: 'Memory pool used (bytes)' },
+    { oid: '1.3.6.1.4.1.9.9.48.1.1.1.6',      mib: 'CISCO-MEMORY-POOL-MIB', name: 'ciscoMemoryPoolFree',         desc: 'Memory pool free (bytes)' },
+    { oid: '1.3.6.1.4.1.9.9.13.1.3.1.3',      mib: 'CISCO-ENVMON-MIB',      name: 'ciscoEnvMonTemperatureValue', desc: 'Temperature sensor (°C)' },
+    { oid: '1.3.6.1.4.1.9.9.13.1.4.1.3',      mib: 'CISCO-ENVMON-MIB',      name: 'ciscoEnvMonVoltageValue',     desc: 'Voltage sensor (mV)' },
+    { oid: '1.3.6.1.4.1.9.9.187.1.2.5.1.3',   mib: 'CISCO-BGP4-MIB',        name: 'cbgpPeer2State',              desc: 'BGP peer FSM state' },
+    { oid: '1.3.6.1.4.1.9.9.187.1.2.5.1.6',   mib: 'CISCO-BGP4-MIB',        name: 'cbgpPeer2InUpdates',          desc: 'BGP peer inbound updates' },
+    { oid: '1.3.6.1.4.1.9.9.187.1.2.5.1.7',   mib: 'CISCO-BGP4-MIB',        name: 'cbgpPeer2OutUpdates',         desc: 'BGP peer outbound updates' },
+    { oid: '1.3.6.1.4.1.9.2.1.57.0',           mib: 'OLD-CISCO-CPU-MIB',      name: 'avgBusy5',                    desc: 'CPU avg busy 5-sec (%)' },
+    { oid: '1.3.6.1.4.1.9.9.23.1.2.1.1.3',    mib: 'CISCO-CDP-MIB',          name: 'cdpCacheDeviceId',            desc: 'CDP neighbour device ID' },
+    { oid: '1.3.6.1.4.1.9.9.46.1.1.1.0',      mib: 'CISCO-VTP-MIB',          name: 'vtpVersion',                  desc: 'VTP version running' },
+    { oid: '1.3.6.1.4.1.9.9.166.1.15.1.1.17', mib: 'CISCO-CBQ-MIB',          name: 'cbQosCMDropByte',             desc: 'QoS class-map drop bytes' },
+  ],
+  mikrotik: [
+    { oid: '1.3.6.1.4.1.14988.1.1.3.1.0',    mib: 'MIKROTIK-MIB', name: 'mtxrCPULoad',             desc: 'CPU load (%)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.3.7.0',    mib: 'MIKROTIK-MIB', name: 'mtxrCPUFrequency',        desc: 'CPU frequency (MHz)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.3.11.0',   mib: 'MIKROTIK-MIB', name: 'mtxrCPUCount',            desc: 'Number of CPUs' },
+    { oid: '1.3.6.1.4.1.14988.1.1.7.4.0',    mib: 'MIKROTIK-MIB', name: 'mtxrTotalMemory',         desc: 'Total memory (bytes)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.7.5.0',    mib: 'MIKROTIK-MIB', name: 'mtxrFreeMemory',          desc: 'Free memory (bytes)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.7.6.0',    mib: 'MIKROTIK-MIB', name: 'mtxrTotalHddSpace',       desc: 'Total disk space (bytes)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.7.7.0',    mib: 'MIKROTIK-MIB', name: 'mtxrFreeHddSpace',        desc: 'Free disk space (bytes)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.14.1.1.4', mib: 'MIKROTIK-MIB', name: 'mtxrGaugeCPUTemperature', desc: 'CPU temperature (°C)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.14.1.1.5', mib: 'MIKROTIK-MIB', name: 'mtxrGaugeBoardTemperature',desc: 'Board temperature (°C)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.1.3.1.8',  mib: 'MIKROTIK-MIB', name: 'mtxrWlStatTxRate',        desc: 'Wireless TX rate (bps)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.1.3.1.9',  mib: 'MIKROTIK-MIB', name: 'mtxrWlStatRxRate',        desc: 'Wireless RX rate (bps)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.1.3.1.12', mib: 'MIKROTIK-MIB', name: 'mtxrWlStatSignalStrength', desc: 'Wireless signal strength (dBm)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.1.3.1.13', mib: 'MIKROTIK-MIB', name: 'mtxrWlStatTxStrength',    desc: 'Wireless TX strength (dBm)' },
+    { oid: '1.3.6.1.4.1.14988.1.1.1.3.1.14', mib: 'MIKROTIK-MIB', name: 'mtxrWlStatRxStrength',    desc: 'Wireless RX strength (dBm)' },
+  ],
+  juniper: [
+    { oid: '1.3.6.1.4.1.2636.3.1.13.1.8',   mib: 'JUNIPER-MIB', name: 'jnxOperatingCPU',           desc: 'CPU utilisation (%)' },
+    { oid: '1.3.6.1.4.1.2636.3.1.13.1.11',  mib: 'JUNIPER-MIB', name: 'jnxOperatingBuffer',        desc: 'Memory buffer utilisation (%)' },
+    { oid: '1.3.6.1.4.1.2636.3.1.13.1.7',   mib: 'JUNIPER-MIB', name: 'jnxOperatingTemp',          desc: 'Operating temperature (°C)' },
+    { oid: '1.3.6.1.4.1.2636.3.1.13.1.15',  mib: 'JUNIPER-MIB', name: 'jnxOperatingPower',         desc: 'Power consumption (W)' },
+    { oid: '1.3.6.1.4.1.2636.3.1.13.1.5',   mib: 'JUNIPER-MIB', name: 'jnxOperatingDescr',         desc: 'FRU description' },
+    { oid: '1.3.6.1.4.1.2636.3.4.2.3.1.2',  mib: 'JUNIPER-MIB', name: 'jnxBgpM2PeerState',         desc: 'BGP peer FSM state' },
+    { oid: '1.3.6.1.4.1.2636.3.4.2.3.1.6',  mib: 'JUNIPER-MIB', name: 'jnxBgpM2PeerInUpdates',     desc: 'BGP peer inbound updates' },
+    { oid: '1.3.6.1.4.1.2636.3.4.2.3.1.7',  mib: 'JUNIPER-MIB', name: 'jnxBgpM2PeerOutUpdates',    desc: 'BGP peer outbound updates' },
+    { oid: '1.3.6.1.4.1.2636.3.4.2.3.1.10', mib: 'JUNIPER-MIB', name: 'jnxBgpM2PeerFsmEstTrans',   desc: 'BGP established transitions' },
+    { oid: '1.3.6.1.4.1.2636.3.18.1.4.0',   mib: 'JUNIPER-MIB', name: 'jnxDomCurrentAlarms',       desc: 'Active chassis alarms' },
+  ],
+  huawei: [
+    { oid: '1.3.6.1.4.1.2011.5.25.31.1.1.1.1.5',  mib: 'HUAWEI-ENTITY-EXTENT-MIB', name: 'hwEntityCpuUsage',     desc: 'CPU usage (%)' },
+    { oid: '1.3.6.1.4.1.2011.5.25.31.1.1.1.1.7',  mib: 'HUAWEI-ENTITY-EXTENT-MIB', name: 'hwEntityMemUsage',     desc: 'Memory usage (%)' },
+    { oid: '1.3.6.1.4.1.2011.5.25.31.1.1.1.1.11', mib: 'HUAWEI-ENTITY-EXTENT-MIB', name: 'hwEntityTemperature',  desc: 'Temperature (°C)' },
+    { oid: '1.3.6.1.4.1.2011.5.25.31.1.1.1.1.12', mib: 'HUAWEI-ENTITY-EXTENT-MIB', name: 'hwEntityVoltage',      desc: 'Voltage (mV)' },
+    { oid: '1.3.6.1.4.1.2011.5.25.31.1.1.1.1.19', mib: 'HUAWEI-ENTITY-EXTENT-MIB', name: 'hwEntityFanState',     desc: 'Fan operational state' },
+    { oid: '1.3.6.1.4.1.2011.6.3.4.1.2',          mib: 'HUAWEI-IF-MIB',             name: 'hwIfInErrorPkts',      desc: 'Inbound error packets' },
+    { oid: '1.3.6.1.4.1.2011.6.3.4.1.3',          mib: 'HUAWEI-IF-MIB',             name: 'hwIfOutErrorPkts',     desc: 'Outbound error packets' },
+    { oid: '1.3.6.1.4.1.2011.5.25.42.2.1.3.1.3',  mib: 'HUAWEI-BGP-MIB',           name: 'hwBgpPeerFsmState',    desc: 'BGP peer FSM state' },
+    { oid: '1.3.6.1.4.1.2011.5.25.42.2.1.3.1.6',  mib: 'HUAWEI-BGP-MIB',           name: 'hwBgpPeerInUpdates',   desc: 'BGP inbound updates' },
+    { oid: '1.3.6.1.4.1.2011.5.25.42.2.1.3.1.7',  mib: 'HUAWEI-BGP-MIB',           name: 'hwBgpPeerOutUpdates',  desc: 'BGP outbound updates' },
+  ],
+  linux: [
+    { oid: '1.3.6.1.4.1.2021.10.1.3.1', mib: 'UCD-SNMP-MIB', name: 'laLoad.1',        desc: '1-min load average' },
+    { oid: '1.3.6.1.4.1.2021.10.1.3.2', mib: 'UCD-SNMP-MIB', name: 'laLoad.2',        desc: '5-min load average' },
+    { oid: '1.3.6.1.4.1.2021.10.1.3.3', mib: 'UCD-SNMP-MIB', name: 'laLoad.3',        desc: '15-min load average' },
+    { oid: '1.3.6.1.4.1.2021.4.5.0',    mib: 'UCD-SNMP-MIB', name: 'memTotalReal',    desc: 'Total real memory (KB)' },
+    { oid: '1.3.6.1.4.1.2021.4.6.0',    mib: 'UCD-SNMP-MIB', name: 'memAvailReal',    desc: 'Available real memory (KB)' },
+    { oid: '1.3.6.1.4.1.2021.4.14.0',   mib: 'UCD-SNMP-MIB', name: 'memBuffer',       desc: 'Buffered memory (KB)' },
+    { oid: '1.3.6.1.4.1.2021.4.15.0',   mib: 'UCD-SNMP-MIB', name: 'memCached',       desc: 'Cached memory (KB)' },
+    { oid: '1.3.6.1.4.1.2021.11.9.0',   mib: 'UCD-SNMP-MIB', name: 'ssCpuUser',       desc: 'CPU user time (%)' },
+    { oid: '1.3.6.1.4.1.2021.11.10.0',  mib: 'UCD-SNMP-MIB', name: 'ssCpuSystem',     desc: 'CPU system time (%)' },
+    { oid: '1.3.6.1.4.1.2021.11.11.0',  mib: 'UCD-SNMP-MIB', name: 'ssCpuIdle',       desc: 'CPU idle time (%)' },
+    { oid: '1.3.6.1.4.1.2021.9.1.8.1',  mib: 'UCD-SNMP-MIB', name: 'dskPercent',      desc: 'Disk usage (%)' },
+    { oid: '1.3.6.1.4.1.2021.9.1.9.1',  mib: 'UCD-SNMP-MIB', name: 'dskPercentNode',  desc: 'Inode usage (%)' },
+    { oid: '1.3.6.1.4.1.2021.13.15.1.1.2', mib: 'UCD-DISKIO-MIB', name: 'diskIORead',  desc: 'Disk I/O reads' },
+    { oid: '1.3.6.1.4.1.2021.13.15.1.1.3', mib: 'UCD-DISKIO-MIB', name: 'diskIOWrite', desc: 'Disk I/O writes' },
+  ],
+  windows: [
+    { oid: '1.3.6.1.2.1.25.1.1.0',    mib: 'HOST-RESOURCES-MIB', name: 'hrSystemUptime',           desc: 'System uptime (1/100 sec)' },
+    { oid: '1.3.6.1.2.1.25.1.6.0',    mib: 'HOST-RESOURCES-MIB', name: 'hrSystemNumUsers',         desc: 'Number of logged-in users' },
+    { oid: '1.3.6.1.2.1.25.1.7.0',    mib: 'HOST-RESOURCES-MIB', name: 'hrSystemProcesses',        desc: 'Number of running processes' },
+    { oid: '1.3.6.1.2.1.25.2.2.0',    mib: 'HOST-RESOURCES-MIB', name: 'hrMemorySize',             desc: 'Total physical memory (KB)' },
+    { oid: '1.3.6.1.2.1.25.3.3.1.2',  mib: 'HOST-RESOURCES-MIB', name: 'hrProcessorLoad',          desc: 'CPU load (%)' },
+    { oid: '1.3.6.1.2.1.25.2.3.1.4',  mib: 'HOST-RESOURCES-MIB', name: 'hrStorageAllocationUnits', desc: 'Storage allocation unit size (bytes)' },
+    { oid: '1.3.6.1.2.1.25.2.3.1.5',  mib: 'HOST-RESOURCES-MIB', name: 'hrStorageSize',            desc: 'Storage total size' },
+    { oid: '1.3.6.1.2.1.25.2.3.1.6',  mib: 'HOST-RESOURCES-MIB', name: 'hrStorageUsed',            desc: 'Storage used' },
+    { oid: '1.3.6.1.4.1.77.1.2.25.0', mib: 'LAN-MGR-MIB',        name: 'usersNumber',              desc: 'Number of active network users' },
+    { oid: '1.3.6.1.4.1.77.1.4.1.0',  mib: 'LAN-MGR-MIB',        name: 'svWorkstations',           desc: 'Workstation count' },
+  ],
+  paloalto: [
+    { oid: '1.3.6.1.4.1.25461.2.1.2.1.1',  mib: 'PAN-COMMON-MIB', name: 'panSysSwVersion',            desc: 'PAN-OS software version' },
+    { oid: '1.3.6.1.4.1.25461.2.1.2.1.2',  mib: 'PAN-COMMON-MIB', name: 'panSysHwVersion',            desc: 'Hardware version' },
+    { oid: '1.3.6.1.4.1.25461.2.1.2.1.4',  mib: 'PAN-COMMON-MIB', name: 'panSysHAState',              desc: 'High-availability state' },
+    { oid: '1.3.6.1.4.1.25461.2.1.2.1.9',  mib: 'PAN-COMMON-MIB', name: 'panSysSessionUtilization',   desc: 'Session table utilisation (%)' },
+    { oid: '1.3.6.1.4.1.25461.2.1.2.1.10', mib: 'PAN-COMMON-MIB', name: 'panSysActiveSessions',       desc: 'Active session count' },
+    { oid: '1.3.6.1.4.1.25461.2.1.2.1.11', mib: 'PAN-COMMON-MIB', name: 'panSysMaxSessions',          desc: 'Maximum session capacity' },
+    { oid: '1.3.6.1.4.1.25461.2.1.2.1.13', mib: 'PAN-COMMON-MIB', name: 'panSysCPULoadAverage',       desc: 'Management plane CPU avg (%)' },
+    { oid: '1.3.6.1.4.1.25461.2.1.2.1.14', mib: 'PAN-COMMON-MIB', name: 'panSysCPULoadMax',           desc: 'Management plane CPU max (%)' },
+    { oid: '1.3.6.1.4.1.25461.2.1.2.3.1',  mib: 'PAN-COMMON-MIB', name: 'panGPGatewayUtilizationPct', desc: 'GlobalProtect gateway utilisation (%)' },
+    { oid: '1.3.6.1.4.1.25461.2.1.2.4.1',  mib: 'PANOS-MIB',       name: 'panVsysActiveSessions',      desc: 'Virtual system active sessions' },
+  ],
+  fortinet: [
+    { oid: '1.3.6.1.4.1.12356.101.4.1.4.0',      mib: 'FORTINET-FORTIGATE-MIB', name: 'fgSysCpuUsage',      desc: 'CPU usage (%)' },
+    { oid: '1.3.6.1.4.1.12356.101.4.1.5.0',      mib: 'FORTINET-FORTIGATE-MIB', name: 'fgSysMemUsage',      desc: 'Memory usage (%)' },
+    { oid: '1.3.6.1.4.1.12356.101.4.1.6.0',      mib: 'FORTINET-FORTIGATE-MIB', name: 'fgSysMemCapacity',   desc: 'Memory capacity (KB)' },
+    { oid: '1.3.6.1.4.1.12356.101.4.1.8.0',      mib: 'FORTINET-FORTIGATE-MIB', name: 'fgSysSesCount',      desc: 'Active session count' },
+    { oid: '1.3.6.1.4.1.12356.101.4.1.25.0',     mib: 'FORTINET-FORTIGATE-MIB', name: 'fgSysLowMemUsage',   desc: 'Low memory usage (%)' },
+    { oid: '1.3.6.1.4.1.12356.101.4.1.9.0',      mib: 'FORTINET-FORTIGATE-MIB', name: 'fgSysSesRate1',      desc: 'Session setup rate per sec' },
+    { oid: '1.3.6.1.4.1.12356.101.5.1.2.1.1.2',  mib: 'FORTINET-FORTIGATE-MIB', name: 'fgVpnTunEntState',   desc: 'VPN tunnel state' },
+    { oid: '1.3.6.1.4.1.12356.101.5.1.2.1.1.19', mib: 'FORTINET-FORTIGATE-MIB', name: 'fgVpnTunInOctets',   desc: 'VPN tunnel inbound bytes' },
+    { oid: '1.3.6.1.4.1.12356.101.5.1.2.1.1.20', mib: 'FORTINET-FORTIGATE-MIB', name: 'fgVpnTunOutOctets',  desc: 'VPN tunnel outbound bytes' },
+    { oid: '1.3.6.1.4.1.12356.101.10.100.1',      mib: 'FORTINET-FORTIGATE-MIB', name: 'fgVdNumber',         desc: 'Number of virtual domains' },
+  ],
+  other: [],
+}
+
 const EMPTY_FORM = {
   name: '', ip_address: '', hostname: '', model: '', os_version: '', location: '',
   device_type: 'other', vendor: 'other',
   monitoring_enabled: true,
-  snmp_enabled: false, snmp_community: 'public', snmp_version: '2c',
+  snmp_enabled: false, snmp_community: 'public', snmp_version: '2c', snmp_oids: [],
   ssh_enabled: false, ssh_port: 22, ssh_username: '', ssh_password: '',
   telnet_enabled: false, telnet_port: 23, telnet_username: '', telnet_password: '',
+}
+
+function OidPicker({ vendor, selected, onChange }) {
+  const [search, setSearch] = useState('')
+  const [customOid, setCustomOid] = useState('')
+
+  const pool = [
+    ...VENDOR_OIDS.common,
+    ...(vendor && vendor !== 'other' && VENDOR_OIDS[vendor] ? VENDOR_OIDS[vendor] : []),
+  ]
+
+  const filtered = search.trim()
+    ? pool.filter(e =>
+        e.oid.includes(search) ||
+        e.name.toLowerCase().includes(search.toLowerCase()) ||
+        e.mib.toLowerCase().includes(search.toLowerCase()) ||
+        e.desc.toLowerCase().includes(search.toLowerCase())
+      )
+    : pool
+
+  const selectedSet = new Set(selected)
+
+  const toggle = (oid) => {
+    if (selectedSet.has(oid)) {
+      onChange(selected.filter(o => o !== oid))
+    } else {
+      onChange([...selected, oid])
+    }
+  }
+
+  const selectAll = () => onChange([...new Set([...selected, ...filtered.map(e => e.oid)])])
+  const clearAll  = () => onChange(selected.filter(o => !filtered.some(e => e.oid === o)))
+
+  const addCustom = () => {
+    const v = customOid.trim()
+    if (!v) return
+    if (!selectedSet.has(v)) onChange([...selected, v])
+    setCustomOid('')
+  }
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-2">
+        <label className="block text-[15px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>
+          OIDs to Poll
+          {selected.length > 0 && (
+            <span className="ml-2 text-[11px] font-mono normal-case px-1.5 py-0.5 rounded"
+              style={{ background: 'rgba(59,130,246,0.12)', color: '#3b82f6' }}>
+              {selected.length} selected
+            </span>
+          )}
+        </label>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={selectAll}
+            className="text-[11px] font-semibold px-2 py-0.5 rounded transition-colors"
+            style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>
+            Select All
+          </button>
+          <button type="button" onClick={clearAll}
+            className="text-[11px] font-semibold px-2 py-0.5 rounded transition-colors"
+            style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.18)' }}>
+            Clear
+          </button>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-2">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--text-4)' }} />
+        <input
+          className="input w-full pl-8 text-[13px] font-mono"
+          placeholder="Search OID, MIB, name or description…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {/* OID list */}
+      <div className="rounded-lg overflow-hidden border" style={{ borderColor: 'var(--border)', maxHeight: '280px', overflowY: 'auto' }}>
+        {filtered.length === 0 ? (
+          <div className="px-4 py-6 text-center text-[12px]" style={{ color: 'var(--text-4)' }}>
+            No OIDs match your search
+          </div>
+        ) : (
+          filtered.map((entry) => {
+            const isSelected = selectedSet.has(entry.oid)
+            const isVendorOid = vendor && vendor !== 'other' && VENDOR_OIDS[vendor]?.some(e => e.oid === entry.oid)
+            return (
+              <label
+                key={entry.oid}
+                className="flex items-start gap-3 px-3 py-2 cursor-pointer transition-colors border-b last:border-b-0"
+                style={{
+                  borderColor: 'var(--border)',
+                  background: isSelected ? 'rgba(59,130,246,0.06)' : 'transparent',
+                }}
+                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = isSelected ? 'rgba(59,130,246,0.06)' : 'transparent' }}
+              >
+                <input
+                  type="checkbox"
+                  className="mt-0.5 flex-shrink-0 accent-blue-500"
+                  checked={isSelected}
+                  onChange={() => toggle(entry.oid)}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-mono text-[11px]" style={{ color: isSelected ? '#3b82f6' : 'var(--text-2)' }}>
+                      {entry.oid}
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                      style={{
+                        background: isVendorOid ? 'rgba(139,92,246,0.12)' : 'rgba(100,116,139,0.12)',
+                        color: isVendorOid ? '#8b5cf6' : '#64748b',
+                        border: isVendorOid ? '1px solid rgba(139,92,246,0.2)' : '1px solid rgba(100,116,139,0.15)',
+                      }}>
+                      {entry.mib}
+                    </span>
+                    <span className="text-[11px] font-semibold font-mono" style={{ color: 'var(--text-3)' }}>
+                      {entry.name}
+                    </span>
+                  </div>
+                  <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-4)' }}>{entry.desc}</p>
+                </div>
+              </label>
+            )
+          })
+        )}
+      </div>
+
+      {/* Custom OID input */}
+      <div className="flex items-center gap-2 mt-2">
+        <input
+          className="input flex-1 font-mono text-[13px]"
+          placeholder="Add custom OID (e.g. 1.3.6.1.4.1.9.9.1.0)"
+          value={customOid}
+          onChange={(e) => setCustomOid(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustom() } }}
+        />
+        <button type="button" onClick={addCustom}
+          className="btn-secondary text-[13px] px-3 py-1.5 flex-shrink-0">
+          + Add
+        </button>
+      </div>
+
+      {/* Custom / manually-added OIDs that aren't in the pool */}
+      {selected.filter(o => !pool.some(e => e.oid === o)).length > 0 && (
+        <div className="mt-2 space-y-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Custom OIDs</p>
+          {selected.filter(o => !pool.some(e => e.oid === o)).map(o => (
+            <div key={o} className="flex items-center justify-between px-3 py-1.5 rounded-lg"
+              style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.15)' }}>
+              <span className="font-mono text-[12px]" style={{ color: '#f59e0b' }}>{o}</span>
+              <button type="button" onClick={() => onChange(selected.filter(x => x !== o))}
+                className="text-[11px] px-1.5 py-0.5 rounded transition-colors"
+                style={{ color: '#ef4444' }}>
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
@@ -46,6 +345,7 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
     snmp_enabled:       device.snmp_enabled   ?? false,
     snmp_community:     device.snmp_community ?? 'public',
     snmp_version:       device.snmp_version   ?? '2c',
+    snmp_oids:          device.extra_data?.snmp_oids ?? [],
     ssh_enabled:        device.ssh_enabled    ?? false,
     ssh_port:           device.ssh_port       ?? 22,
     ssh_username:       device.ssh_username   ?? '',
@@ -76,6 +376,7 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
         ssh_port:   Number(form.ssh_port) || 22,
         snmp_community: form.snmp_enabled ? form.snmp_community : undefined,
         snmp_version:   form.snmp_enabled ? form.snmp_version   : undefined,
+        extra_data: { snmp_oids: form.snmp_oids },
         ssh_username:    form.ssh_enabled    ? form.ssh_username    || undefined : undefined,
         ssh_password:    form.ssh_enabled    ? form.ssh_password    || undefined : undefined,
         telnet_port:     Number(form.telnet_port) || 23,
@@ -199,21 +500,28 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
             <Toggle label="SNMP polling" checked={form.snmp_enabled}
               onChange={(v) => set('snmp_enabled', v)} />
             {form.snmp_enabled && (
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                <div>
-                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Community String</label>
-                  <input className="input w-full font-mono" placeholder="public"
-                    value={form.snmp_community} onChange={(e) => set('snmp_community', e.target.value)} />
+              <>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>Community String</label>
+                    <input className="input w-full font-mono" placeholder="public"
+                      value={form.snmp_community} onChange={(e) => set('snmp_community', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>SNMP Version</label>
+                    <select className="input w-full" value={form.snmp_version} onChange={(e) => set('snmp_version', e.target.value)}>
+                      <option value="1">v1</option>
+                      <option value="2c">v2c</option>
+                      <option value="3">v3</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[15px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-4)' }}>SNMP Version</label>
-                  <select className="input w-full" value={form.snmp_version} onChange={(e) => set('snmp_version', e.target.value)}>
-                    <option value="1">v1</option>
-                    <option value="2c">v2c</option>
-                    <option value="3">v3</option>
-                  </select>
-                </div>
-              </div>
+                <OidPicker
+                  vendor={form.vendor}
+                  selected={form.snmp_oids}
+                  onChange={(oids) => set('snmp_oids', oids)}
+                />
+              </>
             )}
           </section>
 
