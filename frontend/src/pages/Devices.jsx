@@ -1312,6 +1312,111 @@ function LinkCard({ d, detailPath, onNodeClick, onEdit, onDelete }) {
   )
 }
 
+function LinkRow({ d, onNodeClick, onEdit, onDelete }) {
+  const status    = d.status ?? 'unknown'
+  const linkType  = d.extra_data?.link_type ?? '—'
+  const topology  = d.extra_data?.topology
+  const bandwidth = d.extra_data?.bandwidth
+  const provider  = d.extra_data?.provider
+  const nameA     = d.extra_data?.name_a
+  const namesB    = d.extra_data?.names_b ?? []
+  const endpointsB = (() => {
+    const fromExtra = d.extra_data?.endpoints_b?.filter(ip => ip?.trim()) ?? []
+    return fromExtra.length > 0 ? fromExtra : (d.management_ip ? [d.management_ip] : [])
+  })()
+
+  const statusDotCls = { online: 'bg-emerald-500', offline: 'bg-red-500', degraded: 'bg-amber-500', maintenance: 'bg-purple-500', unknown: 'bg-red-500' }[status] ?? 'bg-gray-400'
+  const statusTextCls = { online: 'text-emerald-600', offline: 'text-red-400', degraded: 'text-amber-400', maintenance: 'text-purple-400', unknown: 'text-red-400' }[status] ?? 'text-gray-400'
+
+  return (
+    <tr className="border-b transition-colors hover:bg-gray-50" style={{ borderColor: '#f3f4f6' }}>
+      {/* Name */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <Link to={`/devices/${d.id}`} className="flex items-center gap-2 group">
+          <span className="text-base flex-shrink-0">🔗</span>
+          <span className="text-[13px] font-semibold text-gray-900 group-hover:text-blue-500 transition-colors truncate">{d.name}</span>
+        </Link>
+      </td>
+      {/* Link Type */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
+          style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6' }}>
+          {linkType.replace(/_/g, ' ')}
+        </span>
+      </td>
+      {/* Topology */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        {topology
+          ? <span className="text-[11px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
+              style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>
+              {topology.replace(/_/g, ' ')}
+            </span>
+          : <span className="text-[13px] text-gray-300">—</span>}
+      </td>
+      {/* Endpoint A */}
+      <td className="px-4 py-3">
+        <button className="text-left group/ep"
+          onClick={() => onNodeClick(d, { label: 'A', ip: d.ip_address, name: nameA || '' })}
+          title="Ping / State Log">
+          {nameA && <p className="text-[13px] font-medium text-gray-700 group-hover/ep:text-blue-500 transition-colors">{nameA}</p>}
+          <p className="text-[12px] font-mono text-gray-400 group-hover/ep:text-blue-400 transition-colors">{d.ip_address}</p>
+        </button>
+      </td>
+      {/* Endpoint B */}
+      <td className="px-4 py-3">
+        {endpointsB.length === 0
+          ? <span className="text-[13px] text-gray-300">—</span>
+          : <div className="space-y-1">
+              {endpointsB.map((ip, i) => (
+                <button key={i} className="text-left block group/ep"
+                  onClick={() => onNodeClick(d, { label: endpointsB.length > 1 ? `B${i + 1}` : 'B', ip, name: namesB[i] || '' })}
+                  title="Ping / State Log">
+                  {namesB[i] && <p className="text-[13px] font-medium text-gray-700 group-hover/ep:text-blue-500 transition-colors">{namesB[i]}</p>}
+                  <p className="text-[12px] font-mono text-gray-400 group-hover/ep:text-blue-400 transition-colors">{ip}</p>
+                </button>
+              ))}
+            </div>}
+      </td>
+      {/* Provider */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <span className="text-[13px] text-gray-600">{provider || '—'}</span>
+      </td>
+      {/* Circuit ID */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <span className="text-[12px] font-mono text-gray-500">{d.serial_number || '—'}</span>
+      </td>
+      {/* Bandwidth */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <span className="text-[12px] font-mono text-gray-500">{bandwidth || '—'}</span>
+      </td>
+      {/* Location */}
+      <td className="px-4 py-3" style={{ minWidth: 120 }}>
+        <span className="text-[13px] text-gray-600 line-clamp-1">{d.location || '—'}</span>
+      </td>
+      {/* Status */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <div className="flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDotCls} ${status === 'online' ? 'status-online' : ''}`} />
+          <span className={`text-[12px] font-semibold capitalize ${statusTextCls}`}>{status}</span>
+        </div>
+      </td>
+      {/* Actions */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <div className="flex items-center gap-1">
+          <button onClick={() => onEdit(d)} title="Edit"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors">
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={() => onDelete(d)} title="Delete"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
 function AddDropdown({ onNetworkDevice, onLink }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -1376,6 +1481,9 @@ export default function Devices() {
   useEffect(() => { load() }, [])
   useEffect(() => { const t = setTimeout(load, 400); return () => clearTimeout(t) }, [search])
 
+  const networkDevices = devices.filter(d => !d.tags?.includes('link'))
+  const linkDevices    = devices.filter(d =>  d.tags?.includes('link'))
+
   return (
     <div className="space-y-4 animate-fade-in">
       {showAdd      && <DeviceFormModal category="noc" onClose={() => setShowAdd(false)} onSaved={load} />}
@@ -1385,6 +1493,7 @@ export default function Devices() {
         : <DeviceFormModal category="noc" device={editTarget} onClose={() => setEditTarget(null)} onSaved={load} />)}
       {deleteTarget   && <DeleteConfirmModal device={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={load} />}
       {endpointTarget && <EndpointPopup device={endpointTarget.device} endpoint={endpointTarget} onClose={() => setEndpointTarget(null)} />}
+
       <div className="flex items-center justify-between">
         <div><h1 className="page-title">NOC Devices</h1><p className="page-sub">{total} total</p></div>
         <AddDropdown onNetworkDevice={() => setShowAdd(true)} onLink={() => setShowAddLink(true)} />
@@ -1397,74 +1506,111 @@ export default function Devices() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} rows={3} />)}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} rows={3} />)}
+          </div>
         </div>
       ) : devices.length === 0 ? (
         <div className="card">
           <EmptyState icon={Server} title="No devices found" description="Add your first device to start monitoring infrastructure." />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {devices.map((d) => d.tags?.includes('link') ? (
-            <LinkCard
-              key={d.id} d={d} detailPath={`/devices/${d.id}`}
-              onNodeClick={(device, ep) => setEndpointTarget({ device, ...ep })}
-              onEdit={() => setEditTarget(d)}
-              onDelete={() => setDeleteTarget(d)}
-            />
-          ) : (
-            <Link key={d.id} to={`/devices/${d.id}`} className="card p-4 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group"
-              style={{ borderColor: CARD_BORDER[d.status] }}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                    style={{ background: '#f3f4f6' }}>
-                    {DEVICE_ICONS[d.device_type] ?? '📦'}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-400 transition-all duration-200">{d.name}</p>
-                    <p className="text-xs font-mono text-gray-400">{d.ip_address}</p>
-                  </div>
+        <div className="space-y-6">
+
+          {/* ── Network Devices — card grid ── */}
+          {networkDevices.length > 0 && (
+            <div>
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                Network Devices <span className="ml-1 text-gray-300">({networkDevices.length})</span>
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {networkDevices.map((d) => (
+                  <Link key={d.id} to={`/devices/${d.id}`} className="card p-4 hover:shadow-lg hover:bg-gray-50 transition-all duration-200 group"
+                    style={{ borderColor: CARD_BORDER[d.status] }}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                          style={{ background: '#f3f4f6' }}>
+                          {DEVICE_ICONS[d.device_type] ?? '📦'}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-400 transition-all duration-200">{d.name}</p>
+                          <p className="text-xs font-mono text-gray-400">{d.ip_address}</p>
+                        </div>
+                      </div>
+                      <StatusIndicator status={d.status} dot />
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-gray-400 mb-3">
+                      {d.last_ping_ms != null && (
+                        <span className="flex items-center gap-1"><Activity className="w-3 h-3 text-blue-400" />{d.last_ping_ms}ms</span>
+                      )}
+                      {d.cpu_usage != null && (
+                        <span className="flex items-center gap-1"><Cpu className="w-3 h-3 text-violet-400" />{d.cpu_usage.toFixed(0)}%</span>
+                      )}
+                      {d.memory_usage != null && (
+                        <span className="flex items-center gap-1"><HardDrive className="w-3 h-3 text-emerald-400" />{d.memory_usage.toFixed(0)}%</span>
+                      )}
+                      {d.location && (
+                        <span className="flex items-center gap-1 col-span-2 truncate"><MapPin className="w-3 h-3 text-amber-400" />{d.location}</span>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="btn-secondary flex-1 justify-center text-xs py-1.5"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEndpointTarget({ device: d, label: DEVICE_ICONS[d.device_type] ?? '📦', ip: d.ip_address, name: d.name }) }}>
+                        <Zap className="w-3 h-3" /> Ping
+                      </button>
+                      <button className="btn-secondary justify-center text-xs py-1.5 px-3" title="Edit device"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditTarget(d) }}>
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button className="flex items-center justify-center text-xs py-1.5 px-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all"
+                        title="Delete device"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(d) }}>
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Link Devices — scrollable table ── */}
+          {linkDevices.length > 0 && (
+            <div>
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                Link Devices <span className="ml-1 text-gray-300">({linkDevices.length})</span>
+              </h2>
+              <div className="card overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" style={{ minWidth: 1100 }}>
+                    <thead>
+                      <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                        {['Name','Link Type','Topology','Endpoint A','Endpoint B','Provider','Circuit ID','Bandwidth','Location','Status','Actions'].map(h => (
+                          <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {linkDevices.map(d => (
+                        <LinkRow
+                          key={d.id}
+                          d={d}
+                          onNodeClick={(device, ep) => setEndpointTarget({ device, ...ep })}
+                          onEdit={() => setEditTarget(d)}
+                          onDelete={() => setDeleteTarget(d)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <StatusIndicator status={d.status} dot />
               </div>
+            </div>
+          )}
 
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-gray-400 mb-3">
-                {d.last_ping_ms != null && (
-                  <span className="flex items-center gap-1"><Activity className="w-3 h-3 text-blue-400" />{d.last_ping_ms}ms</span>
-                )}
-                {d.cpu_usage != null && (
-                  <span className="flex items-center gap-1"><Cpu className="w-3 h-3 text-violet-400" />{d.cpu_usage.toFixed(0)}%</span>
-                )}
-                {d.memory_usage != null && (
-                  <span className="flex items-center gap-1"><HardDrive className="w-3 h-3 text-emerald-400" />{d.memory_usage.toFixed(0)}%</span>
-                )}
-                {d.location && (
-                  <span className="flex items-center gap-1 col-span-2 truncate"><MapPin className="w-3 h-3 text-amber-400" />{d.location}</span>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <button className="btn-secondary flex-1 justify-center text-xs py-1.5"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEndpointTarget({ device: d, label: DEVICE_ICONS[d.device_type] ?? '📦', ip: d.ip_address, name: d.name }) }}>
-                  <Zap className="w-3 h-3" /> Ping
-                </button>
-                <button className="btn-secondary justify-center text-xs py-1.5 px-3"
-                  title="Edit device"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditTarget(d) }}>
-                  <Pencil className="w-3 h-3" />
-                </button>
-                <button className="flex items-center justify-center text-xs py-1.5 px-3 rounded-lg
-                                   bg-red-500/10 border border-red-500/20 text-red-400
-                                   hover:bg-red-500/20 transition-all"
-                  title="Delete device"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(d) }}>
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            </Link>
-          ))}
         </div>
       )}
     </div>
