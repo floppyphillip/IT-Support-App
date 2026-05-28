@@ -19,6 +19,29 @@ import { formatDistanceToNow } from 'date-fns'
 const POLL_INTERVAL = 60_000
 const newSid = () => `s${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 
+// Numeric OIDs the backend polls — used as sensor data sources
+const SNMP_VALUE_CATALOG = [
+  { key: 'hrProcessorLoad',          label: 'CPU Load',             unit: '%',  cat: 'CPU'      },
+  { key: 'hrProcessorLoad_alt',      label: 'CPU Load (Cisco alt)', unit: '%',  cat: 'CPU'      },
+  { key: 'jnxOperatingCPU',          label: 'CPU Utilization',      unit: '%',  cat: 'CPU'      },
+  { key: 'hwEntityCpuUsage',         label: 'CPU Usage',            unit: '%',  cat: 'CPU'      },
+  { key: 'fgSysCpuUsage',            label: 'CPU Usage',            unit: '%',  cat: 'CPU'      },
+  { key: 'panSysCPULoadAverage',     label: 'CPU Load Avg',         unit: '%',  cat: 'CPU'      },
+  { key: 'jnxOperatingBuffer',       label: 'Buffer Utilization',   unit: '%',  cat: 'Memory'   },
+  { key: 'hwEntityMemUsage',         label: 'Memory Usage',         unit: '%',  cat: 'Memory'   },
+  { key: 'fgSysMemUsage',            label: 'Memory Usage',         unit: '%',  cat: 'Memory'   },
+  { key: 'ciscoMemPoolUsed',         label: 'Mem Pool Used',        unit: 'B',  cat: 'Memory'   },
+  { key: 'ciscoMemPoolFree',         label: 'Mem Pool Free',        unit: 'B',  cat: 'Memory'   },
+  { key: 'hrMemorySize',             label: 'Memory Size',          unit: 'KB', cat: 'Memory'   },
+  { key: 'panSysSessionUtilization', label: 'Session Utilization',  unit: '%',  cat: 'Sessions' },
+  { key: 'hrStorageUsed_1',          label: 'Storage Used (idx 1)', unit: '',   cat: 'Storage'  },
+  { key: 'hrStorageUsed_2',          label: 'Storage Used (idx 2)', unit: '',   cat: 'Storage'  },
+  { key: 'hrStorageUsed_31',         label: 'Storage Used (31)',    unit: '',   cat: 'Storage'  },
+  { key: 'hrStorageUsed_32',         label: 'Storage Used (32)',    unit: '',   cat: 'Storage'  },
+  { key: 'sysUpTime',                label: 'System Uptime',        unit: 's',  cat: 'System'   },
+  { key: 'ifNumber',                 label: 'Interface Count',      unit: '',   cat: 'System'   },
+]
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtKbps(kbps) {
   if (kbps == null || kbps < 0) return '—'
@@ -78,6 +101,8 @@ function SparklineChart({ data, type }) {
             <Area type="monotone" dataKey="in_kbps"  stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} dot={false} strokeWidth={1.5} isAnimationActive={false} />
             <Area type="monotone" dataKey="out_kbps" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} dot={false} strokeWidth={1.5} isAnimationActive={false} />
           </>
+        ) : type === 'snmp' ? (
+          <Area type="monotone" dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
         ) : (
           <Area type="monotone" dataKey="latency_ms" stroke="#10b981" fill="#10b981" fillOpacity={0.2} dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
         )}
@@ -88,8 +113,9 @@ function SparklineChart({ data, type }) {
 
 // ─── SensorTile ───────────────────────────────────────────────────────────────
 function SensorTile({ sensor, onOpen, onRemove }) {
-  const last = sensor.data[sensor.data.length - 1]
-  const isBw = sensor.type === 'bandwidth'
+  const last   = sensor.data[sensor.data.length - 1]
+  const isBw   = sensor.type === 'bandwidth'
+  const isSnmp = sensor.type === 'snmp'
   const latColor = !last || last.latency_ms == null ? 'text-red-400'
     : last.latency_ms > 100 ? 'text-amber-400'
     : 'text-emerald-400'
@@ -111,15 +137,17 @@ function SensorTile({ sensor, onOpen, onRemove }) {
 
       {/* Header */}
       <p className="text-xs font-mono font-semibold text-gray-900 truncate pr-6 mb-1">
-        {sensor.ifName}
+        {isSnmp ? sensor.label : sensor.ifName}
       </p>
       <div className="flex items-center gap-2 mb-3">
         <span className={`text-[13px] font-bold px-1.5 py-0.5 rounded border ${
           isBw
             ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+            : isSnmp
+            ? 'bg-violet-500/10 text-violet-400 border-violet-500/20'
             : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
         }`}>
-          {isBw ? 'Bandwidth' : 'Latency'}
+          {isBw ? 'Bandwidth' : isSnmp ? 'SNMP Value' : 'Latency'}
         </span>
         {sensor.ifSpeed && (
           <span className="text-[13px] text-gray-400 font-mono">{fmtBps(sensor.ifSpeed)}</span>
@@ -141,6 +169,15 @@ function SensorTile({ sensor, onOpen, onRemove }) {
               {last ? fmtKbps(last.out_kbps) : '—'}
             </span>
           </div>
+        </div>
+      ) : isSnmp ? (
+        <div className="mb-3">
+          <span className="text-xl font-bold font-mono text-violet-400">
+            {last && last.value != null
+              ? `${typeof last.value === 'number' ? last.value.toFixed(1) : last.value}${sensor.unit ? ' ' + sensor.unit : ''}`
+              : '—'
+            }
+          </span>
         </div>
       ) : (
         <div className="mb-3">
@@ -205,7 +242,9 @@ function filterByPeriod(data, period, customFrom, customTo) {
 
 // Builds a full time-axis for the selected period, bucketing actual data into it.
 // Buckets with no data have null values so Recharts renders visible gaps.
-function buildChartData(data, isBw, period, customFrom, customTo) {
+function buildChartData(data, type, period, customFrom, customTo) {
+  const isBw   = type === 'bandwidth'
+  const isSnmp = type === 'snmp'
   const now = Date.now()
   let startMs, endMs
 
@@ -240,7 +279,7 @@ function buildChartData(data, isBw, period, customFrom, customTo) {
   }
 
   const acc = Array.from({ length: bucketCount }, () => ({
-    sumIn: 0, sumOut: 0, sumLat: 0, cntBw: 0, cntLat: 0,
+    sumIn: 0, sumOut: 0, sumLat: 0, sumVal: 0, cntBw: 0, cntLat: 0, cntVal: 0,
   }))
 
   data.forEach(pt => {
@@ -252,6 +291,8 @@ function buildChartData(data, isBw, period, customFrom, customTo) {
     if (isBw) {
       if (pt.in_kbps  != null) { acc[idx].sumIn  += pt.in_kbps;  acc[idx].cntBw++ }
       if (pt.out_kbps != null)   acc[idx].sumOut += pt.out_kbps
+    } else if (isSnmp) {
+      if (pt.value != null) { acc[idx].sumVal += pt.value; acc[idx].cntVal++ }
     } else {
       if (pt.latency_ms != null) { acc[idx].sumLat += pt.latency_ms; acc[idx].cntLat++ }
     }
@@ -263,57 +304,72 @@ function buildChartData(data, isBw, period, customFrom, customTo) {
     in_kbps:    a.cntBw  > 0 ? a.sumIn  / a.cntBw  : null,
     out_kbps:   a.cntBw  > 0 ? a.sumOut / a.cntBw  : null,
     latency_ms: a.cntLat > 0 ? a.sumLat / a.cntLat : null,
+    value:      a.cntVal > 0 ? a.sumVal / a.cntVal  : null,
   }))
 }
 
 function exportCSV(sensor, points) {
   const isBw   = sensor.type === 'bandwidth'
+  const isSnmp = sensor.type === 'snmp'
   const header = isBw
     ? 'Timestamp,Traffic In (kbit/s),Traffic Out (kbit/s)'
+    : isSnmp
+    ? `Timestamp,${sensor.label}${sensor.unit ? ' (' + sensor.unit + ')' : ''}`
     : 'Timestamp,RTT (ms)'
   const rows = points.map(p =>
     isBw
       ? `${p.ts ?? p.t},${p.in_kbps  != null ? p.in_kbps.toFixed(2)  : ''},${p.out_kbps != null ? p.out_kbps.toFixed(2) : ''}`
+      : isSnmp
+      ? `${p.ts ?? p.t},${p.value != null ? (typeof p.value === 'number' ? p.value.toFixed(2) : p.value) : ''}`
       : `${p.ts ?? p.t},${p.latency_ms != null ? p.latency_ms.toFixed(1) : 'Timeout'}`
   )
+  const name = isSnmp ? (sensor.label ?? sensor.oidKey) : sensor.ifName
   const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href     = url
-  a.download = `${sensor.ifName.replace(/[^a-z0-9]/gi, '_')}_${sensor.type}_${new Date().toISOString().slice(0, 10)}.csv`
+  a.download = `${name.replace(/[^a-z0-9]/gi, '_')}_${sensor.type}_${new Date().toISOString().slice(0, 10)}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
 
 // ─── FullSensorModal ──────────────────────────────────────────────────────────
 function FullSensorModal({ sensor, onClose }) {
-  const isBw = sensor?.type === 'bandwidth'
+  const isBw   = sensor?.type === 'bandwidth'
+  const isSnmp = sensor?.type === 'snmp'
 
   const [period, setPeriod]           = useState('live')
   const [customFrom, setCustomFrom]   = useState('')
   const [customTo, setCustomTo]       = useState('')
   const [displayData, setDisplayData] = useState(() =>
-    sensor ? buildChartData(sensor.data, isBw, 'live', '', '') : []
+    sensor ? buildChartData(sensor.data, sensor.type, 'live', '', '') : []
   )
 
   useEffect(() => {
-    if (sensor) setDisplayData(buildChartData(sensor.data, isBw, period, customFrom, customTo))
-  }, [sensor?.data, isBw, period, customFrom, customTo])
+    if (sensor) setDisplayData(buildChartData(sensor.data, sensor.type, period, customFrom, customTo))
+  }, [sensor?.data, sensor?.type, period, customFrom, customTo])
 
   if (!sensor) return null
 
   let maxVal = null, minVal = null
   displayData.forEach(pt => {
-    const v = isBw ? (pt.in_kbps ?? 0) + (pt.out_kbps ?? 0) : pt.latency_ms
+    const v = isBw ? (pt.in_kbps ?? 0) + (pt.out_kbps ?? 0)
+            : isSnmp ? pt.value
+            : pt.latency_ms
     if (v == null) return
     if (maxVal === null || v > maxVal) maxVal = v
     if (minVal === null || v < minVal) minVal = v
   })
 
   const fmtVal = v =>
-    v == null ? '—' : isBw ? fmtKbps(v) : `${v.toFixed(1)} ms`
+    v == null ? '—'
+    : isBw ? fmtKbps(v)
+    : isSnmp ? `${typeof v === 'number' ? v.toFixed(2) : v}${sensor.unit ? ' ' + sensor.unit : ''}`
+    : `${v.toFixed(1)} ms`
 
-  const title = `${sensor.ifName}${sensor.ifSpeed ? ` · ${fmtBps(sensor.ifSpeed)}` : ''}`
+  const title = isSnmp
+    ? sensor.label
+    : `${sensor.ifName}${sensor.ifSpeed ? ` · ${fmtBps(sensor.ifSpeed)}` : ''}`
 
   return (
     <div
@@ -332,12 +388,14 @@ function FullSensorModal({ sensor, onClose }) {
           <div className="flex items-center gap-3">
             {isBw
               ? <BarChart2 size={15} className="text-blue-400 flex-shrink-0" />
-              : <Gauge    size={15} className="text-emerald-400 flex-shrink-0" />
+              : isSnmp
+              ? <Activity  size={15} className="text-violet-400 flex-shrink-0" />
+              : <Gauge     size={15} className="text-emerald-400 flex-shrink-0" />
             }
             <div>
               <p className="text-sm font-bold text-gray-900 font-mono leading-tight">{title}</p>
               <p className="text-[15px] text-gray-400 mt-0.5">
-                {isBw ? 'Bandwidth Utilization' : 'Ping Latency (RTT)'}
+                {isBw ? 'Bandwidth Utilization' : isSnmp ? `SNMP Value · ${sensor.oidKey}` : 'Ping Latency (RTT)'}
                 {' · '}{displayData.length} samples shown · {sensor.data.length} total
               </p>
             </div>
@@ -390,7 +448,9 @@ function FullSensorModal({ sensor, onClose }) {
         {/* Chart */}
         <div className="px-5 pt-5 pb-4" style={{ background: '#f9fafb' }}>
           {(() => {
-            const hasData = displayData.some(p => isBw ? p.in_kbps != null : p.latency_ms != null)
+            const hasData = displayData.some(p =>
+              isBw ? p.in_kbps != null : isSnmp ? p.value != null : p.latency_ms != null
+            )
             return !hasData ? (
               <div className="h-64 flex flex-col items-center justify-center text-gray-400">
                 {sensor.data.length < 2 ? (
@@ -424,6 +484,10 @@ function FullSensorModal({ sensor, onClose }) {
                       <stop offset="0%"   stopColor="#10b981" stopOpacity={0.45} />
                       <stop offset="100%" stopColor="#10b981" stopOpacity={0.03} />
                     </linearGradient>
+                    <linearGradient id="gSnmp" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%"   stopColor="#8b5cf6" stopOpacity={0.45} />
+                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.03} />
+                    </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.07)" vertical={false} />
                   <XAxis
@@ -439,6 +503,8 @@ function FullSensorModal({ sensor, onClose }) {
                         ? v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)} Gb/s`
                           : v >= 1_000 ? `${(v / 1_000).toFixed(1)} Mb/s`
                           : `${v.toFixed(0)} kb/s`
+                        : isSnmp
+                        ? `${typeof v === 'number' ? v.toFixed(1) : v}${sensor.unit ? ' ' + sensor.unit : ''}`
                         : `${v} ms`
                     }
                     tick={{ fontSize: 13, fill: '#6b7280' }}
@@ -448,7 +514,8 @@ function FullSensorModal({ sensor, onClose }) {
                   />
                   <Tooltip
                     formatter={(v, name) => {
-                      if (isBw) return [fmtKbps(v), name === 'in_kbps' ? 'Traffic In' : 'Traffic Out']
+                      if (isBw)   return [fmtKbps(v), name === 'in_kbps' ? 'Traffic In' : 'Traffic Out']
+                      if (isSnmp) return [v != null ? `${typeof v === 'number' ? v.toFixed(2) : v}${sensor.unit ? ' ' + sensor.unit : ''}` : '—', sensor.label]
                       return [v != null ? `${v.toFixed(1)} ms` : 'Timeout', 'RTT']
                     }}
                     labelStyle={{ color: '#6b7280', fontSize: 15 }}
@@ -475,6 +542,8 @@ function FullSensorModal({ sensor, onClose }) {
                       <Area type="monotone" dataKey="in_kbps"  name="in_kbps"  stroke="#3b82f6" fill="url(#gIn)"  dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
                       <Area type="monotone" dataKey="out_kbps" name="out_kbps" stroke="#f59e0b" fill="url(#gOut)" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
                     </>
+                  ) : isSnmp ? (
+                    <Area type="monotone" dataKey="value" name="value" stroke="#8b5cf6" fill="url(#gSnmp)" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
                   ) : (
                     <Area type="monotone" dataKey="latency_ms" name="latency_ms" stroke="#10b981" fill="url(#gLat)" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
                   )}
@@ -488,6 +557,8 @@ function FullSensorModal({ sensor, onClose }) {
                     <LegendItem color="#3b82f6" label="Traffic In (kbit/s)" />
                     <LegendItem color="#f59e0b" label="Traffic Out (kbit/s)" />
                   </>
+                ) : isSnmp ? (
+                  <LegendItem color="#8b5cf6" label={`${sensor.label}${sensor.unit ? ' (' + sensor.unit + ')' : ''}`} />
                 ) : (
                   <LegendItem color="#10b981" label="RTT (ms)" />
                 )}
@@ -513,15 +584,18 @@ function FullSensorModal({ sensor, onClose }) {
 }
 
 // ─── SensorWizard ─────────────────────────────────────────────────────────────
-function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfaces, setCachedInterfaces }) {
+function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfaces, setCachedInterfaces, device }) {
   const [step, setStep]               = useState(1)
   const [type, setType]               = useState(null)
   const [selected, setSelected]       = useState(new Set())
   const [discovering, setDiscovering] = useState(false)
+  const [oidSearch, setOidSearch]     = useState('')
 
   useEffect(() => {
-    if (open) { setStep(1); setType(null); setSelected(new Set()) }
+    if (open) { setStep(1); setType(null); setSelected(new Set()); setOidSearch('') }
   }, [open])
+
+  const selectType = t => { setType(t); setSelected(new Set()) }
 
   const discover = async () => {
     setDiscovering(true)
@@ -549,12 +623,14 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
     if (step === 1) {
       if (type === 'latency') {
         setStep(3)
+      } else if (type === 'snmp') {
+        setStep(2)
       } else {
         setStep(2)
         if (!cachedInterfaces.length && !discovering) discover()
       }
     } else if (step === 2) {
-      if (!selected.size) return toast.error('Select at least one interface')
+      if (!selected.size) return toast.error(`Select at least one ${type === 'snmp' ? 'OID' : 'interface'}`)
       setStep(3)
     }
   }
@@ -562,6 +638,22 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
   const handleAdd = () => {
     if (type === 'latency') {
       onAdd([{ id: newSid(), type: 'latency', ifIndex: null, ifName: deviceIp || 'Device', ifSpeed: null, data: [] }])
+    } else if (type === 'snmp') {
+      const sensors = [...selected].map(oidKey => {
+        const entry = SNMP_VALUE_CATALOG.find(e => e.key === oidKey)
+        return {
+          id: newSid(),
+          type: 'snmp',
+          oidKey,
+          label: entry?.label ?? oidKey,
+          unit:  entry?.unit  ?? '',
+          ifName: entry?.label ?? oidKey,
+          ifIndex: null,
+          ifSpeed: null,
+          data: [],
+        }
+      })
+      onAdd(sensors)
     } else {
       const sensors = [...selected].map(ifIndex => {
         const iface = cachedInterfaces.find(i => i.index === ifIndex)
@@ -610,13 +702,13 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
           {step === 1 && (
             <div>
               <p className="text-xs text-gray-500 mb-4">What would you like to monitor?</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {[
                   {
                     key: 'bandwidth',
                     icon: BarChart2,
                     label: 'Bandwidth',
-                    desc: 'Monitor traffic utilization on SNMP interfaces. Shows in/out kbit/s.',
+                    desc: 'SNMP interface traffic. Shows in/out kbit/s.',
                     activeColor: 'border-blue-500/40 bg-blue-500/[0.07]',
                     iconBg: 'bg-blue-500/20',
                     iconCls: 'text-blue-400',
@@ -626,18 +718,28 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
                     key: 'latency',
                     icon: Gauge,
                     label: 'Ping Latency',
-                    desc: 'Monitor ICMP ping RTT to this device. Shows response time in ms.',
+                    desc: 'ICMP ping RTT to this device in ms.',
                     activeColor: 'border-emerald-500/40 bg-emerald-500/[0.07]',
                     iconBg: 'bg-emerald-500/20',
                     iconCls: 'text-emerald-400',
                     checkCls: 'text-emerald-400',
+                  },
+                  {
+                    key: 'snmp',
+                    icon: Activity,
+                    label: 'SNMP Value',
+                    desc: 'Any numeric OID — CPU, memory, sessions.',
+                    activeColor: 'border-violet-500/40 bg-violet-500/[0.07]',
+                    iconBg: 'bg-violet-500/20',
+                    iconCls: 'text-violet-400',
+                    checkCls: 'text-violet-400',
                   },
                 ].map(opt => {
                   const active = type === opt.key
                   return (
                     <button
                       key={opt.key}
-                      onClick={() => setType(opt.key)}
+                      onClick={() => selectType(opt.key)}
                       className={`flex flex-col items-start gap-3 p-4 rounded-xl border transition-all duration-150 text-left ${
                         active ? opt.activeColor : 'border-gray-200 bg-gray-50 hover:border-gray-300'
                       }`}
@@ -647,7 +749,7 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-gray-900">{opt.label}</p>
-                        <p className="text-[17px] text-gray-400 mt-0.5 leading-relaxed">{opt.desc}</p>
+                        <p className="text-[13px] text-gray-400 mt-0.5 leading-relaxed">{opt.desc}</p>
                       </div>
                       {active && <Check size={13} className={`self-end ${opt.checkCls}`} />}
                     </button>
@@ -657,8 +759,80 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
             </div>
           )}
 
-          {/* Step 2 — select interfaces */}
-          {step === 2 && (
+          {/* Step 2 — OID picker (snmp type) */}
+          {step === 2 && type === 'snmp' && (
+            <div>
+              <p className="text-xs text-gray-500 mb-3">Select OIDs to monitor as live sensors</p>
+              <input
+                type="text"
+                placeholder="Search by name or key…"
+                value={oidSearch}
+                onChange={e => setOidSearch(e.target.value)}
+                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 outline-none focus:border-violet-500/50 transition-colors mb-3"
+              />
+              <div style={{ maxHeight: 300, overflowY: 'auto' }} className="space-y-3 pr-0.5">
+                {['CPU', 'Memory', 'Sessions', 'Storage', 'System'].map(cat => {
+                  const items = SNMP_VALUE_CATALOG.filter(e =>
+                    e.cat === cat && (
+                      !oidSearch ||
+                      e.label.toLowerCase().includes(oidSearch.toLowerCase()) ||
+                      e.key.toLowerCase().includes(oidSearch.toLowerCase())
+                    )
+                  )
+                  if (!items.length) return null
+                  return (
+                    <div key={cat}>
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">{cat}</p>
+                      <div className="rounded-xl overflow-hidden border border-gray-200">
+                        {items.map((entry, idx) => {
+                          const isSel  = selected.has(entry.key)
+                          const rawVal = device?.extra_data?.[entry.key]
+                          const numVal = rawVal != null ? parseFloat(rawVal) : null
+                          return (
+                            <div
+                              key={entry.key}
+                              onClick={() => toggleSelect(entry.key)}
+                              className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${
+                                idx < items.length - 1 ? 'border-b border-gray-100' : ''
+                              } ${isSel ? 'bg-violet-500/[0.06]' : 'hover:bg-gray-50'}`}
+                            >
+                              <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all flex-shrink-0 ${isSel ? 'bg-violet-500 border-violet-500' : 'border-gray-300'}`}>
+                                {isSel && <Check size={10} className="text-white" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-gray-900">{entry.label}</p>
+                                <p className="text-[11px] font-mono text-gray-400 truncate">{entry.key}</p>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                {numVal != null ? (
+                                  <>
+                                    <p className="text-xs font-mono font-semibold text-violet-400">
+                                      {numVal.toFixed(1)}{entry.unit ? ' ' + entry.unit : ''}
+                                    </p>
+                                    <p className="text-[11px] text-gray-400">last poll</p>
+                                  </>
+                                ) : (
+                                  <p className="text-[11px] text-gray-400">no data yet</p>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {selected.size > 0 && (
+                <p className="text-[13px] text-gray-400 mt-3">
+                  {selected.size} OID{selected.size !== 1 ? 's' : ''} selected → {selected.size} sensor{selected.size !== 1 ? 's' : ''} will be created
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Step 2 — select interfaces (bandwidth / latency) */}
+          {step === 2 && type !== 'snmp' && (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs text-gray-500">
@@ -754,8 +928,9 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
               <p className="text-xs text-gray-500 mb-4">
                 {type === 'latency'
                   ? 'Adding 1 Ping Latency sensor:'
-                  : <>Adding <span className="text-gray-900 font-semibold">{selected.size}</span>{' '}
-                      Bandwidth sensor{selected.size !== 1 ? 's' : ''}:</>
+                  : type === 'snmp'
+                  ? <>Adding <span className="text-gray-900 font-semibold">{selected.size}</span>{' '}SNMP Value sensor{selected.size !== 1 ? 's' : ''}:</>
+                  : <>Adding <span className="text-gray-900 font-semibold">{selected.size}</span>{' '}Bandwidth sensor{selected.size !== 1 ? 's' : ''}:</>
                 }
               </p>
               <div className="space-y-2 mb-4" style={{ maxHeight: 240, overflowY: 'auto' }}>
@@ -769,6 +944,21 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
                       <p className="text-[15px] text-gray-400">ICMP ping · RTT in ms</p>
                     </div>
                   </div>
+                ) : type === 'snmp' ? (
+                  [...selected].map(oidKey => {
+                    const entry = SNMP_VALUE_CATALOG.find(e => e.key === oidKey)
+                    return (
+                      <div key={oidKey} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                        <div className="p-1.5 rounded flex-shrink-0 bg-violet-500/20">
+                          <Activity size={12} className="text-violet-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-mono font-semibold text-gray-900 truncate">{entry?.label ?? oidKey}</p>
+                          <p className="text-[13px] text-gray-400 font-mono truncate">{oidKey}{entry?.unit ? ` · ${entry.unit}` : ''}</p>
+                        </div>
+                      </div>
+                    )
+                  })
                 ) : (
                   [...selected].map(ifIndex => {
                     const iface = cachedInterfaces.find(i => i.index === ifIndex)
@@ -882,8 +1072,9 @@ function SNMPMonitor({ device }) {
     const cur = sensorsRef.current
     const ts  = new Date().toISOString()
     const t   = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-    const bwSensors  = cur.filter(s => s.type === 'bandwidth')
-    const latSensors = cur.filter(s => s.type === 'latency')
+    const bwSensors   = cur.filter(s => s.type === 'bandwidth')
+    const latSensors  = cur.filter(s => s.type === 'latency')
+    const snmpSensors = cur.filter(s => s.type === 'snmp')
 
     if (bwSensors.length) {
       try {
@@ -918,6 +1109,20 @@ function SNMPMonitor({ device }) {
           return { ...sensor, data: [...sensor.data, { t, ts, latency_ms }].slice(-10080) }
         }))
       } catch (err) { console.error('[Latency]', err.message) }
+    }
+
+    if (snmpSensors.length) {
+      try {
+        const { data } = await devicesAPI.snmp(device.id)
+        if (data.success) {
+          setSensors(old => old.map(sensor => {
+            if (sensor.type !== 'snmp') return sensor
+            const raw   = data.data?.[sensor.oidKey]
+            const value = raw != null ? parseFloat(raw) : null
+            return { ...sensor, data: [...sensor.data, { t, ts, value }].slice(-10080) }
+          }))
+        }
+      } catch (err) { console.error('[SNMP]', err.message) }
     }
   }
 
@@ -1002,6 +1207,7 @@ function SNMPMonitor({ device }) {
         deviceIp={device.ip_address}
         cachedInterfaces={cachedInterfaces}
         setCachedInterfaces={setCachedInterfaces}
+        device={device}
       />
 
       {fullViewSensor && (
