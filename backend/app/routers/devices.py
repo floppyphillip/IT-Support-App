@@ -159,12 +159,43 @@ async def snmp_poll_device(
         version=device.snmp_version or "2c",
     )
 
-    device.extra_data = result
+    # Merge poll results into extra_data — preserve existing keys (e.g. snmp_oids from OID picker)
+    existing_extra = device.extra_data or {}
+    snmp_snapshot = {k: v for k, v in result.items() if k not in ("success", "ip_address", "error")}
+    device.extra_data = {**existing_extra, **snmp_snapshot}
+
+    # CPU — try standard instance .1 first, fall back to Cisco-style .196608
+    for cpu_key in ("hrProcessorLoad", "hrProcessorLoad_alt"):
+        raw_cpu = result.get(cpu_key)
+        if raw_cpu is not None:
+            try:
+                device.cpu_usage = float(raw_cpu)
+                break
+            except (ValueError, TypeError):
+                pass
+
+    # Memory — compute % from storage index 1 (RAM on most agents)
     try:
-        if result.get("hrProcessorLoad"):
-            device.cpu_usage = float(result["hrProcessorLoad"])
+        mem_used = result.get("hrStorageUsed_1")
+        mem_size = result.get("hrStorageSize_1")
+        if mem_used is not None and mem_size and int(mem_size) > 0:
+            device.memory_usage = round(float(mem_used) / float(mem_size) * 100, 1)
     except (ValueError, TypeError):
         pass
+
+    # Disk — try storage index 31 then 32 (common physical disk indices)
+    for disk_idx in (31, 32):
+        try:
+            disk_used = result.get(f"hrStorageUsed_{disk_idx}")
+            disk_size = result.get(f"hrStorageSize_{disk_idx}")
+            if disk_used is not None and disk_size and int(disk_size) > 0:
+                device.disk_usage = round(float(disk_used) / float(disk_size) * 100, 1)
+                break
+        except (ValueError, TypeError):
+            pass
+
+    await db.commit()
+    await db.refresh(device)
 
     return SNMPResult(
         ip_address=device.ip_address,

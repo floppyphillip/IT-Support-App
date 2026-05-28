@@ -12,15 +12,25 @@ logger = get_logger(__name__)
 
 # Standard SNMP OIDs
 OIDS = {
-    "sysDescr":       "1.3.6.1.2.1.1.1.0",
-    "sysUpTime":      "1.3.6.1.2.1.1.3.0",
-    "sysName":        "1.3.6.1.2.1.1.5.0",
-    "sysLocation":    "1.3.6.1.2.1.1.6.0",
-    "ifNumber":       "1.3.6.1.2.1.2.1.0",
-    "hrProcessorLoad":"1.3.6.1.2.1.25.3.3.1.2.196608",
-    "hrMemorySize":   "1.3.6.1.2.1.25.2.2.0",
-    "hrStorageUsed":  "1.3.6.1.2.1.25.2.3.1.6.1",
-    "hrStorageSize":  "1.3.6.1.2.1.25.2.3.1.5.1",
+    "sysDescr":           "1.3.6.1.2.1.1.1.0",
+    "sysUpTime":          "1.3.6.1.2.1.1.3.0",
+    "sysName":            "1.3.6.1.2.1.1.5.0",
+    "sysLocation":        "1.3.6.1.2.1.1.6.0",
+    "ifNumber":           "1.3.6.1.2.1.2.1.0",
+    # CPU — standard instance .1 (first processor); some Cisco/IOS-XE use .196608
+    "hrProcessorLoad":    "1.3.6.1.2.1.25.3.3.1.2.1",
+    "hrProcessorLoad_alt":"1.3.6.1.2.1.25.3.3.1.2.196608",
+    # Memory — total physical RAM in KB
+    "hrMemorySize":       "1.3.6.1.2.1.25.2.2.0",
+    # Storage index 1 = RAM on most agents (net-snmp, Cisco, MikroTik)
+    "hrStorageUsed_1":    "1.3.6.1.2.1.25.2.3.1.6.1",
+    "hrStorageSize_1":    "1.3.6.1.2.1.25.2.3.1.5.1",
+    # Storage index 31 = first physical disk on Windows / many Linux agents
+    "hrStorageUsed_31":   "1.3.6.1.2.1.25.2.3.1.6.31",
+    "hrStorageSize_31":   "1.3.6.1.2.1.25.2.3.1.5.31",
+    # Storage index 32 = alternative physical disk index
+    "hrStorageUsed_32":   "1.3.6.1.2.1.25.2.3.1.6.32",
+    "hrStorageSize_32":   "1.3.6.1.2.1.25.2.3.1.5.32",
 }
 
 
