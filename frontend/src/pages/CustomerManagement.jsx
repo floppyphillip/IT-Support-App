@@ -644,18 +644,19 @@ function CustomerRow({ c, onEdit, onDelete, alert }) {
         </td>
       </tr>
 
-      {/* Expanded custom fields */}
+      {/* Expanded custom fields — aligned under "Other Details" column (index 8) */}
       {expanded && customFieldCount > 0 && (
         <tr style={{ borderColor: '#f3f4f6' }} className="border-b">
-          <td colSpan={10} className="px-6 pb-3 pt-0 bg-violet-50/40">
-            <div className="rounded-lg overflow-hidden border border-violet-100 w-fit max-w-full">
-              <div className="grid grid-cols-2 px-4 py-2 bg-violet-50">
+          <td colSpan={8} className="p-0" />
+          <td colSpan={2} className="px-4 pb-3 pt-1 align-top">
+            <div className="rounded-lg overflow-hidden border border-violet-100">
+              <div className="grid grid-cols-2 px-3 py-1.5 bg-violet-50">
                 <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wider">Field Name</span>
-                <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wider pr-8">Field Title</span>
+                <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wider">Field Title</span>
               </div>
               <div className="divide-y divide-violet-100 bg-white">
                 {c.custom_fields.map((f, i) => (
-                  <div key={i} className="grid grid-cols-2 px-4 py-2">
+                  <div key={i} className="grid grid-cols-2 px-3 py-1.5">
                     <span className="text-[13px] font-medium text-gray-700">{f.name}</span>
                     <span className="text-[13px] text-gray-500">{f.title}</span>
                   </div>
