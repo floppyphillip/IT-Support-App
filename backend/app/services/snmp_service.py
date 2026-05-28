@@ -23,9 +23,12 @@ OIDS = {
     "hrProcessorLoad_alt":"1.3.6.1.2.1.25.3.3.1.2.196608",
     # Memory — total physical RAM in KB
     "hrMemorySize":       "1.3.6.1.2.1.25.2.2.0",
-    # Storage index 1 = RAM on most standard agents (Cisco, Juniper, Linux net-snmp)
+    # Storage index 1 = RAM on most agents (MikroTik, Cisco, Juniper, Linux net-snmp)
     "hrStorageUsed_1":    "1.3.6.1.2.1.25.2.3.1.6.1",
     "hrStorageSize_1":    "1.3.6.1.2.1.25.2.3.1.5.1",
+    # Storage index 2 = internal flash/disk on MikroTik; swap/virtual mem on Linux
+    "hrStorageUsed_2":    "1.3.6.1.2.1.25.2.3.1.6.2",
+    "hrStorageSize_2":    "1.3.6.1.2.1.25.2.3.1.5.2",
     # Storage index 31 = first physical disk on Windows / many Linux agents
     "hrStorageUsed_31":   "1.3.6.1.2.1.25.2.3.1.6.31",
     "hrStorageSize_31":   "1.3.6.1.2.1.25.2.3.1.5.31",
@@ -36,20 +39,11 @@ OIDS = {
 
 # Vendor-specific supplemental OIDs — merged in per vendor
 VENDOR_OIDS: dict[str, dict[str, str]] = {
-    "mikrotik": {
-        # MIKROTIK-MIB — OID numbering differs by RouterOS version; poll all variants
-        # v1 layout (older RouterOS — .7.1.0=total, .7.3.0=free, .7.4.0=hddTotal, .7.5.0=hddFree)
-        "mtxrMemTotal_v1":   "1.3.6.1.4.1.14988.1.1.7.1.0",
-        "mtxrMemUsed_v1":    "1.3.6.1.4.1.14988.1.1.7.2.0",
-        "mtxrMemFree_v1":    "1.3.6.1.4.1.14988.1.1.7.3.0",
-        "mtxrHddTotal_v1":   "1.3.6.1.4.1.14988.1.1.7.4.0",
-        "mtxrHddFree_v1":    "1.3.6.1.4.1.14988.1.1.7.5.0",
-        # v2 layout (newer RouterOS — .7.4.0=total, .7.5.0=free, .7.6.0=hddTotal, .7.7.0=hddFree)
-        "mtxrMemTotal_v2":   "1.3.6.1.4.1.14988.1.1.7.4.0",
-        "mtxrMemFree_v2":    "1.3.6.1.4.1.14988.1.1.7.5.0",
-        "mtxrHddTotal_v2":   "1.3.6.1.4.1.14988.1.1.7.6.0",
-        "mtxrHddFree_v2":    "1.3.6.1.4.1.14988.1.1.7.7.0",
-    },
+    # MikroTik uses standard HOST-RESOURCES-MIB storage table:
+    #   index 1 = RAM, index 2 = internal flash/disk
+    # These are already in OIDS as hrStorageUsed_1/2 and hrStorageSize_1/2.
+    # No proprietary OIDs needed — leave empty so only standard ones are polled.
+    "mikrotik": {},
     "cisco": {
         # CISCO-MEMORY-POOL-MIB — processor pool index 1
         "ciscoMemPoolUsed":  "1.3.6.1.4.1.9.9.48.1.1.1.5.1",
