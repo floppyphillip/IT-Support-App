@@ -394,7 +394,7 @@ function FullSensorModal({ sensor, onClose }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[61.6rem] bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl"
+        className="w-full max-w-[61.6rem] max-h-[90vh] flex flex-col bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {/* Title bar */}
@@ -463,7 +463,7 @@ function FullSensorModal({ sensor, onClose }) {
         </div>
 
         {/* Chart */}
-        <div className="px-5 pt-5 pb-4" style={{ background: '#f9fafb' }}>
+        <div className="px-5 pt-5 pb-4 overflow-y-auto flex-1" style={{ background: '#f9fafb' }}>
           {(() => {
             const hasData = displayData.some(p =>
               isBw ? p.in_kbps != null : isSnmp ? p.value != null : p.latency_ms != null
