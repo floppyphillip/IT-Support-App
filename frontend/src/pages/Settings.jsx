@@ -2,6 +2,7 @@
 import { authAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import useAuth from '../hooks/useAuth'
+import { fmtDateTime } from '../utils/timeFormat'
 import { User, Lock, Bell, Users, Plus, Clock, Globe, Search, Wifi, Check, Loader2 } from 'lucide-react'
 
 const NTP_REGIONS = ['Global', 'North America', 'Europe', 'Asia', 'Africa', 'South America', 'Oceania']
@@ -125,13 +126,9 @@ export default function Settings() {
     setManualTime(now.toTimeString().slice(0, 5))
   }, [])
 
-  // Live clock — re-runs when clockFormat changes
+  // Live clock — re-runs when clockFormat changes so the preview immediately reflects the toggle
   useEffect(() => {
-    const tick = () => setNowStr(new Date().toLocaleString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: clockFormat === '12',
-    }))
+    const tick = () => setNowStr(fmtDateTime(new Date()))
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)

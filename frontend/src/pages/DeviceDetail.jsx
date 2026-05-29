@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { devicesAPI } from '../api/client'
+import { fmtTime, fmtDateTime } from '../utils/timeFormat'
 import { toast } from 'react-hot-toast'
 import StatusIndicator from '../components/StatusIndicator'
 import { Skeleton } from '../components/Skeleton'
@@ -325,16 +326,14 @@ function buildChartData(data, type, period, customFrom, customTo) {
   const fmt = ms => {
     const d = new Date(ms)
     if (period === 'live')
-      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+      return fmtTime(d)
     if (period === '2d')
-      return d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' +
-             d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+      return d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + fmtTime(d)
     if (period === '1w')
       return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
     const days = rangeMs / 86400000
     if (days <= 3)
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
-             d.toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }) + 'h'
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + fmtTime(d, { minute: undefined })
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
@@ -1143,7 +1142,7 @@ function SNMPMonitor({ device }) {
   const pollAll = async () => {
     const cur = sensorsRef.current
     const ts  = new Date().toISOString()
-    const t   = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    const t   = fmtTime(new Date())
     const bwSensors   = cur.filter(s => s.type === 'bandwidth')
     const latSensors  = cur.filter(s => s.type === 'latency')
     const snmpSensors = cur.filter(s => s.type === 'snmp')
@@ -1471,7 +1470,7 @@ export default function DeviceDetail() {
                   <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: '#f3f4f6' }}>
                     <Database className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{new Date(b.backed_up_at).toLocaleString()}</p>
+                      <p className="text-sm font-medium text-gray-900">{fmtDateTime(b.backed_up_at)}</p>
                       <p className="text-xs text-gray-400">
                         {formatDistanceToNow(new Date(b.backed_up_at), { addSuffix: true })}
                         {b.notes && ` · ${b.notes}`}

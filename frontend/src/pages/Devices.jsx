@@ -2,6 +2,7 @@
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { devicesAPI } from '../api/client'
+import { fmtDateTime } from '../utils/timeFormat'
 import StatusIndicator from '../components/StatusIndicator'
 import { SkeletonCard } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
@@ -1021,13 +1022,7 @@ function EndpointPopup({ device, endpoint, onClose }) {
     return { bg: '#64748b', label: '!' }
   }
 
-  const fmtDate = (ts) => {
-    if (!ts) return '—'
-    return new Date(ts).toLocaleString('en-GB', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-    })
-  }
+  const fmtDate = (ts) => ts ? fmtDateTime(ts) : '—'
 
   const downloadLogs = () => {
     const deviceLabel = device?.name ?? 'device'
