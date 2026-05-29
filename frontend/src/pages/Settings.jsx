@@ -96,6 +96,7 @@ export default function Settings() {
   const [ntpRegion, setNtpRegion]   = useState('All')
   const [syncing, setSyncing]       = useState(false)
   const [nowStr, setNowStr]         = useState('')
+  const [clockFormat, setClockFormat] = useState('24')
 
   const isAdminOrAbove = user?.role === 'superadmin' || user?.role === 'admin'
 
@@ -113,8 +114,9 @@ export default function Settings() {
     // Load saved datetime settings
     try {
       const saved = JSON.parse(localStorage.getItem('netsupportai-datetime') || '{}')
-      if (saved.mode)      setDtMode(saved.mode)
-      if (saved.ntpServer) setNtpServer(saved.ntpServer)
+      if (saved.mode)        setDtMode(saved.mode)
+      if (saved.ntpServer)   setNtpServer(saved.ntpServer)
+      if (saved.clockFormat) setClockFormat(saved.clockFormat)
     } catch {}
 
     // Initialise manual fields with current time
@@ -123,13 +125,17 @@ export default function Settings() {
     setManualTime(now.toTimeString().slice(0, 5))
   }, [])
 
-  // Live clock for manual mode display
+  // Live clock — re-runs when clockFormat changes
   useEffect(() => {
-    const tick = () => setNowStr(new Date().toLocaleString())
+    const tick = () => setNowStr(new Date().toLocaleString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: clockFormat === '12',
+    }))
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [clockFormat])
 
   const saveProfile = async (e) => {
     e.preventDefault(); setSaving(true)
@@ -173,9 +179,17 @@ export default function Settings() {
     } catch { toast.error('Failed') }
   }
 
+  const saveClockFormat = (fmt) => {
+    setClockFormat(fmt)
+    try {
+      const saved = JSON.parse(localStorage.getItem('netsupportai-datetime') || '{}')
+      localStorage.setItem('netsupportai-datetime', JSON.stringify({ ...saved, clockFormat: fmt }))
+    } catch {}
+  }
+
   const applyManual = () => {
     if (!manualDate || !manualTime) return toast.error('Enter both date and time')
-    localStorage.setItem('netsupportai-datetime', JSON.stringify({ mode: 'manual', manualDate, manualTime }))
+    localStorage.setItem('netsupportai-datetime', JSON.stringify({ mode: 'manual', manualDate, manualTime, clockFormat }))
     toast.success(`Time set to ${manualDate} ${manualTime}`)
   }
 
@@ -183,7 +197,7 @@ export default function Settings() {
     if (!ntpServer) return toast.error('Select an NTP server')
     setSyncing(true)
     await new Promise(r => setTimeout(r, 1500))
-    localStorage.setItem('netsupportai-datetime', JSON.stringify({ mode: 'ntp', ntpServer }))
+    localStorage.setItem('netsupportai-datetime', JSON.stringify({ mode: 'ntp', ntpServer, clockFormat }))
     setSyncing(false)
     toast.success(`Syncing with ${ntpServer}`)
   }
@@ -273,9 +287,26 @@ export default function Settings() {
             <h2 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2">
               <Clock className="w-4 h-4 text-gray-400" /> Date &amp; Time Settings
             </h2>
-            <p className="text-xs text-gray-400 mb-4">
-              Current time: <span className="font-mono text-gray-600">{nowStr}</span>
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs text-gray-400">
+                Current time: <span className="font-mono text-gray-600">{nowStr}</span>
+              </p>
+              <div className="flex items-center gap-1 p-0.5 rounded-lg border border-gray-200 bg-gray-50">
+                {[['12', '12-hour'], ['24', '24-hour']].map(([val, lbl]) => (
+                  <button
+                    key={val}
+                    onClick={() => saveClockFormat(val)}
+                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                      clockFormat === val
+                        ? 'bg-white shadow-sm text-gray-900 border border-gray-200'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               {[
                 { key: 'manual', label: 'Manual Setting',  desc: 'Set the date and time manually.',              Icon: Clock },
