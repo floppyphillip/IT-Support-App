@@ -7,7 +7,7 @@ import { Skeleton } from '../components/Skeleton'
 import {
   ArrowLeft, Terminal, RefreshCw, Database, Download, Zap, Cpu, HardDrive,
   Activity, Wifi, Loader2, Plus, X, BarChart2, Gauge, ArrowDown, ArrowUp,
-  ChevronLeft, ChevronRight, Check, FileText,
+  ChevronLeft, ChevronRight, Check, FileText, Clock,
 } from 'lucide-react'
 import {
   AreaChart, Area, LineChart, Line,
@@ -62,6 +62,16 @@ function fmtBps(bps) {
   if (bps < 1_000_000)        return `${(bps / 1_000).toFixed(1)} Kbps`
   if (bps < 1_000_000_000)    return `${(bps / 1_000_000).toFixed(2)} Mbps`
   return `${(bps / 1_000_000_000).toFixed(2)} Gbps`
+}
+
+// sysUpTime is in SNMP TimeTicks (hundredths of a second)
+function fmtUptime(ticks) {
+  if (ticks == null) return '—'
+  const totalSec = Math.floor(Number(ticks) / 100)
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
 const CHART_STYLE = {
@@ -1372,7 +1382,7 @@ export default function DeviceDetail() {
               <MetricTile label="Latency" value={device.last_ping_ms != null ? `${device.last_ping_ms.toFixed(1)}ms` : '—'} icon={Activity} color="blue" />
               <MetricTile label="CPU"     value={device.cpu_usage    != null ? `${device.cpu_usage.toFixed(1)}%`    : '—'} icon={Cpu}      color="violet" />
               <MetricTile label="Memory"  value={device.memory_usage != null ? `${device.memory_usage.toFixed(1)}%` : '—'} icon={HardDrive} color="emerald" />
-              <MetricTile label="Disk"    value={device.disk_usage   != null ? `${device.disk_usage.toFixed(1)}%`   : '—'} icon={Database}  color="amber" />
+              <MetricTile label="Uptime"  value={fmtUptime(device.extra_data?.sysUpTime)} icon={Clock} color="amber" />
             </div>
             {metrics.length > 1 && (
               <div className="grid grid-cols-2 gap-4 pt-4" style={{ borderTop: '1px solid #e5e7eb' }}>
