@@ -438,7 +438,7 @@ function FullSensorModal({ sensor, onClose }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[61.6rem] max-h-[90vh] flex flex-col bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl"
+        className="w-full max-w-[67.76rem] max-h-[90vh] flex flex-col bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {/* Title bar */}
