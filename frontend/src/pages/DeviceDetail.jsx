@@ -229,7 +229,7 @@ function SensorTile({ sensor, onOpen, onRemove }) {
         <div className="mb-3">
           <span className="text-xl font-bold font-mono text-violet-400">
             {last && last.value != null
-              ? `${typeof last.value === 'number' ? last.value.toFixed(1) : last.value}${sensor.unit ? ' ' + sensor.unit : ''}`
+              ? (fmtOidValue(last.value, sensor.unit) ?? '—')
               : '—'
             }
           </span>
@@ -425,7 +425,7 @@ function FullSensorModal({ sensor, onClose }) {
   const fmtVal = v =>
     v == null ? '—'
     : isBw ? fmtKbps(v)
-    : isSnmp ? `${typeof v === 'number' ? v.toFixed(2) : v}${sensor.unit ? ' ' + sensor.unit : ''}`
+    : isSnmp ? (fmtOidValue(v, sensor.unit) ?? '—')
     : `${v.toFixed(1)} ms`
 
   const title = isSnmp
@@ -562,7 +562,7 @@ function FullSensorModal({ sensor, onClose }) {
                           : v >= 1_000 ? `${(v / 1_000).toFixed(1)} Mb/s`
                           : `${v.toFixed(0)} kb/s`
                         : isSnmp
-                        ? `${typeof v === 'number' ? v.toFixed(1) : v}${sensor.unit ? ' ' + sensor.unit : ''}`
+                        ? (fmtOidValue(v, sensor.unit) ?? '')
                         : `${v} ms`
                     }
                     tick={{ fontSize: 11, fill: '#6b7280' }}
@@ -576,7 +576,7 @@ function FullSensorModal({ sensor, onClose }) {
                         if (name === 'total_kbps') return [fmtKbps(v), 'Traffic Total']
                         return [fmtKbps(v), name === 'in_kbps' ? 'Traffic In' : 'Traffic Out']
                       }
-                      if (isSnmp) return [v != null ? `${typeof v === 'number' ? v.toFixed(2) : v}${sensor.unit ? ' ' + sensor.unit : ''}` : '—', sensor.label]
+                      if (isSnmp) return [v != null ? (fmtOidValue(v, sensor.unit) ?? '—') : '—', sensor.label]
                       return [v != null ? `${v.toFixed(1)} ms` : 'Timeout', 'RTT']
                     }}
                     labelStyle={{ color: '#6b7280', fontSize: 11 }}
