@@ -1128,15 +1128,16 @@ function SNMPMonitor({ device }) {
 
     if (snmpSensors.length) {
       try {
-        const { data } = await devicesAPI.snmp(device.id)
-        if (data.success) {
-          setSensors(old => old.map(sensor => {
-            if (sensor.type !== 'snmp') return sensor
-            const raw   = data.data?.[sensor.oidKey]
-            const value = raw != null ? parseFloat(raw) : null
-            return { ...sensor, data: [...sensor.data, { t, ts, value }].slice(-10080) }
-          }))
-        }
+        // Read the device's last-polled extra_data rather than triggering a new
+        // SNMP scan — avoids any risk of overwriting snmp_oids on the backend.
+        const { data: deviceData } = await devicesAPI.get(device.id)
+        const extraData = deviceData.extra_data ?? {}
+        setSensors(old => old.map(sensor => {
+          if (sensor.type !== 'snmp') return sensor
+          const raw   = extraData[sensor.oidKey]
+          const value = raw != null ? parseFloat(raw) : null
+          return { ...sensor, data: [...sensor.data, { t, ts, value }].slice(-10080) }
+        }))
       } catch (err) { console.error('[SNMP]', err.message) }
     }
   }
