@@ -628,7 +628,7 @@ function FullSensorModal({ sensor, onClose }) {
                 <div className="ml-auto flex items-center gap-4">
                   <div className="flex items-center gap-4 text-xs font-mono text-gray-400">
                     {maxVal != null && <span>Max: <span className="text-gray-600 font-semibold">{fmtVal(maxVal)}</span></span>}
-                    {minVal != null && <span>Min: <span className="text-gray-500">{fmtVal(minVal)}</span></span>}
+                    {minVal != null && minVal !== maxVal && <span>Min: <span className="text-gray-500">{fmtVal(minVal)}</span></span>}
                   </div>
                   <button
                     onClick={() => exportCSV(sensor, displayData)}
