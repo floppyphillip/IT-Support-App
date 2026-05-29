@@ -85,18 +85,18 @@ function fmtOidValue(rawVal, unit) {
   if (unit === 'B') {
     // Bytes
     if (v < 1_000)               return `${v.toFixed(0)} B`
-    if (v < 1_000_000)           return `${(v / 1_000).toFixed(1)} KBps`
-    if (v < 1_000_000_000)       return `${(v / 1_000_000).toFixed(2)} MBps`
-    if (v < 1_000_000_000_000)   return `${(v / 1_000_000_000).toFixed(2)} GBps`
-    return `${(v / 1_000_000_000_000).toFixed(2)} TBps`
+    if (v < 1_000_000)           return `${(v / 1_000).toFixed(1)} KB`
+    if (v < 1_000_000_000)       return `${(v / 1_000_000).toFixed(2)} MB`
+    if (v < 1_000_000_000_000)   return `${(v / 1_000_000_000).toFixed(2)} GB`
+    return `${(v / 1_000_000_000_000).toFixed(2)} TB`
   }
   if (unit === 'KB') {
     // KiloBytes → convert to bytes for scaling
     const b = v * 1_024
-    if (b < 1_000_000)           return `${v.toFixed(1)} KBps`
-    if (b < 1_000_000_000)       return `${(b / 1_000_000).toFixed(2)} MBps`
-    if (b < 1_000_000_000_000)   return `${(b / 1_000_000_000).toFixed(2)} GBps`
-    return `${(b / 1_000_000_000_000).toFixed(2)} TBps`
+    if (b < 1_000_000)           return `${v.toFixed(1)} KB`
+    if (b < 1_000_000_000)       return `${(b / 1_000_000).toFixed(2)} MB`
+    if (b < 1_000_000_000_000)   return `${(b / 1_000_000_000).toFixed(2)} GB`
+    return `${(b / 1_000_000_000_000).toFixed(2)} TB`
   }
   if (unit === 'bit' || unit === 'bits') {
     // Bits
