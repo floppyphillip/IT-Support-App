@@ -75,6 +75,40 @@ function fmtUptime(ticks) {
   return `${String(d).padStart(2, '0')}d:${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+// Format an OID value for display in the sensor picker based on its unit tag
+function fmtOidValue(rawVal, unit) {
+  if (rawVal == null) return null
+  const v = parseFloat(rawVal)
+  if (isNaN(v)) return null
+  if (unit === '%')   return `${v.toFixed(1)}%`
+  if (unit === 's')   return fmtUptime(v)   // TimeTicks → DDd:HH:MM:SS
+  if (unit === 'B') {
+    // Bytes
+    if (v < 1_000)               return `${v.toFixed(0)} B`
+    if (v < 1_000_000)           return `${(v / 1_000).toFixed(1)} KBps`
+    if (v < 1_000_000_000)       return `${(v / 1_000_000).toFixed(2)} MBps`
+    if (v < 1_000_000_000_000)   return `${(v / 1_000_000_000).toFixed(2)} GBps`
+    return `${(v / 1_000_000_000_000).toFixed(2)} TBps`
+  }
+  if (unit === 'KB') {
+    // KiloBytes → convert to bytes for scaling
+    const b = v * 1_024
+    if (b < 1_000_000)           return `${v.toFixed(1)} KBps`
+    if (b < 1_000_000_000)       return `${(b / 1_000_000).toFixed(2)} MBps`
+    if (b < 1_000_000_000_000)   return `${(b / 1_000_000_000).toFixed(2)} GBps`
+    return `${(b / 1_000_000_000_000).toFixed(2)} TBps`
+  }
+  if (unit === 'bit' || unit === 'bits') {
+    // Bits
+    if (v < 1_000)               return `${v.toFixed(0)} bps`
+    if (v < 1_000_000)           return `${(v / 1_000).toFixed(1)} Kbps`
+    if (v < 1_000_000_000)       return `${(v / 1_000_000).toFixed(2)} Mbps`
+    if (v < 1_000_000_000_000)   return `${(v / 1_000_000_000).toFixed(2)} Gbps`
+    return `${(v / 1_000_000_000_000).toFixed(2)} Tbps`
+  }
+  return unit ? `${v.toFixed(1)} ${unit}` : v.toFixed(1)
+}
+
 const CHART_STYLE = {
   background: '#f9fafb', border: '1px solid #e5e7eb',
   borderRadius: 6, fontSize: 15, color: '#374151',
@@ -822,9 +856,9 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
                       <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">{cat}</p>
                       <div className="rounded-xl overflow-hidden border border-gray-200">
                         {items.map((entry, idx) => {
-                          const isSel  = selected.has(entry.key)
-                          const rawVal = device?.extra_data?.[entry.key]
-                          const numVal = rawVal != null ? parseFloat(rawVal) : null
+                          const isSel    = selected.has(entry.key)
+                          const rawVal   = device?.extra_data?.[entry.key]
+                          const fmtdVal  = fmtOidValue(rawVal, entry.unit)
                           return (
                             <div
                               key={entry.key}
@@ -841,10 +875,10 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
                                 <p className="text-[11px] font-mono text-gray-400 truncate">{entry.key}</p>
                               </div>
                               <div className="text-right flex-shrink-0">
-                                {numVal != null ? (
+                                {fmtdVal != null ? (
                                   <>
                                     <p className="text-xs font-mono font-semibold text-violet-400">
-                                      {numVal.toFixed(1)}{entry.unit ? ' ' + entry.unit : ''}
+                                      {fmtdVal}
                                     </p>
                                     <p className="text-[11px] text-gray-400">last poll</p>
                                   </>
