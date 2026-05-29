@@ -549,10 +549,11 @@ function FullSensorModal({ sensor, onClose }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.07)" />
                   <XAxis
                     dataKey="t"
-                    tick={{ fontSize: 11, fill: '#6b7280' }}
+                    tick={{ fontSize: 11, fill: '#6b7280', angle: -90, textAnchor: 'end', dy: 4 }}
                     tickLine={false}
                     axisLine={{ stroke: '#d1d5db' }}
                     interval="preserveStartEnd"
+                    height={60}
                   />
                   <YAxis
                     tickFormatter={v =>
