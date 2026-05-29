@@ -19,27 +19,33 @@ import { formatDistanceToNow } from 'date-fns'
 const POLL_INTERVAL = 60_000
 const newSid = () => `s${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 
-// Numeric OIDs the backend polls — used as sensor data sources
+// Numeric OIDs the backend polls — used as sensor data sources.
+// vendors: null = standard IETF/HOST-RESOURCES MIB (all vendors); array = vendor-specific only.
 const SNMP_VALUE_CATALOG = [
-  { key: 'hrProcessorLoad',          label: 'CPU Load',             unit: '%',  cat: 'CPU'      },
-  { key: 'hrProcessorLoad_alt',      label: 'CPU Load (Cisco alt)', unit: '%',  cat: 'CPU'      },
-  { key: 'jnxOperatingCPU',          label: 'CPU Utilization',      unit: '%',  cat: 'CPU'      },
-  { key: 'hwEntityCpuUsage',         label: 'CPU Usage',            unit: '%',  cat: 'CPU'      },
-  { key: 'fgSysCpuUsage',            label: 'CPU Usage',            unit: '%',  cat: 'CPU'      },
-  { key: 'panSysCPULoadAverage',     label: 'CPU Load Avg',         unit: '%',  cat: 'CPU'      },
-  { key: 'jnxOperatingBuffer',       label: 'Buffer Utilization',   unit: '%',  cat: 'Memory'   },
-  { key: 'hwEntityMemUsage',         label: 'Memory Usage',         unit: '%',  cat: 'Memory'   },
-  { key: 'fgSysMemUsage',            label: 'Memory Usage',         unit: '%',  cat: 'Memory'   },
-  { key: 'ciscoMemPoolUsed',         label: 'Mem Pool Used',        unit: 'B',  cat: 'Memory'   },
-  { key: 'ciscoMemPoolFree',         label: 'Mem Pool Free',        unit: 'B',  cat: 'Memory'   },
-  { key: 'hrMemorySize',             label: 'Memory Size',          unit: 'KB', cat: 'Memory'   },
-  { key: 'panSysSessionUtilization', label: 'Session Utilization',  unit: '%',  cat: 'Sessions' },
-  { key: 'hrStorageUsed_1',          label: 'Storage Used (idx 1)', unit: '',   cat: 'Storage'  },
-  { key: 'hrStorageUsed_2',          label: 'Storage Used (idx 2)', unit: '',   cat: 'Storage'  },
-  { key: 'hrStorageUsed_31',         label: 'Storage Used (31)',    unit: '',   cat: 'Storage'  },
-  { key: 'hrStorageUsed_32',         label: 'Storage Used (32)',    unit: '',   cat: 'Storage'  },
-  { key: 'sysUpTime',                label: 'System Uptime',        unit: 's',  cat: 'System'   },
-  { key: 'ifNumber',                 label: 'Interface Count',      unit: '',   cat: 'System'   },
+  // CPU
+  { key: 'hrProcessorLoad',          label: 'CPU Load',             unit: '%',  cat: 'CPU',      vendors: null },
+  { key: 'hrProcessorLoad_alt',      label: 'CPU Load (alt)',       unit: '%',  cat: 'CPU',      vendors: ['cisco'] },
+  { key: 'jnxOperatingCPU',          label: 'CPU Utilization',      unit: '%',  cat: 'CPU',      vendors: ['juniper'] },
+  { key: 'hwEntityCpuUsage',         label: 'CPU Usage',            unit: '%',  cat: 'CPU',      vendors: ['huawei'] },
+  { key: 'fgSysCpuUsage',            label: 'CPU Usage',            unit: '%',  cat: 'CPU',      vendors: ['fortinet'] },
+  { key: 'panSysCPULoadAverage',     label: 'CPU Load Avg',         unit: '%',  cat: 'CPU',      vendors: ['paloalto'] },
+  // Memory
+  { key: 'hrMemorySize',             label: 'Memory Size',          unit: 'KB', cat: 'Memory',   vendors: null },
+  { key: 'jnxOperatingBuffer',       label: 'Buffer Utilization',   unit: '%',  cat: 'Memory',   vendors: ['juniper'] },
+  { key: 'hwEntityMemUsage',         label: 'Memory Usage',         unit: '%',  cat: 'Memory',   vendors: ['huawei'] },
+  { key: 'fgSysMemUsage',            label: 'Memory Usage',         unit: '%',  cat: 'Memory',   vendors: ['fortinet'] },
+  { key: 'ciscoMemPoolUsed',         label: 'Mem Pool Used',        unit: 'B',  cat: 'Memory',   vendors: ['cisco'] },
+  { key: 'ciscoMemPoolFree',         label: 'Mem Pool Free',        unit: 'B',  cat: 'Memory',   vendors: ['cisco'] },
+  // Sessions
+  { key: 'panSysSessionUtilization', label: 'Session Utilization',  unit: '%',  cat: 'Sessions', vendors: ['paloalto'] },
+  // Storage
+  { key: 'hrStorageUsed_1',          label: 'Storage Used (idx 1)', unit: '',   cat: 'Storage',  vendors: null },
+  { key: 'hrStorageUsed_2',          label: 'Storage Used (idx 2)', unit: '',   cat: 'Storage',  vendors: null },
+  { key: 'hrStorageUsed_31',         label: 'Storage Used (31)',    unit: '',   cat: 'Storage',  vendors: null },
+  { key: 'hrStorageUsed_32',         label: 'Storage Used (32)',    unit: '',   cat: 'Storage',  vendors: null },
+  // System
+  { key: 'sysUpTime',                label: 'System Uptime',        unit: 's',  cat: 'System',   vendors: null },
+  { key: 'ifNumber',                 label: 'Interface Count',      unit: '',   cat: 'System',   vendors: null },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -762,7 +768,14 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
           {/* Step 2 — OID picker (snmp type) */}
           {step === 2 && type === 'snmp' && (
             <div>
-              <p className="text-xs text-gray-500 mb-3">Select OIDs to monitor as live sensors</p>
+              <p className="text-xs text-gray-500 mb-3">
+                Select OIDs to monitor as live sensors
+                {device?.vendor && (
+                  <span className="ml-1.5 text-gray-400">
+                    · showing OIDs supported by <span className="font-semibold capitalize">{device.vendor}</span>
+                  </span>
+                )}
+              </p>
               <input
                 type="text"
                 placeholder="Search by name or key…"
@@ -772,8 +785,10 @@ function SensorWizard({ open, onClose, onAdd, deviceId, deviceIp, cachedInterfac
               />
               <div style={{ maxHeight: 300, overflowY: 'auto' }} className="space-y-3 pr-0.5">
                 {['CPU', 'Memory', 'Sessions', 'Storage', 'System'].map(cat => {
+                  const vendorKey = (device?.vendor ?? '').toLowerCase()
                   const items = SNMP_VALUE_CATALOG.filter(e =>
-                    e.cat === cat && (
+                    e.cat === cat &&
+                    (!e.vendors || e.vendors.includes(vendorKey)) && (
                       !oidSearch ||
                       e.label.toLowerCase().includes(oidSearch.toLowerCase()) ||
                       e.key.toLowerCase().includes(oidSearch.toLowerCase())
