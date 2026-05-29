@@ -10,7 +10,7 @@ import {
   ChevronLeft, ChevronRight, Check, FileText, Clock,
 } from 'lucide-react'
 import {
-  AreaChart, Area, LineChart, Line,
+  AreaChart, Area, LineChart, Line, ComposedChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, ReferenceLine,
 } from 'recharts'
 import { formatDistanceToNow } from 'date-fns'
@@ -110,20 +110,24 @@ function SparklineChart({ data, type }) {
       </div>
     )
   }
+  const chartData = type === 'bandwidth'
+    ? data.map(pt => ({ ...pt, total_kbps: (pt.in_kbps ?? 0) + (pt.out_kbps ?? 0) }))
+    : data
   return (
     <ResponsiveContainer width="100%" height={48}>
-      <AreaChart data={data} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+      <ComposedChart data={chartData} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
         {type === 'bandwidth' ? (
           <>
-            <Area type="monotone" dataKey="in_kbps"  stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} dot={false} strokeWidth={1.5} isAnimationActive={false} />
-            <Area type="monotone" dataKey="out_kbps" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} dot={false} strokeWidth={1.5} isAnimationActive={false} />
+            <Area type="monotone" dataKey="total_kbps" stroke="#22c55e" fill="#22c55e" fillOpacity={0.25} dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
+            <Line type="monotone" dataKey="in_kbps"    stroke="#f59e0b" dot={false} strokeWidth={1}   isAnimationActive={false} connectNulls={false} />
+            <Line type="monotone" dataKey="out_kbps"   stroke="#3b82f6" dot={false} strokeWidth={1}   isAnimationActive={false} connectNulls={false} />
           </>
         ) : type === 'snmp' ? (
           <Area type="monotone" dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
         ) : (
           <Area type="monotone" dataKey="latency_ms" stroke="#10b981" fill="#10b981" fillOpacity={0.2} dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
         )}
-      </AreaChart>
+      </ComposedChart>
     </ResponsiveContainer>
   )
 }
@@ -222,9 +226,14 @@ function SensorTile({ sensor, onOpen, onRemove }) {
 // ─── LegendItem ───────────────────────────────────────────────────────────────
 function LegendItem({ color, label }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-5 h-2 rounded-sm" style={{ background: color, opacity: 0.7 }} />
-      <span className="text-[15px] text-gray-500">{label}</span>
+    <div className="flex items-center gap-1.5">
+      <div
+        className="w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center flex-shrink-0"
+        style={{ borderColor: color, background: color + '28' }}
+      >
+        <Check size={8} style={{ color }} strokeWidth={3} />
+      </div>
+      <span className="text-xs text-gray-600">{label}</span>
     </div>
   )
 }
@@ -320,6 +329,7 @@ function buildChartData(data, type, period, customFrom, customTo) {
     ts:         new Date(startMs + i * bucketMs).toISOString(),
     in_kbps:    a.cntBw  > 0 ? a.sumIn  / a.cntBw  : null,
     out_kbps:   a.cntBw  > 0 ? a.sumOut / a.cntBw  : null,
+    total_kbps: a.cntBw  > 0 ? (a.sumIn + a.sumOut) / a.cntBw : null,
     latency_ms: a.cntLat > 0 ? a.sumLat / a.cntLat : null,
     value:      a.cntVal > 0 ? a.sumVal / a.cntVal  : null,
   }))
@@ -370,7 +380,7 @@ function FullSensorModal({ sensor, onClose }) {
 
   let maxVal = null, minVal = null
   displayData.forEach(pt => {
-    const v = isBw ? (pt.in_kbps ?? 0) + (pt.out_kbps ?? 0)
+    const v = isBw ? pt.total_kbps
             : isSnmp ? pt.value
             : pt.latency_ms
     if (v == null) return
@@ -466,7 +476,7 @@ function FullSensorModal({ sensor, onClose }) {
         <div className="px-5 pt-5 pb-4 overflow-y-auto flex-1" style={{ background: '#f9fafb' }}>
           {(() => {
             const hasData = displayData.some(p =>
-              isBw ? p.in_kbps != null : isSnmp ? p.value != null : p.latency_ms != null
+              isBw ? p.total_kbps != null : isSnmp ? p.value != null : p.latency_ms != null
             )
             return !hasData ? (
               <div className="h-64 flex flex-col items-center justify-center text-gray-400">
@@ -487,31 +497,27 @@ function FullSensorModal({ sensor, onClose }) {
           ) : (
             <>
               <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={displayData} margin={{ top: 20, right: 100, bottom: 0, left: 8 }}>
+                <ComposedChart data={displayData} margin={{ top: 16, right: 110, bottom: 0, left: 8 }}>
                   <defs>
-                    <linearGradient id="gIn" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#3b82f6" stopOpacity={0.45} />
-                      <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.03} />
-                    </linearGradient>
-                    <linearGradient id="gOut" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#f59e0b" stopOpacity={0.38} />
-                      <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.03} />
+                    <linearGradient id="gTotal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.38} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0.04} />
                     </linearGradient>
                     <linearGradient id="gLat" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#10b981" stopOpacity={0.45} />
-                      <stop offset="100%" stopColor="#10b981" stopOpacity={0.03} />
+                      <stop offset="5%"  stopColor="#10b981" stopOpacity={0.40} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.04} />
                     </linearGradient>
                     <linearGradient id="gSnmp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor="#8b5cf6" stopOpacity={0.45} />
-                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.03} />
+                      <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.40} />
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.04} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.07)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.07)" />
                   <XAxis
                     dataKey="t"
-                    tick={{ fontSize: 13, fill: '#6b7280' }}
+                    tick={{ fontSize: 11, fill: '#6b7280' }}
                     tickLine={false}
-                    axisLine={{ stroke: '#e5e7eb' }}
+                    axisLine={{ stroke: '#d1d5db' }}
                     interval="preserveStartEnd"
                   />
                   <YAxis
@@ -524,55 +530,60 @@ function FullSensorModal({ sensor, onClose }) {
                         ? `${typeof v === 'number' ? v.toFixed(1) : v}${sensor.unit ? ' ' + sensor.unit : ''}`
                         : `${v} ms`
                     }
-                    tick={{ fontSize: 13, fill: '#6b7280' }}
+                    tick={{ fontSize: 11, fill: '#6b7280' }}
                     tickLine={false}
                     axisLine={false}
                     width={72}
                   />
                   <Tooltip
                     formatter={(v, name) => {
-                      if (isBw)   return [fmtKbps(v), name === 'in_kbps' ? 'Traffic In' : 'Traffic Out']
+                      if (isBw) {
+                        if (name === 'total_kbps') return [fmtKbps(v), 'Traffic Total']
+                        return [fmtKbps(v), name === 'in_kbps' ? 'Traffic In' : 'Traffic Out']
+                      }
                       if (isSnmp) return [v != null ? `${typeof v === 'number' ? v.toFixed(2) : v}${sensor.unit ? ' ' + sensor.unit : ''}` : '—', sensor.label]
                       return [v != null ? `${v.toFixed(1)} ms` : 'Timeout', 'RTT']
                     }}
-                    labelStyle={{ color: '#6b7280', fontSize: 15 }}
+                    labelStyle={{ color: '#6b7280', fontSize: 11 }}
                     contentStyle={CHART_STYLE}
                   />
                   {maxVal != null && (
                     <ReferenceLine
                       y={maxVal}
-                      stroke="rgba(0,0,0,0.20)"
+                      stroke="rgba(0,0,0,0.18)"
                       strokeDasharray="4 3"
-                      label={{ value: `Max: ${fmtVal(maxVal)}`, position: 'right', fontSize: 13, fill: '#6b7280' }}
+                      label={{ value: `Max: ${fmtVal(maxVal)}`, position: 'right', fontSize: 11, fill: '#374151', fontWeight: 600 }}
                     />
                   )}
                   {minVal != null && minVal !== maxVal && (
                     <ReferenceLine
                       y={minVal}
-                      stroke="rgba(0,0,0,0.12)"
+                      stroke="rgba(0,0,0,0.10)"
                       strokeDasharray="4 3"
-                      label={{ value: `Min: ${fmtVal(minVal)}`, position: 'right', fontSize: 13, fill: '#9ca3af' }}
+                      label={{ value: `Min: ${fmtVal(minVal)}`, position: 'right', fontSize: 11, fill: '#6b7280' }}
                     />
                   )}
                   {isBw ? (
                     <>
-                      <Area type="monotone" dataKey="in_kbps"  name="in_kbps"  stroke="#3b82f6" fill="url(#gIn)"  dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
-                      <Area type="monotone" dataKey="out_kbps" name="out_kbps" stroke="#f59e0b" fill="url(#gOut)" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
+                      <Area type="monotone" dataKey="total_kbps" name="total_kbps" stroke="#22c55e" fill="url(#gTotal)" dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
+                      <Line type="monotone" dataKey="in_kbps"    name="in_kbps"    stroke="#f59e0b" dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
+                      <Line type="monotone" dataKey="out_kbps"   name="out_kbps"   stroke="#3b82f6" dot={false} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
                     </>
                   ) : isSnmp ? (
                     <Area type="monotone" dataKey="value" name="value" stroke="#8b5cf6" fill="url(#gSnmp)" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
                   ) : (
                     <Area type="monotone" dataKey="latency_ms" name="latency_ms" stroke="#10b981" fill="url(#gLat)" dot={false} strokeWidth={2} isAnimationActive={false} connectNulls={false} />
                   )}
-                </AreaChart>
+                </ComposedChart>
               </ResponsiveContainer>
 
               {/* Legend + export */}
-              <div className="flex items-center gap-6 mt-4 pt-3 border-t border-gray-100">
+              <div className="flex items-center gap-5 mt-4 pt-3 border-t border-gray-100 flex-wrap">
                 {isBw ? (
                   <>
-                    <LegendItem color="#3b82f6" label="Traffic In (kbit/s)" />
-                    <LegendItem color="#f59e0b" label="Traffic Out (kbit/s)" />
+                    <LegendItem color="#22c55e" label="Traffic Total (kbit/s)" />
+                    <LegendItem color="#f59e0b" label="Traffic In (kbit/s)" />
+                    <LegendItem color="#3b82f6" label="Traffic Out (kbit/s)" />
                   </>
                 ) : isSnmp ? (
                   <LegendItem color="#8b5cf6" label={`${sensor.label}${sensor.unit ? ' (' + sensor.unit + ')' : ''}`} />
@@ -580,8 +591,8 @@ function FullSensorModal({ sensor, onClose }) {
                   <LegendItem color="#10b981" label="RTT (ms)" />
                 )}
                 <div className="ml-auto flex items-center gap-4">
-                  <div className="flex items-center gap-4 text-[15px] font-mono text-gray-400">
-                    {maxVal != null && <span>Max: <span className="text-gray-500">{fmtVal(maxVal)}</span></span>}
+                  <div className="flex items-center gap-4 text-xs font-mono text-gray-400">
+                    {maxVal != null && <span>Max: <span className="text-gray-600 font-semibold">{fmtVal(maxVal)}</span></span>}
                     {minVal != null && <span>Min: <span className="text-gray-500">{fmtVal(minVal)}</span></span>}
                   </div>
                   <button
