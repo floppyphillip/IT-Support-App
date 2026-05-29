@@ -2,7 +2,68 @@
 import { authAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import useAuth from '../hooks/useAuth'
-import { User, Lock, Bell, Users, Plus } from 'lucide-react'
+import { User, Lock, Bell, Users, Plus, Clock, Globe, Search, Wifi, Check, Loader2 } from 'lucide-react'
+
+const NTP_REGIONS = ['Global', 'North America', 'Europe', 'Asia', 'Africa', 'South America', 'Oceania']
+
+const NTP_SERVERS = [
+  // Global
+  { server: 'pool.ntp.org',                label: 'NTP Pool Project',          region: 'Global'        },
+  { server: 'time.cloudflare.com',          label: 'Cloudflare Time',           region: 'Global'        },
+  { server: 'time.google.com',              label: 'Google Public NTP',         region: 'Global'        },
+  { server: 'time.windows.com',             label: 'Microsoft NTP',             region: 'Global'        },
+  { server: 'time.apple.com',              label: 'Apple NTP',                  region: 'Global'        },
+  { server: 'time.aws.com',                label: 'Amazon Time Sync',           region: 'Global'        },
+  { server: 'time.facebook.com',           label: 'Meta NTP',                   region: 'Global'        },
+  // North America
+  { server: 'us.pool.ntp.org',             label: 'NTP Pool (US)',              region: 'North America' },
+  { server: 'time.nist.gov',               label: 'NIST',                       region: 'North America' },
+  { server: 'time-a-g.nist.gov',           label: 'NIST Server A',             region: 'North America' },
+  { server: 'time-b-g.nist.gov',           label: 'NIST Server B',             region: 'North America' },
+  { server: 'ntp.ubuntu.com',              label: 'Ubuntu NTP',                 region: 'North America' },
+  { server: 'ca.pool.ntp.org',             label: 'NTP Pool (Canada)',          region: 'North America' },
+  // Europe
+  { server: 'europe.pool.ntp.org',         label: 'NTP Pool (Europe)',          region: 'Europe'        },
+  { server: 'uk.pool.ntp.org',             label: 'NTP Pool (UK)',              region: 'Europe'        },
+  { server: 'de.pool.ntp.org',             label: 'NTP Pool (Germany)',         region: 'Europe'        },
+  { server: 'fr.pool.ntp.org',             label: 'NTP Pool (France)',          region: 'Europe'        },
+  { server: 'nl.pool.ntp.org',             label: 'NTP Pool (Netherlands)',     region: 'Europe'        },
+  { server: 'ptbtime1.ptb.de',             label: 'PTB (Germany)',              region: 'Europe'        },
+  { server: 'ptbtime2.ptb.de',             label: 'PTB Backup (Germany)',       region: 'Europe'        },
+  { server: 'ntp1.hetzner.de',             label: 'Hetzner (Germany)',          region: 'Europe'        },
+  { server: 'ntp.se',                      label: 'Netnod (Sweden)',            region: 'Europe'        },
+  { server: 'it.pool.ntp.org',             label: 'NTP Pool (Italy)',           region: 'Europe'        },
+  { server: 'es.pool.ntp.org',             label: 'NTP Pool (Spain)',           region: 'Europe'        },
+  // Asia
+  { server: 'asia.pool.ntp.org',           label: 'NTP Pool (Asia)',            region: 'Asia'          },
+  { server: 'cn.pool.ntp.org',             label: 'NTP Pool (China)',           region: 'Asia'          },
+  { server: 'jp.pool.ntp.org',             label: 'NTP Pool (Japan)',           region: 'Asia'          },
+  { server: 'sg.pool.ntp.org',             label: 'NTP Pool (Singapore)',       region: 'Asia'          },
+  { server: 'in.pool.ntp.org',             label: 'NTP Pool (India)',           region: 'Asia'          },
+  { server: 'kr.pool.ntp.org',             label: 'NTP Pool (South Korea)',     region: 'Asia'          },
+  { server: 'hk.pool.ntp.org',             label: 'NTP Pool (Hong Kong)',       region: 'Asia'          },
+  { server: 'ntp.nict.jp',                 label: 'NICT (Japan)',               region: 'Asia'          },
+  { server: 'ntp.aliyun.com',              label: 'Alibaba NTP (China)',        region: 'Asia'          },
+  { server: 'ntp.tencent.com',             label: 'Tencent NTP (China)',        region: 'Asia'          },
+  { server: 'time.stdtime.gov.tw',         label: 'Taiwan Standard Time',       region: 'Asia'          },
+  { server: 'id.pool.ntp.org',             label: 'NTP Pool (Indonesia)',       region: 'Asia'          },
+  // Africa
+  { server: 'africa.pool.ntp.org',         label: 'NTP Pool (Africa)',          region: 'Africa'        },
+  { server: 'za.pool.ntp.org',             label: 'NTP Pool (South Africa)',    region: 'Africa'        },
+  { server: 'ng.pool.ntp.org',             label: 'NTP Pool (Nigeria)',         region: 'Africa'        },
+  { server: 'ke.pool.ntp.org',             label: 'NTP Pool (Kenya)',           region: 'Africa'        },
+  { server: 'eg.pool.ntp.org',             label: 'NTP Pool (Egypt)',           region: 'Africa'        },
+  // South America
+  { server: 'south-america.pool.ntp.org',  label: 'NTP Pool (South America)',   region: 'South America' },
+  { server: 'br.pool.ntp.org',             label: 'NTP Pool (Brazil)',          region: 'South America' },
+  { server: 'ar.pool.ntp.org',             label: 'NTP Pool (Argentina)',       region: 'South America' },
+  { server: 'cl.pool.ntp.org',             label: 'NTP Pool (Chile)',           region: 'South America' },
+  { server: 'co.pool.ntp.org',             label: 'NTP Pool (Colombia)',        region: 'South America' },
+  // Oceania
+  { server: 'oceania.pool.ntp.org',        label: 'NTP Pool (Oceania)',         region: 'Oceania'       },
+  { server: 'au.pool.ntp.org',             label: 'NTP Pool (Australia)',       region: 'Oceania'       },
+  { server: 'nz.pool.ntp.org',             label: 'NTP Pool (New Zealand)',     region: 'Oceania'       },
+]
 
 const ROLE_STYLES = {
   superadmin:        { label: 'Superadmin',        cls: 'bg-violet-500/20 text-violet-400 border-violet-500/30' },
@@ -26,11 +87,48 @@ export default function Settings() {
   const [inviting, setInviting] = useState(false)
   const [tab, setTab] = useState('profile')
 
-  const TABS = [['profile', 'Profile', User], ['notifications', 'Notifications', Bell], ...(isSuperadmin?.() ? [['team', 'Team', Users]] : [])]
+  // Date/Time tab state
+  const [dtMode, setDtMode]         = useState('ntp')
+  const [manualDate, setManualDate] = useState('')
+  const [manualTime, setManualTime] = useState('')
+  const [ntpServer, setNtpServer]   = useState('pool.ntp.org')
+  const [ntpSearch, setNtpSearch]   = useState('')
+  const [ntpRegion, setNtpRegion]   = useState('All')
+  const [syncing, setSyncing]       = useState(false)
+  const [nowStr, setNowStr]         = useState('')
+
+  const isAdminOrAbove = user?.role === 'superadmin' || user?.role === 'admin'
+
+  const TABS = [
+    ['profile', 'Profile', User],
+    ['notifications', 'Notifications', Bell],
+    ...(isSuperadmin?.() ? [['team', 'Team', Users]] : []),
+    ...(isAdminOrAbove ? [['datetime', 'Date & Time', Clock]] : []),
+  ]
 
   useEffect(() => {
     authAPI.getNotifications().then(({ data }) => setNotifSettings(data)).catch(() => {})
     if (isSuperadmin?.()) authAPI.listUsers().then(({ data }) => setTeamUsers(data.items || [])).catch(() => {})
+
+    // Load saved datetime settings
+    try {
+      const saved = JSON.parse(localStorage.getItem('netsupportai-datetime') || '{}')
+      if (saved.mode)      setDtMode(saved.mode)
+      if (saved.ntpServer) setNtpServer(saved.ntpServer)
+    } catch {}
+
+    // Initialise manual fields with current time
+    const now = new Date()
+    setManualDate(now.toISOString().slice(0, 10))
+    setManualTime(now.toTimeString().slice(0, 5))
+  }, [])
+
+  // Live clock for manual mode display
+  useEffect(() => {
+    const tick = () => setNowStr(new Date().toLocaleString())
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
   }, [])
 
   const saveProfile = async (e) => {
@@ -73,6 +171,21 @@ export default function Settings() {
       setTeamUsers((users) => users.map((u) => u.id === userId ? { ...u, is_active: !isActive } : u))
       toast.success(isActive ? 'User deactivated' : 'User activated')
     } catch { toast.error('Failed') }
+  }
+
+  const applyManual = () => {
+    if (!manualDate || !manualTime) return toast.error('Enter both date and time')
+    localStorage.setItem('netsupportai-datetime', JSON.stringify({ mode: 'manual', manualDate, manualTime }))
+    toast.success(`Time set to ${manualDate} ${manualTime}`)
+  }
+
+  const applyNtp = async () => {
+    if (!ntpServer) return toast.error('Select an NTP server')
+    setSyncing(true)
+    await new Promise(r => setTimeout(r, 1500))
+    localStorage.setItem('netsupportai-datetime', JSON.stringify({ mode: 'ntp', ntpServer }))
+    setSyncing(false)
+    toast.success(`Syncing with ${ntpServer}`)
   }
 
   return (
@@ -150,6 +263,148 @@ export default function Settings() {
             </div>
             <button type="submit" className="btn-primary" disabled={savingNotif}>{savingNotif ? 'Saving…' : 'Save Preferences'}</button>
           </form>
+        </div>
+      )}
+
+      {tab === 'datetime' && (
+        <div className="space-y-4">
+          {/* Mode selector card */}
+          <div className="card p-5">
+            <h2 className="text-sm font-semibold text-gray-900 mb-1 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-gray-400" /> Date &amp; Time Settings
+            </h2>
+            <p className="text-xs text-gray-400 mb-4">
+              Current time: <span className="font-mono text-gray-600">{nowStr}</span>
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { key: 'manual', label: 'Manual Setting',  desc: 'Set the date and time manually.',              Icon: Clock },
+                { key: 'ntp',    label: 'NTP Setting',     desc: 'Synchronise via a public NTP time server.',    Icon: Wifi  },
+              ].map(({ key, label, desc, Icon }) => {
+                const active = dtMode === key
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setDtMode(key)}
+                    className={`flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${
+                      active ? 'border-blue-500/40 bg-blue-500/[0.05]' : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg flex-shrink-0 ${active ? 'bg-blue-500/20' : 'bg-gray-100'}`}>
+                      <Icon className={`w-4 h-4 ${active ? 'text-blue-500' : 'text-gray-400'}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900">{label}</p>
+                      <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{desc}</p>
+                    </div>
+                    {active && <Check className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Manual setting */}
+          {dtMode === 'manual' && (
+            <div className="card p-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Set Date &amp; Time Manually</h3>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="label">Date</label>
+                  <input type="date" className="input" value={manualDate} onChange={e => setManualDate(e.target.value)} />
+                </div>
+                <div>
+                  <label className="label">Time</label>
+                  <input type="time" className="input" value={manualTime} onChange={e => setManualTime(e.target.value)} />
+                </div>
+              </div>
+              <button onClick={applyManual} className="btn-primary flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5" /> Apply
+              </button>
+            </div>
+          )}
+
+          {/* NTP setting */}
+          {dtMode === 'ntp' && (
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-gray-900">Select NTP Server</h3>
+                {ntpServer && (
+                  <span className="text-xs font-mono text-blue-500 bg-blue-500/10 px-2.5 py-1 rounded-lg border border-blue-500/20">
+                    {ntpServer}
+                  </span>
+                )}
+              </div>
+
+              {/* Search + region filter */}
+              <div className="flex gap-2 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                  <input
+                    className="input pl-8"
+                    placeholder="Search servers…"
+                    value={ntpSearch}
+                    onChange={e => setNtpSearch(e.target.value)}
+                  />
+                </div>
+                <select className="input w-48" value={ntpRegion} onChange={e => setNtpRegion(e.target.value)}>
+                  <option value="All">All Regions</option>
+                  {NTP_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+
+              {/* Server list */}
+              <div className="rounded-xl border border-gray-200 overflow-hidden mb-4" style={{ maxHeight: 360, overflowY: 'auto' }}>
+                {NTP_REGIONS.filter(r => ntpRegion === 'All' || r === ntpRegion).map(region => {
+                  const servers = NTP_SERVERS.filter(s =>
+                    s.region === region && (
+                      !ntpSearch ||
+                      s.server.toLowerCase().includes(ntpSearch.toLowerCase()) ||
+                      s.label.toLowerCase().includes(ntpSearch.toLowerCase())
+                    )
+                  )
+                  if (!servers.length) return null
+                  return (
+                    <div key={region}>
+                      <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <Globe className="w-3 h-3" /> {region}
+                        </p>
+                      </div>
+                      {servers.map((s, idx) => {
+                        const isSel = ntpServer === s.server
+                        return (
+                          <div
+                            key={s.server}
+                            onClick={() => setNtpServer(s.server)}
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                              idx < servers.length - 1 ? 'border-b border-gray-100' : ''
+                            } ${isSel ? 'bg-blue-500/[0.05]' : 'hover:bg-gray-50'}`}
+                          >
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSel ? 'border-blue-500' : 'border-gray-300'}`}>
+                              {isSel && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900">{s.label}</p>
+                              <p className="text-xs font-mono text-gray-400">{s.server}</p>
+                            </div>
+                            <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0 capitalize">
+                              {region}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+              </div>
+
+              <button onClick={applyNtp} disabled={!ntpServer || syncing} className="btn-primary flex items-center gap-2">
+                {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wifi className="w-3.5 h-3.5" />}
+                {syncing ? 'Syncing…' : 'Apply & Sync'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
