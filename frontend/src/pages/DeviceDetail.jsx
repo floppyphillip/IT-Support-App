@@ -96,7 +96,7 @@ function MetricTile({ label, value, icon: Icon, color }) {
         <Icon className="w-3.5 h-3.5 opacity-70" />
         <p className="text-xs font-medium opacity-70">{label}</p>
       </div>
-      <p className="text-2xl font-bold">{value}</p>
+      <p className="text-[19px] font-bold">{value}</p>
     </div>
   )
 }
