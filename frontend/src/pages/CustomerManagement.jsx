@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { customersAPI, devicesAPI, ticketsAPI } from '../api/client'
@@ -558,21 +558,11 @@ function CustomerModal({ customer, onClose, onSave }) {
 }
 
 function CustomerRow({ c, devices = [], onEdit, onDelete, alert }) {
-  const [expanded, setExpanded]     = useState(false)
+  const [expanded, setExpanded]       = useState(false)
   const [devicesOpen, setDevicesOpen] = useState(false)
-  const dropdownRef                 = useRef(null)
   const customFieldCount = c.custom_fields?.length ?? 0
   const deviceCount      = devices.length || c.device_ids?.length || 0
   const hasAlert         = alert?.hasInactiveDevice || alert?.hasOpenTicket
-
-  useEffect(() => {
-    if (!devicesOpen) return
-    const handle = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setDevicesOpen(false)
-    }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
-  }, [devicesOpen])
 
   return (
     <>
@@ -619,53 +609,20 @@ function CustomerRow({ c, devices = [], onEdit, onDelete, alert }) {
         <td className="px-4 py-3 whitespace-nowrap">
           <span className="text-[13px] text-gray-600">{c.country || '—'}</span>
         </td>
-        {/* Customer Devices — dropdown */}
+        {/* Customer Devices — inline expand */}
         <td className="px-4 py-3 whitespace-nowrap">
           {deviceCount > 0 ? (
-            <div ref={dropdownRef} className="relative inline-block">
-              <button
-                onClick={() => setDevicesOpen(v => !v)}
-                className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
-                  alert?.hasInactiveDevice
-                    ? 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100'
-                    : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'
-                }`}
-              >
-                {deviceCount} device{deviceCount !== 1 ? 's' : ''}
-                {devicesOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              </button>
-
-              {devicesOpen && devices.length > 0 && (
-                <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden min-w-[230px]">
-                  <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Attached Devices</p>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
-                    {devices.map(d => (
-                      <Link
-                        key={d.id}
-                        to={`/customer-devices/${d.id}`}
-                        onClick={() => setDevicesOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-blue-50 transition-colors group"
-                      >
-                        <span className="text-sm flex-shrink-0">
-                          {d.tags?.includes('link') ? '🔗' : (DEVICE_ICONS[d.device_type] ?? '📦')}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-gray-800 truncate group-hover:text-blue-600 transition-colors">{d.name}</p>
-                          <p className="text-[10px] font-mono text-gray-400 truncate">{d.ip_address}</p>
-                        </div>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 capitalize ${
-                          d.status === 'online'  ? 'bg-emerald-50 text-emerald-600' :
-                          d.status === 'offline' ? 'bg-red-50 text-red-400' :
-                                                  'bg-gray-100 text-gray-400'
-                        }`}>{d.status ?? 'unknown'}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <button
+              onClick={() => setDevicesOpen(v => !v)}
+              className={`flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
+                alert?.hasInactiveDevice
+                  ? 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100'
+                  : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'
+              }`}
+            >
+              {deviceCount} device{deviceCount !== 1 ? 's' : ''}
+              {devicesOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
           ) : (
             <span className="text-[13px] text-gray-300">—</span>
           )}
@@ -696,6 +653,43 @@ function CustomerRow({ c, devices = [], onEdit, onDelete, alert }) {
           </div>
         </td>
       </tr>
+
+      {/* Expanded devices — aligned under "Customer Devices" column (index 7) */}
+      {devicesOpen && devices.length > 0 && (
+        <tr style={{ borderColor: '#f3f4f6' }} className="border-b">
+          <td colSpan={7} className="p-0" />
+          <td colSpan={3} className="px-4 pb-3 pt-1.5 align-top">
+            <div className="rounded-lg overflow-hidden border border-emerald-100">
+              <div className="grid grid-cols-[auto_1fr_auto] px-3 py-1.5 bg-emerald-50 border-b border-emerald-100">
+                <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider col-span-2">Device</span>
+                <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Status</span>
+              </div>
+              <div className="divide-y divide-emerald-50 bg-white">
+                {devices.map(d => (
+                  <Link
+                    key={d.id}
+                    to={`/customer-devices/${d.id}`}
+                    className="flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50 transition-colors group"
+                  >
+                    <span className="text-sm flex-shrink-0">
+                      {d.tags?.includes('link') ? '🔗' : (DEVICE_ICONS[d.device_type] ?? '📦')}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 truncate group-hover:text-blue-600 transition-colors">{d.name}</p>
+                      <p className="text-[10px] font-mono text-gray-400 truncate">{d.ip_address}</p>
+                    </div>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 capitalize ml-2 ${
+                      d.status === 'online'  ? 'bg-emerald-50 text-emerald-600' :
+                      d.status === 'offline' ? 'bg-red-50 text-red-400' :
+                                              'bg-gray-100 text-gray-400'
+                    }`}>{d.status ?? 'unknown'}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
 
       {/* Expanded custom fields — aligned under "Other Details" column (index 8) */}
       {expanded && customFieldCount > 0 && (
