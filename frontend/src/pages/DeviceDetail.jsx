@@ -548,7 +548,7 @@ function FullSensorModal({ sensor, onClose }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.07)" />
                   <XAxis
                     dataKey="t"
-                    tick={{ style: { fontSize: '9px', fill: '#6b7280' }, angle: -90, textAnchor: 'end', dy: 4 }}
+                    tick={{ style: { fontSize: '13.5px', fill: '#6b7280' }, angle: -90, textAnchor: 'end', dy: 4 }}
                     tickLine={false}
                     axisLine={{ stroke: '#d1d5db' }}
                     interval="preserveStartEnd"
@@ -564,7 +564,7 @@ function FullSensorModal({ sensor, onClose }) {
                         ? (fmtOidValue(v, sensor.unit) ?? '')
                         : `${v} ms`
                     }
-                    tick={{ style: { fontSize: '9px', fill: '#6b7280' } }}
+                    tick={{ style: { fontSize: '13.5px', fill: '#6b7280' } }}
                     tickLine={false}
                     axisLine={false}
                     width={72}
