@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast'
 import {
   Plus, Search, Edit2, Trash2, X, UserCircle2,
   Mail, Phone, MapPin, Hash, ChevronDown, ChevronUp, PlusCircle,
-  Server, Check, Monitor,
+  Server, Check, Monitor, Layers,
 } from 'lucide-react'
 import { SkeletonTable } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
@@ -238,6 +238,18 @@ function CustomerModal({ customer, onClose, onSave, readOnly = false }) {
   const [devicesLoading, setDevicesLoading]     = useState(false)
   const set = (f) => (e) => setForm((p) => ({ ...p, [f]: e.target.value }))
 
+  // Services from the Services tool
+  const [availableServices] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('netsupportai-services') || '[]') }
+    catch { return [] }
+  })
+  const [serviceDetails, setServiceDetails] = useState(customer?.service_details ?? [])
+
+  const addServiceDetail    = () => setServiceDetails(prev => [...prev, { service_type: '', service_name: '', capacity_bandwidth: '' }])
+  const removeServiceDetail = (i) => setServiceDetails(prev => prev.filter((_, idx) => idx !== i))
+  const setServiceDetail    = (i, field, val) =>
+    setServiceDetails(prev => prev.map((sd, idx) => idx === i ? { ...sd, [field]: val } : sd))
+
   // When editing, re-fetch the actual device objects for the stored IDs
   useEffect(() => {
     const storedIds = customer?.device_ids ?? []
@@ -278,7 +290,8 @@ function CustomerModal({ customer, onClose, onSave, readOnly = false }) {
         address:    form.address || null,
         state:      form.state   || null,
         country:    form.country || null,
-        device_ids: selectedDevices.map(d => d.id),
+        device_ids:      selectedDevices.map(d => d.id),
+        service_details: serviceDetails,
       }
       const { data } = isEdit
         ? await customersAPI.update(customer.id, payload)
@@ -418,6 +431,112 @@ function CustomerModal({ customer, onClose, onSave, readOnly = false }) {
                   {!readOnly && (
                     <button type="button" onClick={addField} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-violet-600 transition-colors mt-1 pl-1">
                       <PlusCircle className="w-3.5 h-3.5" /> Add another field
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ── Service Details ───────────────────────────────────── */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-4 rounded-full bg-blue-500 flex-shrink-0" />
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Service Details</h3>
+                  {serviceDetails.length > 0 && (
+                    <span className="text-[10px] font-semibold bg-blue-50 text-blue-500 border border-blue-200 px-1.5 py-0.5 rounded-full">
+                      {serviceDetails.length}
+                    </span>
+                  )}
+                </div>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={addServiceDetail}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    Add Service
+                  </button>
+                )}
+              </div>
+
+              {serviceDetails.length === 0 ? (
+                readOnly ? (
+                  <p className="text-sm text-gray-300 text-center py-6">No service details</p>
+                ) : (
+                  <div
+                    className="flex flex-col items-center justify-center py-8 rounded-xl text-center cursor-pointer transition-colors hover:bg-gray-50"
+                    style={{ border: '1.5px dashed #e5e7eb' }}
+                    onClick={addServiceDetail}
+                  >
+                    <Layers className="w-7 h-7 text-gray-300 mb-2" />
+                    <p className="text-sm font-medium text-gray-400">No service details yet</p>
+                    <p className="text-xs text-gray-300 mt-0.5">Click to add service information</p>
+                  </div>
+                )
+              ) : (
+                <div className="space-y-3">
+                  {serviceDetails.map((sd, i) => (
+                    <div key={i} className="rounded-xl border border-gray-200 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Service {i + 1}</span>
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={() => removeServiceDetail(i)}
+                            className="p-1 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="label">Service Type</label>
+                          <select
+                            className="input"
+                            value={sd.service_type}
+                            onChange={e => setServiceDetail(i, 'service_type', e.target.value)}
+                            disabled={readOnly}
+                          >
+                            <option value="">Select service…</option>
+                            {availableServices.map(s => (
+                              <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="label">Service Name</label>
+                          <input
+                            className="input"
+                            placeholder="e.g. Primary Link"
+                            value={sd.service_name}
+                            onChange={e => setServiceDetail(i, 'service_name', e.target.value)}
+                            disabled={readOnly}
+                          />
+                        </div>
+                        <div>
+                          <label className="label">Capacity / Bandwidth</label>
+                          <input
+                            className="input"
+                            placeholder="e.g. 100 Mbps"
+                            value={sd.capacity_bandwidth}
+                            onChange={e => setServiceDetail(i, 'capacity_bandwidth', e.target.value)}
+                            disabled={readOnly}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={addServiceDetail}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-blue-600 transition-colors pl-1"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      Add another service
                     </button>
                   )}
                 </div>
