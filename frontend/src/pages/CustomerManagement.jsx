@@ -216,7 +216,7 @@ function DevicePickerModal({ onClose, onAdd, alreadySelectedIds }) {
   )
 }
 
-function CustomerModal({ customer, onClose, onSave }) {
+function CustomerModal({ customer, onClose, onSave, readOnly = false }) {
   const isEdit = !!customer?.id
   const [form, setForm] = useState(
     customer?.id
@@ -305,8 +305,12 @@ function CustomerModal({ customer, onClose, onSave }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 flex-shrink-0" style={{ borderBottom: '1px solid #e5e7eb' }}>
           <div>
-            <h2 className="text-base font-semibold text-gray-900">{isEdit ? 'Edit Customer' : 'New Customer'}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Fill in customer details below</p>
+            <h2 className="text-base font-semibold text-gray-900">
+              {readOnly ? customer?.customer_name : (isEdit ? 'Edit Customer' : 'New Customer')}
+            </h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {readOnly ? 'Customer profile' : 'Fill in customer details below'}
+            </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
             <X className="w-4 h-4" />
@@ -325,32 +329,32 @@ function CustomerModal({ customer, onClose, onSave }) {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="label">Customer Name *</label>
-                  <input className="input" required value={form.customer_name} onChange={set('customer_name')} placeholder="e.g. Acme Corporation" />
+                  <label className="label">Customer Name {!readOnly && '*'}</label>
+                  <input className="input" required={!readOnly} disabled={readOnly} value={form.customer_name} onChange={set('customer_name')} placeholder="e.g. Acme Corporation" />
                 </div>
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="label">Customer ID *</label>
-                  <input className="input" required value={form.customer_id} onChange={set('customer_id')} placeholder="e.g. CUST-001" />
+                  <label className="label">Customer ID {!readOnly && '*'}</label>
+                  <input className="input" required={!readOnly} disabled={readOnly} value={form.customer_id} onChange={set('customer_id')} placeholder="e.g. CUST-001" />
                 </div>
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="label">Email Address *</label>
-                  <input className="input" type="email" required value={form.email} onChange={set('email')} placeholder="contact@company.com" />
+                  <label className="label">Email Address {!readOnly && '*'}</label>
+                  <input className="input" type="email" required={!readOnly} disabled={readOnly} value={form.email} onChange={set('email')} placeholder="contact@company.com" />
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <label className="label">Phone Number</label>
-                  <input className="input" value={form.phone} onChange={set('phone')} placeholder="+1 (555) 000-0000" />
+                  <input className="input" disabled={readOnly} value={form.phone} onChange={set('phone')} placeholder="+1 (555) 000-0000" />
                 </div>
                 <div className="col-span-2">
                   <label className="label">Physical Address</label>
-                  <input className="input" value={form.address} onChange={set('address')} placeholder="123 Main Street, Suite 400" />
+                  <input className="input" disabled={readOnly} value={form.address} onChange={set('address')} placeholder="123 Main Street, Suite 400" />
                 </div>
                 <div>
                   <label className="label">State</label>
-                  <input className="input" value={form.state} onChange={set('state')} placeholder="e.g. California" />
+                  <input className="input" disabled={readOnly} value={form.state} onChange={set('state')} placeholder="e.g. California" />
                 </div>
                 <div>
                   <label className="label">Country</label>
-                  <input className="input" value={form.country} onChange={set('country')} placeholder="e.g. United States" />
+                  <input className="input" disabled={readOnly} value={form.country} onChange={set('country')} placeholder="e.g. United States" />
                 </div>
               </div>
             </div>
@@ -367,67 +371,55 @@ function CustomerModal({ customer, onClose, onSave }) {
                     </span>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={addField}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-700 hover:bg-violet-50 px-2.5 py-1.5 rounded-lg transition-colors"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  Add Field
-                </button>
-              </div>
-
-              {form.custom_fields.length === 0 ? (
-                <div
-                  className="flex flex-col items-center justify-center py-8 rounded-xl text-center cursor-pointer transition-colors"
-                  style={{ border: '1.5px dashed #e5e7eb' }}
-                  onClick={addField}
-                >
-                  <PlusCircle className="w-7 h-7 text-gray-300 mb-2" />
-                  <p className="text-sm font-medium text-gray-400">No custom fields yet</p>
-                  <p className="text-xs text-gray-300 mt-0.5">Click to add additional details</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {/* Column headers */}
-                  <div className="grid grid-cols-[1fr_1fr_32px] gap-3 px-1">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Field Name</span>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Field Title</span>
-                    <span />
-                  </div>
-                  {form.custom_fields.map((field, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_1fr_32px] gap-3 items-center">
-                      <input
-                        className="input"
-                        required
-                        placeholder="e.g. Industry"
-                        value={field.name}
-                        onChange={(e) => setField(i, 'name', e.target.value)}
-                      />
-                      <input
-                        className="input"
-                        required
-                        placeholder="e.g. Technology"
-                        value={field.title}
-                        onChange={(e) => setField(i, 'title', e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeField(i)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors flex-shrink-0"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                {!readOnly && (
                   <button
                     type="button"
                     onClick={addField}
-                    className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-violet-600 transition-colors mt-1 pl-1"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 hover:text-violet-700 hover:bg-violet-50 px-2.5 py-1.5 rounded-lg transition-colors"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
-                    Add another field
+                    Add Field
                   </button>
+                )}
+              </div>
+
+              {form.custom_fields.length === 0 ? (
+                readOnly ? (
+                  <p className="text-sm text-gray-300 text-center py-6">No additional details</p>
+                ) : (
+                  <div
+                    className="flex flex-col items-center justify-center py-8 rounded-xl text-center cursor-pointer transition-colors"
+                    style={{ border: '1.5px dashed #e5e7eb' }}
+                    onClick={addField}
+                  >
+                    <PlusCircle className="w-7 h-7 text-gray-300 mb-2" />
+                    <p className="text-sm font-medium text-gray-400">No custom fields yet</p>
+                    <p className="text-xs text-gray-300 mt-0.5">Click to add additional details</p>
+                  </div>
+                )
+              ) : (
+                <div className="space-y-2">
+                  <div className={`grid gap-3 px-1 ${readOnly ? 'grid-cols-2' : 'grid-cols-[1fr_1fr_32px]'}`}>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Field Name</span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Field Title</span>
+                    {!readOnly && <span />}
+                  </div>
+                  {form.custom_fields.map((field, i) => (
+                    <div key={i} className={`grid gap-3 items-center ${readOnly ? 'grid-cols-2' : 'grid-cols-[1fr_1fr_32px]'}`}>
+                      <input className="input" required={!readOnly} disabled={readOnly} placeholder="e.g. Industry"   value={field.name}  onChange={(e) => setField(i, 'name',  e.target.value)} />
+                      <input className="input" required={!readOnly} disabled={readOnly} placeholder="e.g. Technology" value={field.title} onChange={(e) => setField(i, 'title', e.target.value)} />
+                      {!readOnly && (
+                        <button type="button" onClick={() => removeField(i)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors flex-shrink-0">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {!readOnly && (
+                    <button type="button" onClick={addField} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-violet-600 transition-colors mt-1 pl-1">
+                      <PlusCircle className="w-3.5 h-3.5" /> Add another field
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -444,14 +436,16 @@ function CustomerModal({ customer, onClose, onSave }) {
                     </span>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowDevicePicker(true)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg transition-colors"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  Add Device
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDevicePicker(true)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    Add Device
+                  </button>
+                )}
               </div>
 
               {devicesLoading ? (
@@ -461,21 +455,21 @@ function CustomerModal({ customer, onClose, onSave }) {
                 </div>
               ) : selectedDevices.length === 0 ? (
                 <div
-                  className="flex flex-col items-center justify-center py-8 rounded-xl text-center cursor-pointer transition-colors hover:bg-gray-50"
+                  className={`flex flex-col items-center justify-center py-8 rounded-xl text-center transition-colors ${!readOnly && 'cursor-pointer hover:bg-gray-50'}`}
                   style={{ border: '1.5px dashed #e5e7eb' }}
-                  onClick={() => setShowDevicePicker(true)}
+                  onClick={!readOnly ? () => setShowDevicePicker(true) : undefined}
                 >
                   <Monitor className="w-7 h-7 text-gray-300 mb-2" />
                   <p className="text-sm font-medium text-gray-400">No devices attached</p>
-                  <p className="text-xs text-gray-300 mt-0.5">Click to attach customer devices</p>
+                  {!readOnly && <p className="text-xs text-gray-300 mt-0.5">Click to attach customer devices</p>}
                 </div>
               ) : (
                 <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #e5e7eb' }}>
-                  <div className="grid grid-cols-[28px_1fr_auto_32px] gap-3 px-4 py-2 items-center" style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                  <div className={`grid gap-3 px-4 py-2 items-center ${readOnly ? 'grid-cols-[28px_1fr_auto]' : 'grid-cols-[28px_1fr_auto_32px]'}`} style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                     <span />
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Name / Endpoint</span>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</span>
-                    <span />
+                    {!readOnly && <span />}
                   </div>
                   <div className="divide-y" style={{ borderColor: '#f3f4f6' }}>
                     {selectedDevices.map(d => {
@@ -483,7 +477,7 @@ function CustomerModal({ customer, onClose, onSave }) {
                       const linkType = d.extra_data?.link_type
                       const endpointsB = d.extra_data?.endpoints_b?.filter(ip => ip?.trim()) ?? []
                       return (
-                        <div key={d.id} className="grid grid-cols-[28px_1fr_auto_32px] gap-3 px-4 py-2.5 items-center">
+                        <div key={d.id} className={`grid gap-3 px-4 py-2.5 items-center ${readOnly ? 'grid-cols-[28px_1fr_auto]' : 'grid-cols-[28px_1fr_auto_32px]'}`}>
                           <span className="text-base leading-none">{link ? '🔗' : (DEVICE_ICONS[d.device_type] ?? '📦')}</span>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
@@ -506,27 +500,22 @@ function CustomerModal({ customer, onClose, onSave }) {
                             d.status === 'offline' ? 'bg-red-50 text-red-400' :
                                                     'bg-gray-100 text-gray-400'
                           }`}>{d.status ?? 'unknown'}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeDevice(d.id)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors flex-shrink-0"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
+                          {!readOnly && (
+                            <button type="button" onClick={() => removeDevice(d.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors flex-shrink-0">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       )
                     })}
                   </div>
-                  <div className="px-4 py-2.5" style={{ borderTop: '1px solid #f3f4f6' }}>
-                    <button
-                      type="button"
-                      onClick={() => setShowDevicePicker(true)}
-                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-emerald-600 transition-colors"
-                    >
-                      <PlusCircle className="w-3.5 h-3.5" />
-                      Add another device
-                    </button>
-                  </div>
+                  {!readOnly && (
+                    <div className="px-4 py-2.5" style={{ borderTop: '1px solid #f3f4f6' }}>
+                      <button type="button" onClick={() => setShowDevicePicker(true)} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-emerald-600 transition-colors">
+                        <PlusCircle className="w-3.5 h-3.5" /> Add another device
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -534,10 +523,16 @@ function CustomerModal({ customer, onClose, onSave }) {
 
           {/* Footer */}
           <div className="flex gap-3 px-6 py-4 flex-shrink-0" style={{ borderTop: '1px solid #e5e7eb' }}>
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Customer'}
-            </button>
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+            {readOnly ? (
+              <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
+            ) : (
+              <>
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Customer'}
+                </button>
+                <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+              </>
+            )}
           </div>
         </form>
 
@@ -557,7 +552,7 @@ function CustomerModal({ customer, onClose, onSave }) {
   )
 }
 
-function CustomerRow({ c, devices = [], onEdit, onDelete, alert }) {
+function CustomerRow({ c, devices = [], onView, onEdit, onDelete, alert }) {
   const [expanded, setExpanded]       = useState(false)
   const [devicesOpen, setDevicesOpen] = useState(false)
   const customFieldCount = c.custom_fields?.length ?? 0
@@ -576,7 +571,12 @@ function CustomerRow({ c, devices = [], onEdit, onDelete, alert }) {
             <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 font-bold text-[13px] flex-shrink-0">
               {c.customer_name?.[0]?.toUpperCase() ?? '?'}
             </div>
-            <span className="text-[15px] font-semibold text-gray-900">{c.customer_name ?? '—'}</span>
+            <button
+              onClick={() => onView(c)}
+              className="text-[15px] font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-colors text-left"
+            >
+              {c.customer_name ?? '—'}
+            </button>
           </div>
         </td>
         {/* Customer ID */}
@@ -726,6 +726,7 @@ export default function CustomerManagement() {
   const [deleting, setDeleting] = useState(null)
   const [customerAlerts, setCustomerAlerts] = useState({})
   const [deviceMap, setDeviceMap] = useState({})
+  const [viewModal, setViewModal] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -820,6 +821,9 @@ export default function CustomerManagement() {
       {modal !== null && (
         <CustomerModal customer={modal} onClose={() => setModal(null)} onSave={handleSave} />
       )}
+      {viewModal !== null && (
+        <CustomerModal customer={viewModal} onClose={() => setViewModal(null)} onSave={() => {}} readOnly />
+      )}
 
       {/* Page header */}
       <div className="flex items-center justify-between">
@@ -875,6 +879,7 @@ export default function CustomerManagement() {
                     key={c.id}
                     c={c}
                     devices={(c.device_ids ?? []).map(id => deviceMap[id]).filter(Boolean)}
+                    onView={setViewModal}
                     onEdit={setModal}
                     onDelete={handleDelete}
                     alert={customerAlerts[c.id]}
