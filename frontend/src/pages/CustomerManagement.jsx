@@ -659,7 +659,7 @@ function CustomerRow({ c, devices = [], onEdit, onDelete, alert }) {
         <tr style={{ borderColor: '#f3f4f6' }} className="border-b">
           <td colSpan={7} className="p-0" />
           <td colSpan={3} className="px-4 pb-3 pt-1.5 align-top">
-            <div className="rounded-lg overflow-hidden border border-emerald-100">
+            <div className="rounded-lg overflow-hidden border border-emerald-100" style={{ animation: 'expandDown 0.2s ease-out' }}>
               <div className="grid grid-cols-[auto_1fr_auto] px-3 py-1.5 bg-emerald-50 border-b border-emerald-100">
                 <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider col-span-2">Device</span>
                 <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Status</span>
