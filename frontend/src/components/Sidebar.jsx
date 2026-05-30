@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useState } from 'react'
 import {
   LayoutDashboard, Ticket, Server, Users, Bot, Terminal,
-  AlertTriangle, Settings, Monitor, LogOut, ChevronLeft, ChevronRight, UserCircle2, UserPlus,
+  AlertTriangle, Settings, Monitor, LogOut, ChevronLeft, ChevronRight, UserCircle2, UserPlus, Layers,
 } from 'lucide-react'
 import useAuth from '../hooks/useAuth'
 
@@ -23,6 +23,7 @@ const NAV = [
       { to: '/customer-devices',    label: 'Customer Devices',    icon: Server       },
       { to: '/remote-access',       label: 'Remote Access',       icon: Terminal     },
       { to: '/customer-management', label: 'Customer Mgmt',       icon: UserCircle2  },
+      { to: '/services',            label: 'Services',            icon: Layers       },
     ],
   },
   {

@@ -18,6 +18,7 @@ import ClientPortal        from './pages/ClientPortal'
 import CustomerManagement  from './pages/CustomerManagement'
 import UserManagement       from './pages/UserManagement'
 import CustomerDevices      from './pages/CustomerDevices'
+import Services             from './pages/Services'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="customer-devices"          element={<CustomerDevices />} />
         <Route path="customer-devices/:id"      element={<DeviceDetail />} />
         <Route path="users"                     element={<UserManagement />} />
+        <Route path="services"                  element={<Services />} />
       </Route>
     </Routes>
   )
