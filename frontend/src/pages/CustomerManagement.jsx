@@ -692,10 +692,19 @@ function CustomerModal({ customer, onClose, onSave, readOnly = false }) {
 }
 
 function CustomerRow({ c, devices = [], onView, onEdit, onDelete, alert }) {
-  const [expanded, setExpanded]       = useState(false)
-  const [devicesOpen, setDevicesOpen] = useState(false)
+  const [expanded, setExpanded]         = useState(false)
+  const [devicesOpen, setDevicesOpen]   = useState(false)
+  const [servicesOpen, setServicesOpen] = useState(false)
+
+  const [services] = useState(() => getSd(c.id))
+  const [availableServices] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('netsupportai-services') || '[]') }
+    catch { return [] }
+  })
+
   const customFieldCount = c.custom_fields?.length ?? 0
   const deviceCount      = devices.length || c.device_ids?.length || 0
+  const serviceCount     = services.length
   const hasAlert         = alert?.hasInactiveDevice || alert?.hasOpenTicket
 
   return (
@@ -766,6 +775,20 @@ function CustomerRow({ c, devices = [], onView, onEdit, onDelete, alert }) {
             <span className="text-[13px] text-gray-300">—</span>
           )}
         </td>
+        {/* Services — inline expand */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          {serviceCount > 0 ? (
+            <button
+              onClick={() => setServicesOpen(v => !v)}
+              className="flex items-center gap-1 text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors"
+            >
+              {serviceCount} service{serviceCount !== 1 ? 's' : ''}
+              {servicesOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          ) : (
+            <span className="text-[13px] text-gray-300">—</span>
+          )}
+        </td>
         {/* Other Details */}
         <td className="px-4 py-3 whitespace-nowrap">
           {customFieldCount > 0
@@ -797,7 +820,7 @@ function CustomerRow({ c, devices = [], onView, onEdit, onDelete, alert }) {
       {devicesOpen && devices.length > 0 && (
         <tr style={{ borderColor: '#f3f4f6' }} className="border-b">
           <td colSpan={7} className="p-0" />
-          <td colSpan={3} className="px-4 pb-3 pt-1.5 align-top">
+          <td colSpan={4} className="px-4 pb-3 pt-1.5 align-top">
             <div className="rounded-lg overflow-hidden border border-emerald-100" style={{ animation: 'expandDown 0.2s ease-out' }}>
               <div className="grid grid-cols-[auto_1fr_auto] px-3 py-1.5 bg-emerald-50 border-b border-emerald-100">
                 <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider col-span-2">Device</span>
@@ -830,10 +853,37 @@ function CustomerRow({ c, devices = [], onView, onEdit, onDelete, alert }) {
         </tr>
       )}
 
-      {/* Expanded custom fields — aligned under "Other Details" column (index 8) */}
-      {expanded && customFieldCount > 0 && (
+      {/* Expanded services — aligned under "Services" column (index 8) */}
+      {servicesOpen && services.length > 0 && (
         <tr style={{ borderColor: '#f3f4f6' }} className="border-b">
           <td colSpan={8} className="p-0" />
+          <td colSpan={3} className="px-4 pb-3 pt-1.5 align-top">
+            <div className="rounded-lg overflow-hidden border border-blue-100" style={{ animation: 'expandDown 0.2s ease-out' }}>
+              <div className="grid grid-cols-3 px-3 py-1.5 bg-blue-50 border-b border-blue-100">
+                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Service Type</span>
+                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Service Name</span>
+                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Capacity</span>
+              </div>
+              <div className="divide-y divide-blue-50 bg-white">
+                {services.map((sd, i) => (
+                  <div key={i} className="grid grid-cols-3 px-3 py-2">
+                    <span className="text-[13px] font-medium text-gray-700 truncate">
+                      {availableServices.find(s => s.id === sd.service_type)?.name ?? sd.service_type ?? '—'}
+                    </span>
+                    <span className="text-[13px] text-gray-500 truncate">{sd.service_name || '—'}</span>
+                    <span className="text-[13px] text-gray-500 truncate">{sd.capacity_bandwidth || '—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+
+      {/* Expanded custom fields — aligned under "Other Details" column (index 9) */}
+      {expanded && customFieldCount > 0 && (
+        <tr style={{ borderColor: '#f3f4f6' }} className="border-b">
+          <td colSpan={9} className="p-0" />
           <td colSpan={2} className="px-4 pb-3 pt-1 align-top">
             <div className="rounded-lg overflow-hidden border border-violet-100">
               <div className="grid grid-cols-2 px-3 py-1.5 bg-violet-50">
@@ -1003,10 +1053,10 @@ export default function CustomerManagement() {
       ) : (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ minWidth: 1050 }}>
+            <table className="w-full text-sm" style={{ minWidth: 1200 }}>
               <thead>
                 <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                  {['Customer Name', 'Customer ID', 'Email Address', 'Phone Number', 'Physical Address', 'State', 'Country', 'Customer Devices', 'Other Details', 'Actions'].map(h => (
+                  {['Customer Name', 'Customer ID', 'Email Address', 'Phone Number', 'Physical Address', 'State', 'Country', 'Customer Devices', 'Services', 'Other Details', 'Actions'].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
                       {h}
                     </th>
