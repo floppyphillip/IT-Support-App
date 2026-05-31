@@ -16,6 +16,24 @@ const DEVICE_ICONS = {
   printer: '🖨️', access_point: '📡', firewall: '🛡️', nas: '💾', camera: '📷', other: '📦',
 }
 
+// Service-details are stored in localStorage (backend schema doesn't have this field)
+const SD_STORAGE_KEY = 'netsupportai-customer-service-details'
+function loadSdMap() {
+  try { return JSON.parse(localStorage.getItem(SD_STORAGE_KEY) || '{}') }
+  catch { return {} }
+}
+function getSd(customerId) { return loadSdMap()[customerId] ?? [] }
+function saveSd(customerId, details) {
+  const map = loadSdMap()
+  map[customerId] = details
+  localStorage.setItem(SD_STORAGE_KEY, JSON.stringify(map))
+}
+function deleteSd(customerId) {
+  const map = loadSdMap()
+  delete map[customerId]
+  localStorage.setItem(SD_STORAGE_KEY, JSON.stringify(map))
+}
+
 const EMPTY_FIELD = { name: '', title: '' }
 const EMPTY_FORM = {
   customer_name: '', customer_id: '', email: '',
@@ -243,7 +261,9 @@ function CustomerModal({ customer, onClose, onSave, readOnly = false }) {
     try { return JSON.parse(localStorage.getItem('netsupportai-services') || '[]') }
     catch { return [] }
   })
-  const [serviceDetails, setServiceDetails] = useState(customer?.service_details ?? [])
+  const [serviceDetails, setServiceDetails] = useState(() =>
+    customer?.id ? getSd(customer.id) : []
+  )
 
   const addServiceDetail    = () => setServiceDetails(prev => [...prev, { service_type: '', service_name: '', capacity_bandwidth: '' }])
   const removeServiceDetail = (i) => setServiceDetails(prev => prev.filter((_, idx) => idx !== i))
@@ -290,12 +310,12 @@ function CustomerModal({ customer, onClose, onSave, readOnly = false }) {
         address:    form.address || null,
         state:      form.state   || null,
         country:    form.country || null,
-        device_ids:      selectedDevices.map(d => d.id),
-        service_details: serviceDetails,
+        device_ids: selectedDevices.map(d => d.id),
       }
       const { data } = isEdit
         ? await customersAPI.update(customer.id, payload)
         : await customersAPI.create(payload)
+      saveSd(data.id, serviceDetails)
       onSave(data)
       onClose()
     } catch (err) {
@@ -925,6 +945,7 @@ export default function CustomerManagement() {
     setDeleting(customer.id)
     try {
       await customersAPI.delete(customer.id)
+      deleteSd(customer.id)
       setCustomers((prev) => prev.filter((c) => c.id !== customer.id))
       setTotal((t) => t - 1)
       toast.success('Customer deleted')
