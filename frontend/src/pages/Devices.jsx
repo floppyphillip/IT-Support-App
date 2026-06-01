@@ -616,6 +616,7 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
                     to assign them to devices.
                   </p>
                 ) : (
+                  <>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[11px]" style={{ color: 'var(--text-4)' }}>
                       {form.alert_rule_ids.length} of {availableAlertRules.length} selected
@@ -660,6 +661,7 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
                       )
                     })}
                   </div>
+                  </>
                 )}
               </div>
             )}
