@@ -316,7 +316,7 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'customer' }) {
                             isSel ? 'border-red-500/30 bg-red-500/[0.08]' : 'border-white/[0.07] hover:border-white/[0.14] hover:bg-white/[0.03]'
                           }`}
                         >
-                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSel ? 'bg-red-500 border-red-500' : 'border-white/20'}`}>
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSel ? 'bg-red-500 border-red-500' : 'border-slate-500'}`}>
                             {isSel && (
                               <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
                                 <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -895,7 +895,7 @@ function LinkFormModal({ onClose, onSaved, category = 'customer', device = null 
                               isSel ? 'border-red-500/30 bg-red-500/[0.08]' : 'border-white/[0.07] hover:border-white/[0.14] hover:bg-white/[0.03]'
                             }`}
                           >
-                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSel ? 'bg-red-500 border-red-500' : 'border-white/20'}`}>
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSel ? 'bg-red-500 border-red-500' : 'border-slate-500'}`}>
                               {isSel && (
                                 <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
                                   <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
