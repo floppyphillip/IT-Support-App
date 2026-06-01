@@ -12,6 +12,41 @@ import {
   resolveCustomAlert,
   deleteCustomAlert,
 } from '../utils/alertEngine'
+import { fmtDateTime } from '../utils/timeFormat'
+
+/**
+ * Reformat any alert (backend or custom) into:
+ *   "Severity Level - Device Name: Alert Name  DD Mon YYYY, HH:MM:SS"
+ *
+ * Backend alerts arrive as title = "Device Offline: CoreRouter"
+ * with severity stored separately.  We swap and prepend severity.
+ */
+function formatAlertHeading(a) {
+  const sev = a._isCustom
+    ? (a.display_severity ?? a.severity)           // already full name e.g. "Warning"
+    : a.severity.charAt(0).toUpperCase() + a.severity.slice(1)   // capitalise "critical" → "Critical"
+
+  let alertName, deviceName
+
+  if (a._isCustom) {
+    // Custom title is already "Severity - Device: Rule", extract parts after first " - "
+    const afterSev = a.title.replace(/^[^-]+ - /, '')   // "Device: Rule"
+    const colonIdx = afterSev.indexOf(': ')
+    deviceName = colonIdx >= 0 ? afterSev.slice(0, colonIdx) : afterSev
+    alertName  = colonIdx >= 0 ? afterSev.slice(colonIdx + 2) : ''
+  } else {
+    // Backend title is "Alert Name: Device Name" or just "Alert Name"
+    const colonIdx = a.title.indexOf(': ')
+    alertName  = colonIdx >= 0 ? a.title.slice(0, colonIdx)     : a.title
+    deviceName = colonIdx >= 0 ? a.title.slice(colonIdx + 2)    : ''
+  }
+
+  const base = deviceName
+    ? `${sev} - ${deviceName}: ${alertName}`
+    : `${sev} - ${alertName}`
+
+  return `${base}  ${fmtDateTime(a.created_at)}`
+}
 
 // Severity → visual style mapping (backend levels + full custom levels)
 const SEV = {
@@ -133,8 +168,9 @@ export default function Alerts() {
       ) : (
         <div className="space-y-2">
           {allAlerts.map((a) => {
-            // Use display_severity for custom alerts, else backend severity
-            const sevKey = a._isCustom ? (a.display_severity ?? a.severity) : a.severity
+            const sevKey = a._isCustom
+              ? (a.display_severity ?? a.severity)
+              : a.severity
             const s = SEV[sevKey] ?? SEV.info
 
             const canOpenTicket = !a._isCustom && !!a.ticket_id && (filter !== 'resolved' || a.ticket?.status === 'closed')
@@ -149,10 +185,7 @@ export default function Alerts() {
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${s.dot}`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                      <span className="text-sm font-semibold text-gray-900">{a.title}</span>
-                      <span className={`badge border ${s.badge}`}>
-                        {a._isCustom ? (a.display_severity ?? a.severity) : a.severity}
-                      </span>
+                      <span className="text-sm font-semibold text-gray-900">{formatAlertHeading(a)}</span>
                       {a._isCustom && (
                         <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">
                           <ShieldAlert size={9} /> Custom Rule
