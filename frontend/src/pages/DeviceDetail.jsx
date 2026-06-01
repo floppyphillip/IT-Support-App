@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { devicesAPI } from '../api/client'
 import { fmtTime, fmtDateTime } from '../utils/timeFormat'
+import { checkPingAlerts, checkJitterAlerts, fireAlertToasts, calcJitter } from '../utils/alertEngine'
 import { toast } from 'react-hot-toast'
 import StatusIndicator from '../components/StatusIndicator'
 import { Skeleton } from '../components/Skeleton'
@@ -1175,9 +1176,17 @@ function SNMPMonitor({ device }) {
       try {
         const { data }   = await devicesAPI.ping(device.id)
         const latency_ms = data.reachable && data.latency_ms != null ? data.latency_ms : null
+        // Ping alerts — with cooldown to avoid notification spam every 60s
+        fireAlertToasts(checkPingAlerts(device, data), device.id, device.name, toast, true)
         setSensors(old => old.map(sensor => {
           if (sensor.type !== 'latency') return sensor
-          return { ...sensor, data: [...sensor.data, { t, ts, latency_ms }].slice(-10080) }
+          const newData = [...sensor.data, { t, ts, latency_ms }].slice(-10080)
+          // Jitter from last 5 readings
+          const recentLat = newData.slice(-5).filter(p => p.latency_ms != null).map(p => p.latency_ms)
+          const jitter = calcJitter(recentLat)
+          if (jitter != null)
+            fireAlertToasts(checkJitterAlerts(device, jitter), device.id, device.name, toast, true)
+          return { ...sensor, data: newData }
         }))
       } catch (err) { console.error('[Latency]', err.message) }
     }
@@ -1321,6 +1330,8 @@ export default function DeviceDetail() {
     setPinging(true)
     try {
       const { data } = await devicesAPI.ping(id)
+      // Fire alert rule notifications (no cooldown — user-triggered)
+      if (device) fireAlertToasts(checkPingAlerts(device, data), device.id, device.name, toast)
       toast[data.reachable ? 'success' : 'error'](
         data.reachable ? `Reachable — ${data.latency_ms?.toFixed(1)}ms` : 'Unreachable'
       )

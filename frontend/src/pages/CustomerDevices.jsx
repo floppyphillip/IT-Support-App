@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { devicesAPI } from '../api/client'
 import { fmtDateTime } from '../utils/timeFormat'
+import { checkPingAlerts, checkJitterAlerts, fireAlertToasts, calcJitter } from '../utils/alertEngine'
 import StatusIndicator from '../components/StatusIndicator'
 import { SkeletonCard } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
@@ -483,6 +484,9 @@ function PingModal({ device, onClose }) {
           const { data } = await devicesAPI.ping(device.id, 1, pingIp)
           sent++
           if (data.reachable && data.latency_ms != null) { received++; latencies.push(data.latency_ms) }
+          fireAlertToasts(checkPingAlerts(device, data), device.id, device.name, toast, true)
+          const jitter = calcJitter(latencies.slice(-5))
+          if (jitter != null) fireAlertToasts(checkJitterAlerts(device, jitter), device.id, device.name, toast, true)
           setResults(prev => [...prev, { key: Date.now() + Math.random(), reachable: data.reachable, latency: data.latency_ms, ip: data.ip_address }])
           setSummary(buildSummary(sent, received, latencies))
         } catch {
@@ -496,6 +500,7 @@ function PingModal({ device, onClose }) {
       const n = Math.max(1, Math.min(100, parseInt(count) || 4))
       try {
         const { data } = await devicesAPI.ping(device.id, n, pingIp)
+        fireAlertToasts(checkPingAlerts(device, data), device.id, device.name, toast)
         setResults([{ key: Date.now(), reachable: data.reachable, latency: data.latency_ms, ip: data.ip_address, packets_sent: data.packets_sent, packets_received: data.packets_received, loss: data.packet_loss_pct }])
         setSummary({ sent: data.packets_sent, received: data.packets_received, loss: data.packet_loss_pct?.toFixed(0) ?? '100', avg: data.latency_ms != null ? data.latency_ms.toFixed(1) : '—', min: '—', max: '—' })
       } catch (err) {
@@ -1004,6 +1009,9 @@ function EndpointPopup({ device, endpoint, onClose }) {
           const { data } = await devicesAPI.ping(device.id, 1, endpoint.ip)
           sent++
           if (data.reachable && data.latency_ms != null) { received++; latencies.push(data.latency_ms) }
+          fireAlertToasts(checkPingAlerts(device, data), device.id, device.name, toast, true)
+          const jitter = calcJitter(latencies.slice(-5))
+          if (jitter != null) fireAlertToasts(checkJitterAlerts(device, jitter), device.id, device.name, toast, true)
           setResults(prev => [...prev, { key: Date.now() + Math.random(), reachable: data.reachable, latency: data.latency_ms, ip: data.ip_address }])
           setSummary(buildSummary(sent, received, latencies))
         } catch {
@@ -1021,6 +1029,9 @@ function EndpointPopup({ device, endpoint, onClose }) {
           const { data } = await devicesAPI.ping(device.id, 1, endpoint.ip)
           sent++
           if (data.reachable && data.latency_ms != null) { received++; latencies.push(data.latency_ms) }
+          fireAlertToasts(checkPingAlerts(device, data), device.id, device.name, toast, true)
+          const jitter = calcJitter(latencies.slice(-5))
+          if (jitter != null) fireAlertToasts(checkJitterAlerts(device, jitter), device.id, device.name, toast, true)
           setResults(prev => [...prev, { key: Date.now() + Math.random(), reachable: data.reachable, latency: data.latency_ms, ip: data.ip_address }])
           setSummary(buildSummary(sent, received, latencies))
         } catch {
