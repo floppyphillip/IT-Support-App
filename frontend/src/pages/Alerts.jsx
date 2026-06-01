@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { alertsAPI } from '../api/client'
 import { toast } from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
 import { CheckCircle, Bell, Trash2, RefreshCw, ShieldCheck, ShieldAlert } from 'lucide-react'
@@ -59,44 +57,21 @@ function buildHeading(a) {
 }
 
 export default function Alerts() {
-  const navigate  = useNavigate()
   const [items, setItems]     = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter]   = useState('active')
   const [actioning, setActioning] = useState(null)
 
-  const load = async () => {
+  const load = () => {
     setLoading(true)
-    try {
-      // Backend system alerts
-      const params = {}
-      if (filter === 'active')   params.is_resolved = false
-      if (filter === 'resolved') params.is_resolved = true
-      const { data } = await alertsAPI.list({ ...params, limit: 100 })
-      const backendItems = (data.items ?? []).map(a => ({ ...a, _source: 'backend' }))
-
-      // Custom rule alerts from localStorage
-      const customAll = getCustomAlerts().map(a => ({ ...a, _source: 'custom_rule' }))
-      const customFiltered = customAll.filter(a => {
-        if (filter === 'active')   return !a.is_resolved
-        if (filter === 'resolved') return  a.is_resolved
-        return true
-      })
-
-      // Merge, newest first
-      const merged = [...backendItems, ...customFiltered]
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-
-      setItems(merged)
-    } catch {
-      // If API fails, still show custom alerts
-      const custom = getCustomAlerts()
-        .map(a => ({ ...a, _source: 'custom_rule' }))
-        .filter(a => filter === 'active' ? !a.is_resolved : filter === 'resolved' ? a.is_resolved : true)
-      setItems(custom)
-    } finally {
-      setLoading(false)
-    }
+    const all = getCustomAlerts().map(a => ({ ...a, _source: 'custom_rule' }))
+    const filtered = all.filter(a => {
+      if (filter === 'active')   return !a.is_resolved
+      if (filter === 'resolved') return  a.is_resolved
+      return true
+    })
+    setItems(filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)))
+    setLoading(false)
   }
 
   useEffect(() => { load() }, [filter])
@@ -105,24 +80,14 @@ export default function Alerts() {
     ...getCustomAlerts().filter(a => !a.is_resolved),
   ].length
 
-  const doAction = async (a, action) => {
+  const doAction = (a, action) => {
     setActioning(a.id)
-    try {
-      if (a._source === 'custom_rule') {
-        if (action === 'acknowledge') acknowledgeCustomAlert(a.id)
-        else if (action === 'resolve') resolveCustomAlert(a.id)
-        else deleteCustomAlert(a.id)
-        toast.success(`Alert ${action}d`)
-        await load()
-      } else {
-        if (action === 'acknowledge') await alertsAPI.acknowledge(a.id)
-        else if (action === 'resolve') await alertsAPI.resolve(a.id)
-        else await alertsAPI.delete(a.id)
-        toast.success(`Alert ${action}d`)
-        await load()
-      }
-    } catch { toast.error('Action failed') }
-    finally { setActioning(null) }
+    if (action === 'acknowledge') acknowledgeCustomAlert(a.id)
+    else if (action === 'resolve') resolveCustomAlert(a.id)
+    else deleteCustomAlert(a.id)
+    toast.success(`Alert ${action}d`)
+    load()
+    setActioning(null)
   }
 
   return (
@@ -167,16 +132,14 @@ export default function Alerts() {
       ) : (
         <div className="space-y-2">
           {items.map(a => {
-            const sevKey = a._source === 'custom_rule' ? a.severity_level : a.severity
-            const s = SEV_STYLE[sevKey] ?? DEFAULT_STYLE
+            const s = SEV_STYLE[a.severity_level] ?? DEFAULT_STYLE
             const heading = buildHeading(a)
-            const canOpenTicket = a._source === 'backend' && !!a.ticket_id
 
             return (
               <div
                 key={a.id}
-                className={`card border-l-4 ${s.left} p-4 hover:shadow-lg transition-all duration-200 ${canOpenTicket ? 'cursor-pointer' : ''}`}
-                onClick={() => canOpenTicket && navigate(`/tickets/${a.ticket_id}`)}
+                className={`card border-l-4 ${s.left} p-4 hover:shadow-lg transition-all duration-200`}
+                onClick={undefined}
               >
                 <div className="flex items-start gap-3">
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${s.dot}`} />
