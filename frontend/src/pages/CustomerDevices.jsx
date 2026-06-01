@@ -6,7 +6,7 @@ import { fmtDateTime } from '../utils/timeFormat'
 import StatusIndicator from '../components/StatusIndicator'
 import { SkeletonCard } from '../components/Skeleton'
 import EmptyState from '../components/EmptyState'
-import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square, Pencil, Trash2, AlertTriangle, ChevronDown, Link2, Clock, Filter, Download } from 'lucide-react'
+import { Plus, Search, Activity, Cpu, HardDrive, MapPin, Zap, Server, X, Loader2, Play, Square, Pencil, Trash2, AlertTriangle, ChevronDown, Link2, Clock, Filter, Download, ShieldAlert } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { alertsAPI } from '../api/client'
 
@@ -25,6 +25,7 @@ const EMPTY_FORM = {
   snmp_enabled: false, snmp_community: 'public', snmp_version: '2c',
   ssh_enabled: false, ssh_port: 22, ssh_username: '', ssh_password: '',
   telnet_enabled: false, telnet_port: 23, telnet_username: '', telnet_password: '',
+  alert_rule_ids: [],
 }
 
 function DeviceFormModal({ device, onClose, onSaved, category = 'customer' }) {
@@ -55,10 +56,34 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'customer' }) {
     telnet_port:        device.telnet_port     ?? 23,
     telnet_username:    device.telnet_username ?? '',
     telnet_password:    '',
+    alert_rule_ids:     device.extra_data?.alert_rule_ids ?? [],
   } : EMPTY_FORM)
   const [saving, setSaving] = useState(false)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const [availableAlertRules] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('netsupportai-alert-rules') || '[]') }
+    catch { return [] }
+  })
+  const toggleAlertRule = (id) =>
+    setForm(f => ({
+      ...f,
+      alert_rule_ids: f.alert_rule_ids.includes(id)
+        ? f.alert_rule_ids.filter(x => x !== id)
+        : [...f.alert_rule_ids, id],
+    }))
+  const SEVERITY_ORDER = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notification', 'Informational']
+  const SEVERITY_COLOR  = {
+    Emergency: 'bg-red-600 text-white', Alert: 'bg-red-500 text-white',
+    Critical: 'bg-orange-600 text-white', Error: 'bg-orange-400 text-white',
+    Warning: 'bg-amber-500 text-white', Notification: 'bg-blue-500 text-white',
+    Informational: 'bg-slate-400 text-white',
+  }
+  const getHighestSev = (rule) => {
+    const active = rule.parameters?.filter(p => p.enabled) ?? []
+    return SEVERITY_ORDER.find(s => active.some(p => p.severity === s)) ?? null
+  }
 
   const submit = async () => {
     if (!form.name.trim())       return toast.error('Device name is required')
@@ -77,6 +102,7 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'customer' }) {
         ssh_port:   Number(form.ssh_port) || 22,
         snmp_community: form.snmp_enabled ? form.snmp_community : undefined,
         snmp_version:   form.snmp_enabled ? form.snmp_version   : undefined,
+        extra_data: { alert_rule_ids: form.alert_rule_ids },
         ssh_username:    form.ssh_enabled    ? form.ssh_username    || undefined : undefined,
         ssh_password:    form.ssh_enabled    ? form.ssh_password    || undefined : undefined,
         telnet_port:     Number(form.telnet_port) || 23,
@@ -248,6 +274,63 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'customer' }) {
                   <input className="input w-full font-mono" type="password" placeholder="Encrypted at rest"
                     value={form.telnet_password} onChange={(e) => set('telnet_password', e.target.value)} />
                 </div>
+              </div>
+            )}
+          </section>
+
+          {/* Alert Rules */}
+          <section className="border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldAlert className="w-3.5 h-3.5" style={{ color: 'var(--text-4)' }} />
+              <span className="text-[15px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>Alert Rules</span>
+              {form.alert_rule_ids.length > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
+                  {form.alert_rule_ids.length} selected
+                </span>
+              )}
+            </div>
+            {availableAlertRules.length === 0 ? (
+              <p className="text-[13px]" style={{ color: 'var(--text-4)' }}>
+                No alert rules configured.{' '}
+                <Link to="/alert-rules" className="text-blue-400 hover:underline" onClick={onClose}>
+                  Create alert rules
+                </Link>{' '}
+                to assign them to devices.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {availableAlertRules.map(rule => {
+                  const isSel  = form.alert_rule_ids.includes(rule.id)
+                  const topSev = getHighestSev(rule)
+                  return (
+                    <div
+                      key={rule.id}
+                      onClick={() => toggleAlertRule(rule.id)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer border transition-all ${
+                        isSel ? 'border-red-500/30 bg-red-500/[0.08]' : 'border-white/[0.07] hover:border-white/[0.14] hover:bg-white/[0.03]'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSel ? 'bg-red-500 border-red-500' : 'border-white/20'}`}>
+                        {isSel && (
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
+                            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" style={{ color: 'var(--text-2)' }}>{rule.name}</p>
+                        {rule.description && (
+                          <p className="text-[11px] truncate" style={{ color: 'var(--text-4)' }}>{rule.description}</p>
+                        )}
+                      </div>
+                      {topSev && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${SEVERITY_COLOR[topSev]}`}>
+                          {topSev}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </section>
