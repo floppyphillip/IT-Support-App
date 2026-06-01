@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
 import { CheckCircle, Bell, Trash2, RefreshCw, ShieldCheck, ShieldAlert } from 'lucide-react'
@@ -62,19 +62,21 @@ export default function Alerts() {
   const [filter, setFilter]   = useState('active')
   const [actioning, setActioning] = useState(null)
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true)
-    const all = getCustomAlerts().map(a => ({ ...a, _source: 'custom_rule' }))
-    const filtered = all.filter(a => {
-      if (filter === 'active')   return !a.is_resolved
-      if (filter === 'resolved') return  a.is_resolved
-      return true
+    requestAnimationFrame(() => {
+      const all = getCustomAlerts().map(a => ({ ...a, _source: 'custom_rule' }))
+      const filtered = all.filter(a => {
+        if (filter === 'active')   return !a.is_resolved
+        if (filter === 'resolved') return  a.is_resolved
+        return true
+      })
+      setItems(filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)))
+      setLoading(false)
     })
-    setItems(filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)))
-    setLoading(false)
-  }
+  }, [filter])
 
-  useEffect(() => { load() }, [filter])
+  useEffect(() => { load() }, [load])
 
   const activeCount = [
     ...getCustomAlerts().filter(a => !a.is_resolved),
