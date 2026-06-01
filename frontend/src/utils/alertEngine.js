@@ -168,21 +168,16 @@ export function fireAlertToasts(triggered, deviceId, deviceName, toastFn, useCoo
     if (HIGH_SEV.has(severity)) toastFn.error(fullMsg, { duration: 6000 })
     else toastFn(fullMsg, { icon: '🔔', duration: 5000 })
 
-    // Persist to Alerts page store
+    // Persist to Alerts page store — store each field explicitly so the
+    // Alerts page can build the heading without any string parsing
     saveCustomAlert({
       id:              `ca-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      title,
-      message:         `Triggered at ${timestamp}`,
-      severity:        SEV_TO_BACKEND[severity] ?? 'info',
-      display_severity: severity,
-      alert_type:      'custom_rule',
-      device_id:       deviceId,
-      device_name:     deviceName,
-      rule_name:       ruleName,
+      severity_level:  severity,          // exact severity from alert rule ("Emergency", "Warning", …)
+      device_name:     deviceName,        // exact device name
+      alert_name:      ruleName,          // exact alert rule name ("Down", "High Latency", …)
       created_at:      new Date().toISOString(),
       is_resolved:     false,
       is_acknowledged: false,
-      source:          'custom_rule',
     })
   }
 }
