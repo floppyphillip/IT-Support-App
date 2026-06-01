@@ -593,6 +593,7 @@ const LINK_EMPTY = {
   name_a: '', endpoint_a: '', names_b: [''], endpoints_b: [''],
   bandwidth: '', provider: '', circuit_id: '', location: '', monitoring_enabled: true,
   snmp_enabled: false, snmp_community: 'public', snmp_version: '2c',
+  alert_rule_ids: [],
 }
 
 function LinkFormModal({ onClose, onSaved, category = 'customer', device = null }) {
@@ -626,9 +627,33 @@ function LinkFormModal({ onClose, onSaved, category = 'customer', device = null 
     snmp_enabled:       device.snmp_enabled   ?? false,
     snmp_community:     device.snmp_community ?? 'public',
     snmp_version:       device.snmp_version   ?? '2c',
+    alert_rule_ids:     device.extra_data?.alert_rule_ids ?? [],
   } : LINK_EMPTY)
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const [availableAlertRules] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('netsupportai-alert-rules') || '[]') }
+    catch { return [] }
+  })
+  const toggleAlertRule = (id) =>
+    setForm(f => ({
+      ...f,
+      alert_rule_ids: f.alert_rule_ids.includes(id)
+        ? f.alert_rule_ids.filter(x => x !== id)
+        : [...f.alert_rule_ids, id],
+    }))
+  const SEVERITY_ORDER = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notification', 'Informational']
+  const SEVERITY_COLOR  = {
+    Emergency: 'bg-red-600 text-white', Alert: 'bg-red-500 text-white',
+    Critical: 'bg-orange-600 text-white', Error: 'bg-orange-400 text-white',
+    Warning: 'bg-amber-500 text-white', Notification: 'bg-blue-500 text-white',
+    Informational: 'bg-slate-400 text-white',
+  }
+  const getHighestSev = (rule) => {
+    const active = rule.parameters?.filter(p => p.enabled) ?? []
+    return SEVERITY_ORDER.find(s => active.some(p => p.severity === s)) ?? null
+  }
   const setEndpointB = (i, val) => setForm(f => { const a = [...f.endpoints_b]; a[i] = val; return { ...f, endpoints_b: a } })
   const setNameB = (i, val) => setForm(f => { const a = [...f.names_b]; a[i] = val; return { ...f, names_b: a } })
   const addEndpointB = () => setForm(f => ({ ...f, endpoints_b: [...f.endpoints_b, ''], names_b: [...f.names_b, ''] }))
@@ -651,13 +676,14 @@ function LinkFormModal({ onClose, onSaved, category = 'customer', device = null 
         snmp_community:  form.snmp_enabled ? form.snmp_community || undefined : undefined,
         snmp_version:    form.snmp_enabled ? form.snmp_version   || undefined : undefined,
         extra_data: {
-          link_type:   form.link_type,
-          topology:    form.topology,
-          name_a:      form.name_a.trim() || undefined,
-          names_b:     form.names_b.map(n => n.trim()),
-          bandwidth:   form.bandwidth.trim() || undefined,
-          provider:    form.provider.trim()  || undefined,
-          endpoints_b: validB.length > 0 ? validB : undefined,
+          link_type:      form.link_type,
+          topology:       form.topology,
+          name_a:         form.name_a.trim() || undefined,
+          names_b:        form.names_b.map(n => n.trim()),
+          bandwidth:      form.bandwidth.trim() || undefined,
+          provider:       form.provider.trim()  || undefined,
+          endpoints_b:    validB.length > 0 ? validB : undefined,
+          alert_rule_ids: form.alert_rule_ids,
         },
       }
       if (isEdit) {
@@ -817,6 +843,63 @@ function LinkFormModal({ onClose, onSaved, category = 'customer', device = null 
                       <option value="3">v3</option>
                     </select>
                   </div>
+                </div>
+              )}
+            </section>
+
+            {/* Alert Rules */}
+            <section className="border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <ShieldAlert className="w-3.5 h-3.5" style={{ color: 'var(--text-4)' }} />
+                <span className="text-[15px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-4)' }}>Alert Rules</span>
+                {form.alert_rule_ids.length > 0 && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
+                    {form.alert_rule_ids.length} selected
+                  </span>
+                )}
+              </div>
+              {availableAlertRules.length === 0 ? (
+                <p className="text-[13px]" style={{ color: 'var(--text-4)' }}>
+                  No alert rules configured.{' '}
+                  <Link to="/alert-rules" className="text-blue-400 hover:underline" onClick={onClose}>
+                    Create alert rules
+                  </Link>{' '}
+                  to assign them to devices.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {availableAlertRules.map(rule => {
+                    const isSel  = form.alert_rule_ids.includes(rule.id)
+                    const topSev = getHighestSev(rule)
+                    return (
+                      <div
+                        key={rule.id}
+                        onClick={() => toggleAlertRule(rule.id)}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer border transition-all ${
+                          isSel ? 'border-red-500/30 bg-red-500/[0.08]' : 'border-white/[0.07] hover:border-white/[0.14] hover:bg-white/[0.03]'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSel ? 'bg-red-500 border-red-500' : 'border-white/20'}`}>
+                          {isSel && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
+                              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate" style={{ color: 'var(--text-2)' }}>{rule.name}</p>
+                          {rule.description && (
+                            <p className="text-[11px] truncate" style={{ color: 'var(--text-4)' }}>{rule.description}</p>
+                          )}
+                        </div>
+                        {topSev && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${SEVERITY_COLOR[topSev]}`}>
+                            {topSev}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </section>
