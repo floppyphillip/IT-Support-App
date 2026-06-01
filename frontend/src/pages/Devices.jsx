@@ -616,6 +616,16 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
                     to assign them to devices.
                   </p>
                 ) : (
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px]" style={{ color: 'var(--text-4)' }}>
+                      {form.alert_rule_ids.length} of {availableAlertRules.length} selected
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => set('alert_rule_ids', availableAlertRules.map(r => r.id))} className="text-[11px] text-blue-400 hover:underline transition-colors">Select all</button>
+                      <span style={{ color: 'var(--text-4)' }}>·</span>
+                      <button type="button" onClick={() => set('alert_rule_ids', [])} className="text-[11px] text-red-400 hover:underline transition-colors">Deselect all</button>
+                    </div>
+                  </div>
                   <div className="space-y-1.5">
                     {availableAlertRules.map(rule => {
                       const isSel  = form.alert_rule_ids.includes(rule.id)
