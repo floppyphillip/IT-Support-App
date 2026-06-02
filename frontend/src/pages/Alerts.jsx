@@ -9,6 +9,7 @@ import {
   acknowledgeCustomAlert,
   resolveCustomAlert,
   deleteCustomAlert,
+  clearCooldowns,
 } from '../utils/alertEngine'
 import { fmtDateTime } from '../utils/timeFormat'
 
@@ -92,9 +93,11 @@ export default function Alerts() {
     toast.success(`Alert ${action}d`)
     // Optimistic update — avoid re-fetching and flashing skeletons
     if (action === 'delete') {
+      clearCooldowns()
       setItems(prev => prev.filter(x => x.id !== a.id))
       setTotalActive(prev => a.is_resolved ? prev : Math.max(0, prev - 1))
     } else if (action === 'resolve') {
+      clearCooldowns()
       setItems(prev => filter === 'active'
         ? prev.filter(x => x.id !== a.id)
         : prev.map(x => x.id === a.id ? { ...x, is_resolved: true } : x))

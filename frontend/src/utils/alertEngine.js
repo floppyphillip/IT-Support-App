@@ -139,6 +139,11 @@ export function deleteCustomAlert(id) {
   persistCustomAlerts(loadCustomAlerts().filter(a => a.id !== id))
 }
 
+/** Clear all in-memory cooldowns so conditions can re-fire immediately. */
+export function clearCooldowns() {
+  cooldowns.clear()
+}
+
 // ─── Toast + persist ─────────────────────────────────────────────────────────
 
 /**
