@@ -10,7 +10,6 @@ import {
   resolveCustomAlert,
   deleteCustomAlert,
 } from '../utils/alertEngine'
-import { alertsAPI } from '../api/client'
 import { fmtDateTime } from '../utils/timeFormat'
 
 const SEV_STYLE = {
@@ -64,22 +63,11 @@ export default function Alerts() {
   const [actioning, setActioning] = useState(null)
   const [totalActive, setTotalActive] = useState(0)
 
-  const load = useCallback(async () => {
+  const load = useCallback(() => {
     setLoading(true)
-    try {
-      // Backend alerts — fail silently if backend is unavailable
-      let backendAlerts = []
-      try {
-        const { data } = await alertsAPI.list({ limit: 200 })
-        backendAlerts = (data.items ?? data ?? []).map(a => ({ ...a, _source: 'backend' }))
-      } catch {
-        // Backend offline — custom-rule alerts only
-      }
-
-      // Custom-rule alerts from localStorage
-      const customAlerts = getCustomAlerts().map(a => ({ ...a, _source: 'custom_rule' }))
-
-      const all = [...customAlerts, ...backendAlerts]
+    requestAnimationFrame(() => {
+      const all = getCustomAlerts()
+        .map(a => ({ ...a, _source: 'custom_rule' }))
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
       setTotalActive(all.filter(a => !a.is_resolved).length)
@@ -90,44 +78,31 @@ export default function Alerts() {
         return true
       })
       setItems(filtered)
-    } finally {
       setLoading(false)
-    }
+    })
   }, [filter])
 
   useEffect(() => { load() }, [load])
 
-  const doAction = async (a, action) => {
+  const doAction = (a, action) => {
     setActioning(a.id)
-    try {
-      if (a._source === 'backend') {
-        if (action === 'acknowledge') await alertsAPI.acknowledge(a.id)
-        else if (action === 'resolve')   await alertsAPI.resolve(a.id)
-        else                             await alertsAPI.delete(a.id)
-      } else {
-        if (action === 'acknowledge') acknowledgeCustomAlert(a.id)
-        else if (action === 'resolve')   resolveCustomAlert(a.id)
-        else                             deleteCustomAlert(a.id)
-      }
-      toast.success(`Alert ${action}d`)
-      // Optimistic update — avoid re-fetching and flashing skeletons
-      if (action === 'delete') {
-        setItems(prev => prev.filter(x => x.id !== a.id))
-        setTotalActive(prev => a.is_resolved ? prev : Math.max(0, prev - 1))
-      } else if (action === 'resolve') {
-        setItems(prev => filter === 'active'
-          ? prev.filter(x => x.id !== a.id)
-          : prev.map(x => x.id === a.id ? { ...x, is_resolved: true } : x))
-        setTotalActive(prev => Math.max(0, prev - 1))
-      } else {
-        setItems(prev => prev.map(x => x.id === a.id ? { ...x, is_acknowledged: true } : x))
-      }
-    } catch {
-      toast.error(`Failed to ${action} alert`)
-      load()
-    } finally {
-      setActioning(null)
+    if (action === 'acknowledge') acknowledgeCustomAlert(a.id)
+    else if (action === 'resolve') resolveCustomAlert(a.id)
+    else deleteCustomAlert(a.id)
+    toast.success(`Alert ${action}d`)
+    // Optimistic update — avoid re-fetching and flashing skeletons
+    if (action === 'delete') {
+      setItems(prev => prev.filter(x => x.id !== a.id))
+      setTotalActive(prev => a.is_resolved ? prev : Math.max(0, prev - 1))
+    } else if (action === 'resolve') {
+      setItems(prev => filter === 'active'
+        ? prev.filter(x => x.id !== a.id)
+        : prev.map(x => x.id === a.id ? { ...x, is_resolved: true } : x))
+      setTotalActive(prev => Math.max(0, prev - 1))
+    } else {
+      setItems(prev => prev.map(x => x.id === a.id ? { ...x, is_acknowledged: true } : x))
     }
+    setActioning(null)
   }
 
   return (
@@ -137,7 +112,7 @@ export default function Alerts() {
           <h1 className="page-title">Alerts</h1>
           <p className="page-sub">{totalActive} active · {items.length} shown</p>
         </div>
-        <button className="btn-secondary" onClick={() => load()}>
+        <button className="btn-secondary" onClick={load}>
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />Refresh
         </button>
       </div>
