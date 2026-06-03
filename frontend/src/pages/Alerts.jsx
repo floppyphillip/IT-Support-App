@@ -85,6 +85,13 @@ export default function Alerts() {
 
   useEffect(() => { load() }, [load])
 
+  // Re-run load whenever fireAlertToasts writes a new alert in this tab
+  useEffect(() => {
+    const handler = () => load()
+    window.addEventListener('nsa:alert-saved', handler)
+    return () => window.removeEventListener('nsa:alert-saved', handler)
+  }, [load])
+
   const doAction = (a, action) => {
     setActioning(a.id)
     if (action === 'acknowledge') acknowledgeCustomAlert(a.id)

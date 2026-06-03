@@ -24,21 +24,32 @@ function loadRules() {
 
 function compare(condition, value, threshold) {
   if (value == null) return false
+  const v = Number(value)
+  const t = Number(threshold)
   switch (condition) {
-    case '>':  return value >  threshold
-    case '>=': return value >= threshold
-    case '<':  return value <  threshold
-    case '<=': return value <= threshold
-    case '=':  return value === threshold
+    case '>':  return v >  t
+    case '>=': return v >= t
+    case '<':  return v <  t
+    case '<=': return v <= t
+    case '=':  return v === t
     default:   return false
   }
 }
 
 function getDeviceRules(device) {
-  if (!device?.extra_data?.alerts_enabled) return []
+  if (!device?.extra_data?.alerts_enabled) {
+    console.debug('[AlertEngine] alerts_enabled not set on device', device?.name ?? device?.id)
+    return []
+  }
   const ids = device.extra_data?.alert_rule_ids ?? []
-  if (!ids.length) return []
-  return loadRules().filter(r => ids.includes(r.id))
+  if (!ids.length) {
+    console.debug('[AlertEngine] no alert_rule_ids on device', device?.name ?? device?.id)
+    return []
+  }
+  const allRules = loadRules()
+  const matched  = allRules.filter(r => ids.includes(r.id))
+  console.debug('[AlertEngine] device rules matched', device?.name, '→', matched.map(r => r.name))
+  return matched
 }
 
 // Map custom severity names → backend bucket (used for color coding in Alerts page)
@@ -71,7 +82,8 @@ export function checkPingAlerts(device, pingData) {
             breach = compare(p.condition, pingData.latency_ms, p.threshold)
           break
         case 'ping_timeout':
-          breach = compare(p.condition, pingData.reachable ? 0 : 1, p.threshold)
+          // Single pings return binary reachable/unreachable — fire whenever unreachable
+          breach = !pingData.reachable
           break
         case 'ping_stability': {
           const loss = pingData.packet_loss_pct ?? (pingData.reachable ? 0 : 100)
@@ -80,6 +92,7 @@ export function checkPingAlerts(device, pingData) {
         }
       }
 
+      console.debug('[AlertEngine]', rule.name, p.key, '→ breach:', breach, { pingData, threshold: p.threshold, condition: p.condition })
       if (breach) triggered.push({ severity: p.severity, ruleName: rule.name, paramKey: p.key })
     }
   }
@@ -119,7 +132,9 @@ function persistCustomAlerts(alerts) {
 function saveCustomAlert(entry) {
   const existing = loadCustomAlerts()
   existing.unshift(entry)
-  persistCustomAlerts(existing.slice(0, 200))  // keep last 200
+  persistCustomAlerts(existing.slice(0, 200))
+  // Notify same-tab listeners (e.g. Alerts page) that a new alert was written
+  window.dispatchEvent(new CustomEvent('nsa:alert-saved'))
 }
 
 /** Load all custom rule–triggered alerts (for the Alerts page) */

@@ -41,11 +41,11 @@ const PARAMETERS = [
   {
     key:              'ping_timeout',
     label:            'Ping Timeout',
-    unit:             'count',
-    defaultThreshold: 3,
+    unit:             '',
+    defaultThreshold: 1,
     defaultCondition: '>=',
     defaultSeverity:  'Critical',
-    description:      'Consecutive ping timeouts before triggering',
+    description:      'Fires whenever the device does not respond to a ping',
   },
   {
     key:              'ping_stability',
