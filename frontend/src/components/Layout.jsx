@@ -3,9 +3,12 @@ import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 import useAuthStore from '../store/authStore'
 import ForcePasswordChangeModal from './ForcePasswordChangeModal'
+import useAlertMonitor from '../hooks/useAlertMonitor'
 
 export default function Layout() {
   const forcePasswordChange = useAuthStore((s) => s.user?.force_password_change)
+  const accessToken         = useAuthStore((s) => s.accessToken)
+  useAlertMonitor(accessToken)
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)' }}>
