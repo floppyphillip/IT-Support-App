@@ -1,35 +1,46 @@
 /**
- * Background alert monitor.
+ * Background alert monitor — edge-triggered, not level-triggered.
+ *
+ * An alert fires ONLY when a parameter transitions from "ok" to "breaching".
+ * While the device stays in the same state (e.g. still unreachable), no
+ * duplicate alert is produced.  When the condition clears (recovery), the
+ * state resets so the NEXT breach fires a fresh alert.
  *
  * Two entry points:
- *  1. `nsa:device-saved` event — fired whenever a device is created/updated.
- *     If the device has alerts_enabled, it is pinged immediately and registered
- *     for ongoing polling.
- *  2. Periodic poll (every POLL_MS) — pings every registered alert-enabled device.
+ *  1. `nsa:device-saved`  — fires an immediate check the moment a device is
+ *     created/updated with alerts enabled.
+ *  2. Periodic sweep (POLL_MS) — pings every registered device.
  *
- * The module-level `alertDevices` map is the single source of truth for which
- * devices are being monitored.  It survives re-renders but resets on page refresh.
+ * State is reset globally when the user deletes or resolves alerts
+ * (`nsa:state-reset`), allowing re-alerting on an already-breaching device.
  */
 import { useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
 import { devicesAPI } from '../api/client'
 import { checkPingAlerts, fireAlertToasts } from '../utils/alertEngine'
 
-const POLL_MS       = 2 * 60_000   // full-sweep every 2 minutes
-const INTER_PING_MS = 2_000        // 2 s gap between consecutive pings
+const POLL_MS       = 2 * 60_000   // full sweep every 2 minutes
+const INTER_PING_MS = 2_000        // gap between consecutive pings
 
 // Module-level — survives re-renders, resets on page refresh
-const alertDevices = new Map()  // deviceId → full device object
+const alertDevices = new Map()  // deviceId → device object
+// `${deviceId}::${ruleName}::${paramKey}` → true (was breaching on last check)
+const paramStates  = new Map()
 
 function register(device) {
   const active =
     device?.extra_data?.alerts_enabled &&
     device?.extra_data?.alert_rule_ids?.length > 0 &&
     device?.ip_address
+
   if (active) {
     alertDevices.set(device.id, device)
   } else {
     alertDevices.delete(device.id)
+    // Drop stale state for this device
+    for (const key of paramStates.keys()) {
+      if (key.startsWith(device.id + '::')) paramStates.delete(key)
+    }
   }
   return !!active
 }
@@ -37,16 +48,43 @@ function register(device) {
 async function pingDevice(device) {
   try {
     const { data } = await devicesAPI.ping(device.id, 1)
-    const triggered = checkPingAlerts(device, data)
-    console.debug(
-      `[AlertMonitor] ${device.name} — reachable:${data.reachable}` +
-      ` latency:${data.latency_ms ?? '—'}ms triggered:${triggered.length}`
+    const current  = checkPingAlerts(device, data)
+
+    const breachingNow = new Set(
+      current.map(b => `${device.id}::${b.ruleName}::${b.paramKey}`)
     )
-    if (triggered.length > 0) {
-      fireAlertToasts(triggered, device.id, device.name, toast, true)
+
+    // State change ok → breach: collect only NEW breaches
+    const newBreaches = current.filter(({ ruleName, paramKey }) => {
+      const key = `${device.id}::${ruleName}::${paramKey}`
+      return !(paramStates.get(key) ?? false)
+    })
+
+    // Update breach states
+    for (const { ruleName, paramKey } of current) {
+      paramStates.set(`${device.id}::${ruleName}::${paramKey}`, true)
+    }
+
+    // State change breach → ok: reset so next breach triggers a fresh alert
+    for (const [key, wasBreaching] of paramStates.entries()) {
+      if (wasBreaching && key.startsWith(device.id + '::') && !breachingNow.has(key)) {
+        paramStates.set(key, false)
+        console.debug(`[AlertMonitor] ${device.name} recovered — ${key.split('::').slice(1).join('/')}`)
+      }
+    }
+
+    console.debug(
+      `[AlertMonitor] ${device.name}` +
+      ` reachable:${data.reachable} latency:${data.latency_ms ?? '—'}ms` +
+      ` newBreaches:${newBreaches.length} totalBreaching:${current.length}`
+    )
+
+    if (newBreaches.length > 0) {
+      // useCooldown=false — state-change dedup already handled above
+      fireAlertToasts(newBreaches, device.id, device.name, toast, false)
     }
   } catch (err) {
-    console.debug(`[AlertMonitor] ping API error for ${device.name}:`, err.message)
+    console.debug(`[AlertMonitor] ping error for ${device.name}:`, err.message)
   }
 }
 
@@ -56,7 +94,7 @@ export default function useAlertMonitor(accessToken) {
   useEffect(() => {
     if (!accessToken) return
 
-    // ── Immediate check when any device is created/updated ─────────────────────
+    // Immediate check when a device is created/updated
     function onDeviceSaved({ detail }) {
       const device = detail?.device
       if (!device?.id) return
@@ -67,12 +105,18 @@ export default function useAlertMonitor(accessToken) {
       )
       if (active) pingDevice(device)
     }
-    window.addEventListener('nsa:device-saved', onDeviceSaved)
 
-    // ── Periodic full sweep ─────────────────────────────────────────────────────
+    // User dismissed/resolved alerts — reset states so devices can re-alert
+    function onStateReset() {
+      for (const key of paramStates.keys()) paramStates.set(key, false)
+      console.debug('[AlertMonitor] state reset — all breach states cleared')
+    }
+
+    window.addEventListener('nsa:device-saved', onDeviceSaved)
+    window.addEventListener('nsa:state-reset',  onStateReset)
+
     async function sweep() {
-      // Sync registry from the API on each sweep so adds/removes from other
-      // sessions or pages are picked up without needing a page refresh.
+      // Sync registry from API to pick up changes made in other sessions
       try {
         const [nocRes, custRes] = await Promise.allSettled([
           devicesAPI.list({ limit: 200, category: 'noc' }),
@@ -84,27 +128,26 @@ export default function useAlertMonitor(accessToken) {
         ]
         all.forEach(register)
       } catch {
-        // API offline — keep using the existing registry from prior events/sweeps
+        // API offline — use existing registry
       }
 
       const targets = [...alertDevices.values()]
-      console.debug(`[AlertMonitor] sweep — ${targets.length} device(s) to check`)
+      console.debug(`[AlertMonitor] sweep — ${targets.length} device(s)`)
 
       for (const device of targets) {
         await pingDevice(device)
-        if (targets.length > 1) {
-          await new Promise(r => setTimeout(r, INTER_PING_MS))
-        }
+        if (targets.length > 1) await new Promise(r => setTimeout(r, INTER_PING_MS))
       }
 
       timerRef.current = setTimeout(sweep, POLL_MS)
     }
 
-    sweep()   // run immediately on mount
+    sweep()
 
     return () => {
       clearTimeout(timerRef.current)
       window.removeEventListener('nsa:device-saved', onDeviceSaved)
+      window.removeEventListener('nsa:state-reset',  onStateReset)
     }
   }, [accessToken])
 }

@@ -154,9 +154,10 @@ export function deleteCustomAlert(id) {
   persistCustomAlerts(loadCustomAlerts().filter(a => a.id !== id))
 }
 
-/** Clear all in-memory cooldowns so conditions can re-fire immediately. */
+/** Clear cooldowns and reset monitor breach states so conditions can re-fire. */
 export function clearCooldowns() {
   cooldowns.clear()
+  window.dispatchEvent(new CustomEvent('nsa:state-reset'))
 }
 
 // ─── Toast + persist ─────────────────────────────────────────────────────────
