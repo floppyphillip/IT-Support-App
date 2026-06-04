@@ -169,7 +169,7 @@ export default function Alerts() {
                 <div className="flex items-start gap-3">
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${s.dot}`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 mb-1 font-mono">{heading}</p>
+                    <p className="text-sm font-semibold text-gray-900 mb-1">{heading}</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {a._source === 'custom_rule' && (
                         <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">
