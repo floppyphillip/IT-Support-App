@@ -1,21 +1,54 @@
 /**
- * Background alert monitor — runs while the app is open.
+ * Background alert monitor.
  *
- * Every POLL_MS it fetches all devices that have alerts_enabled=true,
- * pings each one via the API, evaluates the device's custom alert rules,
- * and writes to localStorage when a rule breaches.
+ * Two entry points:
+ *  1. `nsa:device-saved` event — fired whenever a device is created/updated.
+ *     If the device has alerts_enabled, it is pinged immediately and registered
+ *     for ongoing polling.
+ *  2. Periodic poll (every POLL_MS) — pings every registered alert-enabled device.
  *
- * This is the frontend counterpart to the planned backend Celery worker.
- * It does NOT use the manual ping tool in the UI — it runs silently in the
- * background as long as Layout is mounted.
+ * The module-level `alertDevices` map is the single source of truth for which
+ * devices are being monitored.  It survives re-renders but resets on page refresh.
  */
 import { useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
 import { devicesAPI } from '../api/client'
 import { checkPingAlerts, fireAlertToasts } from '../utils/alertEngine'
 
-const POLL_MS        = 5 * 60_000   // ping every 5 minutes
-const INTER_PING_MS  = 3_000        // 3 s gap between device pings to avoid hammering
+const POLL_MS       = 2 * 60_000   // full-sweep every 2 minutes
+const INTER_PING_MS = 2_000        // 2 s gap between consecutive pings
+
+// Module-level — survives re-renders, resets on page refresh
+const alertDevices = new Map()  // deviceId → full device object
+
+function register(device) {
+  const active =
+    device?.extra_data?.alerts_enabled &&
+    device?.extra_data?.alert_rule_ids?.length > 0 &&
+    device?.ip_address
+  if (active) {
+    alertDevices.set(device.id, device)
+  } else {
+    alertDevices.delete(device.id)
+  }
+  return !!active
+}
+
+async function pingDevice(device) {
+  try {
+    const { data } = await devicesAPI.ping(device.id, 1)
+    const triggered = checkPingAlerts(device, data)
+    console.debug(
+      `[AlertMonitor] ${device.name} — reachable:${data.reachable}` +
+      ` latency:${data.latency_ms ?? '—'}ms triggered:${triggered.length}`
+    )
+    if (triggered.length > 0) {
+      fireAlertToasts(triggered, device.id, device.name, toast, true)
+    }
+  } catch (err) {
+    console.debug(`[AlertMonitor] ping API error for ${device.name}:`, err.message)
+  }
+}
 
 export default function useAlertMonitor(accessToken) {
   const timerRef = useRef(null)
@@ -23,48 +56,55 @@ export default function useAlertMonitor(accessToken) {
   useEffect(() => {
     if (!accessToken) return
 
-    async function run() {
+    // ── Immediate check when any device is created/updated ─────────────────────
+    function onDeviceSaved({ detail }) {
+      const device = detail?.device
+      if (!device?.id) return
+      const active = register(device)
+      console.debug(
+        `[AlertMonitor] device-saved "${device.name}" — ` +
+        (active ? 'registered, pinging now' : 'not alert-enabled, skipped')
+      )
+      if (active) pingDevice(device)
+    }
+    window.addEventListener('nsa:device-saved', onDeviceSaved)
+
+    // ── Periodic full sweep ─────────────────────────────────────────────────────
+    async function sweep() {
+      // Sync registry from the API on each sweep so adds/removes from other
+      // sessions or pages are picked up without needing a page refresh.
       try {
-        // Fetch all NOC + customer devices; filter to alert-enabled ones
         const [nocRes, custRes] = await Promise.allSettled([
           devicesAPI.list({ limit: 200, category: 'noc' }),
           devicesAPI.list({ limit: 200, category: 'customer' }),
         ])
-
-        const noc  = nocRes.status  === 'fulfilled' ? (nocRes.value.data.items  ?? []) : []
-        const cust = custRes.status === 'fulfilled' ? (custRes.value.data.items ?? []) : []
-
-        const targets = [...noc, ...cust].filter(
-          d => d.extra_data?.alerts_enabled &&
-               d.extra_data?.alert_rule_ids?.length > 0 &&
-               d.ip_address
-        )
-
-        console.debug(`[AlertMonitor] checking ${targets.length} alert-enabled device(s)`)
-
-        for (const device of targets) {
-          try {
-            const { data } = await devicesAPI.ping(device.id, 1)
-            const triggered = checkPingAlerts(device, data)
-            if (triggered.length > 0) {
-              fireAlertToasts(triggered, device.id, device.name, toast, true)
-            }
-            console.debug(`[AlertMonitor] ${device.name} → reachable:${data.reachable} latency:${data.latency_ms}ms triggered:${triggered.length}`)
-          } catch {
-            // This device's ping failed at the API level — skip it
-          }
-
-          // Brief pause between devices so we don't flood the backend
-          await new Promise(r => setTimeout(r, INTER_PING_MS))
-        }
+        const all = [
+          ...(nocRes.status  === 'fulfilled' ? (nocRes.value.data.items  ?? []) : []),
+          ...(custRes.status === 'fulfilled' ? (custRes.value.data.items ?? []) : []),
+        ]
+        all.forEach(register)
       } catch {
-        // Could not fetch device list — backend offline, skip this cycle
+        // API offline — keep using the existing registry from prior events/sweeps
       }
 
-      timerRef.current = setTimeout(run, POLL_MS)
+      const targets = [...alertDevices.values()]
+      console.debug(`[AlertMonitor] sweep — ${targets.length} device(s) to check`)
+
+      for (const device of targets) {
+        await pingDevice(device)
+        if (targets.length > 1) {
+          await new Promise(r => setTimeout(r, INTER_PING_MS))
+        }
+      }
+
+      timerRef.current = setTimeout(sweep, POLL_MS)
     }
 
-    run()
-    return () => clearTimeout(timerRef.current)
+    sweep()   // run immediately on mount
+
+    return () => {
+      clearTimeout(timerRef.current)
+      window.removeEventListener('nsa:device-saved', onDeviceSaved)
+    }
   }, [accessToken])
 }

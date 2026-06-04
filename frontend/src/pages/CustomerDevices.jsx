@@ -111,10 +111,16 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'customer' }) {
         telnet_password: form.telnet_enabled ? form.telnet_password || undefined : undefined,
       }
       if (isEdit) {
-        await devicesAPI.update(device.id, payload)
+        const { data } = await devicesAPI.update(device.id, payload)
+        window.dispatchEvent(new CustomEvent('nsa:device-saved', {
+          detail: { device: { ...data, extra_data: payload.extra_data } },
+        }))
         toast.success('Device updated')
       } else {
-        await devicesAPI.create(payload)
+        const { data } = await devicesAPI.create(payload)
+        window.dispatchEvent(new CustomEvent('nsa:device-saved', {
+          detail: { device: { ...data, extra_data: payload.extra_data } },
+        }))
         toast.success('Device added successfully')
       }
       onSaved()
