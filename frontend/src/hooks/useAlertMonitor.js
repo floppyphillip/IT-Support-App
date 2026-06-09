@@ -17,7 +17,7 @@
 import { useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
 import { devicesAPI } from '../api/client'
-import { checkPingAlerts, fireAlertToasts } from '../utils/alertEngine'
+import { checkPingAlerts, fireAlertToasts, fireRecoveryAlert } from '../utils/alertEngine'
 
 const POLL_MS       = 2 * 60_000   // full sweep every 2 minutes
 const INTER_PING_MS = 2_000        // gap between consecutive pings
@@ -65,11 +65,17 @@ async function pingDevice(device) {
       paramStates.set(`${device.id}::${ruleName}::${paramKey}`, true)
     }
 
-    // State change breach → ok: reset so next breach triggers a fresh alert
+    // State change breach → ok: reset and fire recovery if it was a timeout breach
+    let didFireRecovery = false
     for (const [key, wasBreaching] of paramStates.entries()) {
       if (wasBreaching && key.startsWith(device.id + '::') && !breachingNow.has(key)) {
         paramStates.set(key, false)
         console.debug(`[AlertMonitor] ${device.name} recovered — ${key.split('::').slice(1).join('/')}`)
+        // Fire one recovery alert when the device becomes reachable again
+        if (!didFireRecovery && key.split('::').pop() === 'ping_timeout') {
+          fireRecoveryAlert(device.name, toast)
+          didFireRecovery = true
+        }
       }
     }
 

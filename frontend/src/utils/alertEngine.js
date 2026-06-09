@@ -160,6 +160,25 @@ export function clearCooldowns() {
   window.dispatchEvent(new CustomEvent('nsa:state-reset'))
 }
 
+/**
+ * Save a recovery (device back online) alert and show a success toast.
+ * Format: "Device Name: Up  DD Mon YYYY, HH:MM:SS"
+ */
+export function fireRecoveryAlert(deviceName, toastFn) {
+  const timestamp = fmtDateTime(new Date())
+  const msg = `${deviceName}: Up  ${timestamp}`
+  toastFn.success(msg, { duration: 6000 })
+  saveCustomAlert({
+    id:              `ca-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    severity_level:  'recovery',
+    device_name:     deviceName,
+    alert_name:      'Up',
+    created_at:      new Date().toISOString(),
+    is_resolved:     false,
+    is_acknowledged: false,
+  })
+}
+
 // ─── Toast + persist ─────────────────────────────────────────────────────────
 
 /**

@@ -15,17 +15,18 @@ import { fmtDateTime } from '../utils/timeFormat'
 
 const SEV_STYLE = {
   // Custom rule severity levels (exact names)
-  Emergency:     { dot: 'bg-red-600',    badge: 'bg-red-600/20 text-red-500 border-red-600/30',          left: 'border-l-red-600'    },
-  Alert:         { dot: 'bg-red-500',    badge: 'bg-red-500/20 text-red-400 border-red-500/30',          left: 'border-l-red-500'    },
-  Critical:      { dot: 'bg-orange-500', badge: 'bg-orange-500/20 text-orange-400 border-orange-500/30', left: 'border-l-orange-500' },
-  Error:         { dot: 'bg-orange-400', badge: 'bg-orange-400/20 text-orange-300 border-orange-400/30', left: 'border-l-orange-400' },
-  Warning:       { dot: 'bg-amber-500',  badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30',    left: 'border-l-amber-500'  },
-  Notification:  { dot: 'bg-blue-500',   badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',       left: 'border-l-blue-500'   },
-  Informational: { dot: 'bg-slate-400',  badge: 'bg-slate-400/20 text-slate-400 border-slate-400/30',    left: 'border-l-slate-400'  },
+  Emergency:     { dot: 'bg-red-600',      badge: 'bg-red-600/20 text-red-500 border-red-600/30',            left: 'border-l-red-600'      },
+  Alert:         { dot: 'bg-red-500',      badge: 'bg-red-500/20 text-red-400 border-red-500/30',            left: 'border-l-red-500'      },
+  Critical:      { dot: 'bg-orange-500',   badge: 'bg-orange-500/20 text-orange-400 border-orange-500/30',   left: 'border-l-orange-500'   },
+  Error:         { dot: 'bg-orange-400',   badge: 'bg-orange-400/20 text-orange-300 border-orange-400/30',   left: 'border-l-orange-400'   },
+  Warning:       { dot: 'bg-amber-500',    badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30',      left: 'border-l-amber-500'    },
+  Notification:  { dot: 'bg-blue-500',     badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',         left: 'border-l-blue-500'     },
+  Informational: { dot: 'bg-slate-400',    badge: 'bg-slate-400/20 text-slate-400 border-slate-400/30',      left: 'border-l-slate-400'    },
+  recovery:      { dot: 'bg-emerald-500',  badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', left: 'border-l-emerald-500'  },
   // Backend severity buckets (capitalised)
-  critical:      { dot: 'bg-red-500',    badge: 'bg-red-500/20 text-red-400 border-red-500/30',          left: 'border-l-red-500'    },
-  warning:       { dot: 'bg-amber-500',  badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30',    left: 'border-l-amber-500'  },
-  info:          { dot: 'bg-blue-500',   badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',       left: 'border-l-blue-500'   },
+  critical:      { dot: 'bg-red-500',      badge: 'bg-red-500/20 text-red-400 border-red-500/30',            left: 'border-l-red-500'      },
+  warning:       { dot: 'bg-amber-500',    badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30',      left: 'border-l-amber-500'    },
+  info:          { dot: 'bg-blue-500',     badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30',         left: 'border-l-blue-500'     },
 }
 const DEFAULT_STYLE = SEV_STYLE.info
 
@@ -41,8 +42,11 @@ const TABS = [['active', 'Active'], ['all', 'All'], ['resolved', 'Resolved']]
 function buildHeading(a) {
   const ts = fmtDateTime(a.created_at)
 
+  if (a.severity_level === 'recovery') {
+    return `${a.device_name}: Up  ${ts}`
+  }
+
   if (a._source === 'custom_rule') {
-    // All three fields are stored explicitly — use them directly
     return `${a.severity_level} - ${a.device_name}: ${a.alert_name}  ${ts}`
   }
 
