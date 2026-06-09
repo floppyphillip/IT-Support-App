@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Plus, Search, Edit2, Trash2, X, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { fmtDateTime } from '../utils/timeFormat'
+import { SNMP_VALUE_CATALOG, SNMP_CATS } from '../utils/snmpCatalog'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -67,14 +68,26 @@ const PARAMETERS = [
   },
 ]
 
-const defaultParams = () =>
-  PARAMETERS.map(p => ({
+const defaultSnmpParams = () =>
+  SNMP_VALUE_CATALOG.map(o => ({
+    key:       `snmp_${o.key}`,
+    oidKey:    o.key,
+    enabled:   false,
+    condition: '>',
+    threshold: o.unit === '%' ? 80 : 0,
+    severity:  'Warning',
+  }))
+
+const defaultParams = () => [
+  ...PARAMETERS.map(p => ({
     key:       p.key,
     enabled:   false,
     condition: p.defaultCondition,
     threshold: p.defaultThreshold,
     severity:  p.defaultSeverity,
-  }))
+  })),
+  ...defaultSnmpParams(),
+]
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'netsupportai-alert-rules'
@@ -97,9 +110,27 @@ function AlertRuleModal({ rule, onClose, onSave }) {
   const isEdit = !!rule?.id
   const [name, setName]         = useState(rule?.name ?? '')
   const [description, setDesc]  = useState(rule?.description ?? '')
-  const [params, setParams]     = useState(
-    rule?.parameters ?? defaultParams()
-  )
+  const [params, setParams] = useState(() => {
+    const base     = defaultParams()
+    const existing = rule?.parameters ?? []
+    // Preserve saved values; add any new params (e.g. newly-added SNMP OIDs) as disabled
+    return base.map(def => existing.find(e => e.key === def.key) ?? def)
+  })
+
+  // Pre-expand categories that already have enabled SNMP params
+  const [openCats, setOpenCats] = useState(() => {
+    const active = new Set()
+    for (const p of (rule?.parameters ?? [])) {
+      if (p.enabled && p.key?.startsWith('snmp_')) {
+        const meta = SNMP_VALUE_CATALOG.find(o => `snmp_${o.key}` === p.key)
+        if (meta) active.add(meta.cat)
+      }
+    }
+    return active
+  })
+
+  const toggleCat = cat =>
+    setOpenCats(prev => { const s = new Set(prev); s.has(cat) ? s.delete(cat) : s.add(cat); return s })
 
   const setParam = (key, field, val) =>
     setParams(prev => prev.map(p => p.key === key ? { ...p, [field]: val } : p))
@@ -270,6 +301,127 @@ function AlertRuleModal({ rule, onClose, onSave }) {
                   )
                 })}
               </div>
+            </div>
+          </div>
+
+          {/* ── SNMP Parameters ─────────────────────────────────────────── */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1 h-4 rounded-full bg-blue-500 flex-shrink-0" />
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">SNMP Parameters</h3>
+              <span className="text-[10px] text-gray-400">Evaluated against latest sensor data collected from device</span>
+            </div>
+
+            <div className="rounded-xl overflow-hidden border border-gray-200">
+              {/* Column headers */}
+              <div
+                className="grid gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider"
+                style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', gridTemplateColumns: '20px 1fr 90px 130px 60px 160px' }}
+              >
+                <span /><span>OID / Metric</span><span>Condition</span><span>Threshold</span><span>Unit</span><span>Severity Level</span>
+              </div>
+
+              {SNMP_CATS.map(cat => {
+                const oids    = SNMP_VALUE_CATALOG.filter(o => o.cat === cat)
+                const isOpen  = openCats.has(cat)
+                const enabled = oids.filter(o => params.find(p => p.key === `snmp_${o.key}`)?.enabled).length
+
+                return (
+                  <div key={cat} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    {/* Category header */}
+                    <div
+                      className="flex items-center justify-between px-4 py-2.5 cursor-pointer select-none"
+                      style={{ background: '#f9fafb' }}
+                      onClick={() => toggleCat(cat)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-600">{cat}</span>
+                        {enabled > 0 && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500">
+                            {enabled} active
+                          </span>
+                        )}
+                      </div>
+                      {isOpen
+                        ? <ChevronUp className="w-3.5 h-3.5 text-gray-400" />
+                        : <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
+                    </div>
+
+                    {/* OID rows */}
+                    {isOpen && (
+                      <div className="divide-y divide-gray-100">
+                        {oids.map(meta => {
+                          const p = params.find(x => x.key === `snmp_${meta.key}`)
+                          if (!p) return null
+                          const vendorHint = meta.vendors
+                            ? meta.vendors.join(', ')
+                            : 'all vendors'
+                          return (
+                            <div
+                              key={meta.key}
+                              className={`grid gap-3 px-4 py-3 items-center transition-colors ${p.enabled ? 'bg-white' : 'bg-gray-50/40'}`}
+                              style={{ gridTemplateColumns: '20px 1fr 90px 130px 60px 160px' }}
+                            >
+                              {/* Checkbox */}
+                              <div
+                                className={`w-4 h-4 rounded border-2 flex items-center justify-center cursor-pointer transition-all flex-shrink-0 ${p.enabled ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}
+                                onClick={() => setParam(`snmp_${meta.key}`, 'enabled', !p.enabled)}
+                              >
+                                {p.enabled && (
+                                  <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
+                                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                )}
+                              </div>
+
+                              {/* Label */}
+                              <div className={`min-w-0 ${!p.enabled && 'opacity-40'}`}>
+                                <p className="text-sm font-semibold text-gray-800">{meta.label}</p>
+                                <p className="text-[11px] text-gray-400 truncate font-mono">{meta.key} · {vendorHint}</p>
+                              </div>
+
+                              {/* Condition */}
+                              <select
+                                className="input text-sm py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                                value={p.condition}
+                                disabled={!p.enabled}
+                                onChange={e => setParam(`snmp_${meta.key}`, 'condition', e.target.value)}
+                              >
+                                {CONDITIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                              </select>
+
+                              {/* Threshold */}
+                              <input
+                                type="number"
+                                min={0}
+                                className="input text-sm py-1.5 font-mono disabled:opacity-40 disabled:cursor-not-allowed"
+                                value={p.threshold}
+                                disabled={!p.enabled}
+                                onChange={e => setParam(`snmp_${meta.key}`, 'threshold', Number(e.target.value))}
+                              />
+
+                              {/* Unit */}
+                              <span className={`text-xs font-mono text-gray-400 ${!p.enabled && 'opacity-40'}`}>
+                                {meta.unit || '—'}
+                              </span>
+
+                              {/* Severity */}
+                              <select
+                                className="input text-sm py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                                value={p.severity}
+                                disabled={!p.enabled}
+                                onChange={e => setParam(`snmp_${meta.key}`, 'severity', e.target.value)}
+                              >
+                                {SEVERITY_LEVELS.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>

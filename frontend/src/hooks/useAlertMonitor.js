@@ -17,7 +17,7 @@
 import { useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
 import { devicesAPI } from '../api/client'
-import { checkPingAlerts, fireAlertToasts, fireRecoveryAlert } from '../utils/alertEngine'
+import { checkPingAlerts, checkSnmpAlerts, fireAlertToasts, fireRecoveryAlert } from '../utils/alertEngine'
 
 const POLL_MS       = 2 * 60_000   // full sweep every 2 minutes
 const INTER_PING_MS = 2_000        // gap between consecutive pings
@@ -45,10 +45,30 @@ function register(device) {
   return !!active
 }
 
+function readSnmpData(deviceId) {
+  try {
+    const sensors = JSON.parse(localStorage.getItem(`netsupportai-sensors-${deviceId}`) ?? '[]')
+    const out = {}
+    const tenMin = 10 * 60_000
+    for (const s of sensors) {
+      if (s.type !== 'snmp' || !s.oidKey || !s.data?.length) continue
+      const last = s.data[s.data.length - 1]
+      if (last?.value == null) continue
+      if (Date.now() - new Date(last.ts ?? last.t).getTime() > tenMin) continue  // stale
+      out[s.oidKey] = last.value
+    }
+    return out
+  } catch { return {} }
+}
+
 async function pingDevice(device) {
   try {
     const { data } = await devicesAPI.ping(device.id, 1)
-    const current  = checkPingAlerts(device, data)
+    const snmpData = readSnmpData(device.id)
+    const current  = [
+      ...checkPingAlerts(device, data),
+      ...checkSnmpAlerts(device, snmpData),
+    ]
 
     const breachingNow = new Set(
       current.map(b => `${device.id}::${b.ruleName}::${b.paramKey}`)

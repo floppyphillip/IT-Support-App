@@ -101,6 +101,28 @@ export function checkPingAlerts(device, pingData) {
 }
 
 /**
+ * Evaluate the latest SNMP sensor values against the device's alert rules.
+ * snmpData: { oidKey → latestNumericValue }
+ * Returns array of { severity, ruleName, paramKey }
+ */
+export function checkSnmpAlerts(device, snmpData) {
+  const rules = getDeviceRules(device)
+  const triggered = []
+  for (const rule of rules) {
+    for (const p of rule.parameters ?? []) {
+      if (!p.enabled || !p.key?.startsWith('snmp_')) continue
+      const value = snmpData[p.oidKey]
+      if (value == null) continue
+      if (compare(p.condition, value, p.threshold)) {
+        console.debug(`[AlertEngine] ${rule.name} ${p.key} → breach: true`, { value, threshold: p.threshold, condition: p.condition })
+        triggered.push({ severity: p.severity, ruleName: rule.name, paramKey: p.key })
+      }
+    }
+  }
+  return triggered
+}
+
+/**
  * Evaluate a calculated jitter value (ms) against the device's alert rules.
  */
 export function checkJitterAlerts(device, jitterMs) {
