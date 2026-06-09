@@ -7,6 +7,7 @@ const HEIGHT = parseInt(process.argv[5] || '900')
 
 const browser = await puppeteer.launch({
   headless: 'new',
+  executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   args: ['--no-sandbox', '--disable-setuid-sandbox'],
 })
 
@@ -17,7 +18,7 @@ await page.evaluateOnNewDocument(() => {
   const mockState = {
     state: {
       user: { id: 'dev-user-1', full_name: 'Adewale Okafor', email: 'admin@netsupportai.com', role: 'superadmin' },
-      token: 'dev-mock-token-for-screenshot',
+      accessToken: 'dev-mock-token-for-screenshot',
     },
     version: 0,
   }
@@ -57,7 +58,7 @@ await page.evaluateOnNewDocument(() => {
 })
 
 await page.goto(PAGE, { waitUntil: 'networkidle2', timeout: 15000 })
-await page.waitForTimeout(2000)
+await new Promise(r => setTimeout(r, 2000))
 await page.evaluate(() => {
   document.querySelectorAll('[class*="toast"]').forEach(el => el.remove())
 })

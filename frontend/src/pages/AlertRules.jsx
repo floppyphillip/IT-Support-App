@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Search, Edit2, Trash2, X, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, X, ShieldAlert, ChevronDown, ChevronUp, Layers, WifiOff } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { fmtDateTime } from '../utils/timeFormat'
 import { SNMP_VALUE_CATALOG, SNMP_CATS } from '../utils/snmpCatalog'
@@ -87,6 +87,50 @@ const defaultParams = () => [
     severity:  p.defaultSeverity,
   })),
   ...defaultSnmpParams(),
+]
+
+// ─── Param meta lookup — covers both ping and SNMP entries ───────────────────
+function getParamMeta(key) {
+  const ping = PARAMETERS.find(m => m.key === key)
+  if (ping) return { label: ping.label, unit: ping.unit }
+  const oidKey = key.startsWith('snmp_') ? key.slice(5) : key
+  const snmp = SNMP_VALUE_CATALOG.find(o => o.key === oidKey)
+  if (snmp) return { label: snmp.label, unit: snmp.unit || '—' }
+  return { label: key, unit: '—' }
+}
+
+// ─── Quick-create templates ───────────────────────────────────────────────────
+const RULE_TEMPLATES = [
+  {
+    id:          'tpl-iface-down',
+    icon:        WifiOff,
+    label:       'Interface Down',
+    description: 'Fires when any of interfaces 1–12 reports ifOperStatus = 2 (down)',
+    build: () => {
+      const base = defaultParams()
+      return base.map(p => {
+        if (!p.key.startsWith('snmp_ifOperStatus_')) return p
+        return { ...p, enabled: true, condition: '=', threshold: 2, severity: 'Critical' }
+      })
+    },
+    name:        'Interface Down Monitor',
+    ruleName:    'Fires when any monitored interface transitions to down state (ifOperStatus = 2)',
+  },
+  {
+    id:          'tpl-iface-admin-down',
+    icon:        WifiOff,
+    label:       'Interface Admin Down',
+    description: 'Fires when any of interfaces 1–8 is administratively disabled (ifAdminStatus = 2)',
+    build: () => {
+      const base = defaultParams()
+      return base.map(p => {
+        if (!p.key.startsWith('snmp_ifAdminStatus_')) return p
+        return { ...p, enabled: true, condition: '=', threshold: 2, severity: 'Warning' }
+      })
+    },
+    name:        'Interface Admin Down Monitor',
+    ruleName:    'Fires when any interface is administratively shut down (ifAdminStatus = 2)',
+  },
 ]
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
@@ -531,17 +575,17 @@ function AlertRuleRow({ rule, onEdit, onDelete }) {
               </div>
               <div className="divide-y divide-red-50 bg-white">
                 {active.map(p => {
-                  const meta = PARAMETERS.find(m => m.key === p.key)
+                  const meta = getParamMeta(p.key)
                   return (
                     <div
                       key={p.key}
                       className="grid gap-3 px-3 py-2 items-center"
                       style={{ gridTemplateColumns: '1fr 60px 80px 50px 1fr' }}
                     >
-                      <span className="text-[13px] font-medium text-gray-800">{meta?.label}</span>
+                      <span className="text-[13px] font-medium text-gray-800">{meta.label}</span>
                       <span className="text-[13px] font-mono text-gray-500">{p.condition}</span>
                       <span className="text-[13px] font-mono font-semibold text-gray-800">{p.threshold}</span>
-                      <span className="text-[13px] font-mono text-gray-400">{meta?.unit}</span>
+                      <span className="text-[13px] font-mono text-gray-400">{meta.unit}</span>
                       <span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${SEVERITY_STYLES[p.severity]}`}>
                           {p.severity}
@@ -561,9 +605,20 @@ function AlertRuleRow({ rule, onEdit, onDelete }) {
 
 // ─── AlertRules page ──────────────────────────────────────────────────────────
 export default function AlertRules() {
-  const [rules, setRules]   = useState(load)
-  const [search, setSearch] = useState('')
-  const [modal, setModal]   = useState(null)
+  const [rules, setRules]       = useState(load)
+  const [search, setSearch]     = useState('')
+  const [modal, setModal]       = useState(null)
+  const [tplOpen, setTplOpen]   = useState(false)
+  const tplRef                  = useRef(null)
+
+  const applyTemplate = (tpl) => {
+    setTplOpen(false)
+    setModal({
+      name:        tpl.name,
+      description: tpl.ruleName,
+      parameters:  tpl.build(),
+    })
+  }
 
   const filtered = rules.filter(r =>
     !search ||
@@ -603,9 +658,49 @@ export default function AlertRules() {
           <h1 className="page-title">Alert Rules</h1>
           <p className="page-sub">{rules.length} rule{rules.length !== 1 ? 's' : ''} configured</p>
         </div>
-        <button className="btn-primary" onClick={() => setModal({})}>
-          <Plus className="w-4 h-4" /> Create Alert Rule
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Template picker */}
+          <div className="relative" ref={tplRef}>
+            <button
+              className="btn-secondary flex items-center gap-1.5"
+              onClick={() => setTplOpen(v => !v)}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              From Template
+              <ChevronDown className={`w-3 h-3 transition-transform ${tplOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {tplOpen && (
+              <div
+                className="absolute right-0 mt-1.5 w-72 rounded-xl shadow-xl border border-gray-200 bg-white z-30 overflow-hidden"
+                style={{ animation: 'expandDown 0.15s ease-out' }}
+                onMouseLeave={() => setTplOpen(false)}
+              >
+                <div className="px-3 py-2 border-b border-gray-100">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Quick Templates</p>
+                </div>
+                {RULE_TEMPLATES.map(tpl => (
+                  <button
+                    key={tpl.id}
+                    className="w-full flex items-start gap-3 px-3 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
+                    onClick={() => applyTemplate(tpl)}
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <tpl.icon className="w-3.5 h-3.5 text-amber-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-800">{tpl.label}</p>
+                      <p className="text-[11px] text-gray-400 leading-snug">{tpl.description}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button className="btn-primary" onClick={() => setModal({})}>
+            <Plus className="w-4 h-4" /> Create Alert Rule
+          </button>
+        </div>
       </div>
 
       {/* Search */}
