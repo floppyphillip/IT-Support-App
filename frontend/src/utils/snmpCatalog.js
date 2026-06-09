@@ -40,31 +40,29 @@ export const SNMP_VALUE_CATALOG = [
   { key: 'sysUpTime',                label: 'System Uptime',        unit: 's',  cat: 'System',     vendors: null },
   { key: 'ifNumber',                 label: 'Interface Count',      unit: '',   cat: 'System',     vendors: null },
 
-  // ── Interfaces — IF-MIB (RFC 2863) — all device types, all vendors ──────────
-  // ifOperStatus: 1=up  2=down  3=testing  4=unknown  5=dormant  6=notPresent  7=lowerLayerDown
-  // Alert condition "= 2" fires when the interface goes down.
-  { key: 'ifOperStatus_1',  label: 'Interface 1 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifOperStatus_2',  label: 'Interface 2 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifOperStatus_3',  label: 'Interface 3 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifOperStatus_4',  label: 'Interface 4 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifOperStatus_5',  label: 'Interface 5 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifOperStatus_6',  label: 'Interface 6 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifOperStatus_7',  label: 'Interface 7 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifOperStatus_8',  label: 'Interface 8 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifOperStatus_9',  label: 'Interface 9 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifOperStatus_10', label: 'Interface 10 – Oper Status', unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifOperStatus_11', label: 'Interface 11 – Oper Status', unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifOperStatus_12', label: 'Interface 12 – Oper Status', unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-
-  // ifAdminStatus: 1=up  2=down  3=testing  (administratively configured state)
-  { key: 'ifAdminStatus_1', label: 'Interface 1 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifAdminStatus_2', label: 'Interface 2 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifAdminStatus_3', label: 'Interface 3 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifAdminStatus_4', label: 'Interface 4 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifAdminStatus_5', label: 'Interface 5 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifAdminStatus_6', label: 'Interface 6 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifAdminStatus_7', label: 'Interface 7 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
-  { key: 'ifAdminStatus_8', label: 'Interface 8 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, defaultCondition: '=', defaultThreshold: 2, description: '1=up  2=down  3=testing' },
+  // ── Interfaces — IF-MIB (RFC 2863) — kept for DeviceDetail sensor charts only ─
+  // alertHidden: true — excluded from AlertRules params. Use 'iface_state' param in
+  // the main Parameters section instead (monitors all interfaces with Up/Down select).
+  { key: 'ifOperStatus_1',  label: 'Interface 1 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifOperStatus_2',  label: 'Interface 2 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifOperStatus_3',  label: 'Interface 3 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifOperStatus_4',  label: 'Interface 4 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifOperStatus_5',  label: 'Interface 5 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifOperStatus_6',  label: 'Interface 6 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifOperStatus_7',  label: 'Interface 7 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifOperStatus_8',  label: 'Interface 8 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifOperStatus_9',  label: 'Interface 9 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifOperStatus_10', label: 'Interface 10 – Oper Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifOperStatus_11', label: 'Interface 11 – Oper Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifOperStatus_12', label: 'Interface 12 – Oper Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifAdminStatus_1', label: 'Interface 1 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifAdminStatus_2', label: 'Interface 2 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifAdminStatus_3', label: 'Interface 3 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifAdminStatus_4', label: 'Interface 4 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifAdminStatus_5', label: 'Interface 5 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifAdminStatus_6', label: 'Interface 6 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifAdminStatus_7', label: 'Interface 7 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifAdminStatus_8', label: 'Interface 8 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
 ]
 
 export const SNMP_CATS = [...new Set(SNMP_VALUE_CATALOG.map(o => o.cat))]

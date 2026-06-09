@@ -123,6 +123,39 @@ export function checkSnmpAlerts(device, snmpData) {
 }
 
 /**
+ * Evaluate interface Up/Down state across all polled ifOperStatus_N OIDs.
+ * Fires a separate breach entry per interface that matches the rule threshold.
+ * Returns array of { severity, ruleName, paramKey, ifaceNum, ifaceState }
+ */
+export function checkIfaceAlerts(device, snmpData) {
+  const rules = getDeviceRules(device)
+  const triggered = []
+  for (const rule of rules) {
+    for (const p of rule.parameters ?? []) {
+      if (!p.enabled || p.key !== 'iface_state') continue
+      const targetState = Number(p.threshold)  // 1=up  2=down
+      for (const [oidKey, value] of Object.entries(snmpData)) {
+        const m = oidKey.match(/^ifOperStatus_(\d+)$/)
+        if (!m || value == null) continue
+        if (Number(value) === targetState) {
+          const ifaceNum   = m[1]
+          const ifaceState = targetState === 1 ? 'Up' : 'Down'
+          console.debug(`[AlertEngine] ${rule.name} Interface ${ifaceNum} → ${ifaceState}`)
+          triggered.push({
+            severity:   p.severity,
+            ruleName:   rule.name,
+            paramKey:   `iface_state_${ifaceNum}`,
+            ifaceNum,
+            ifaceState,
+          })
+        }
+      }
+    }
+  }
+  return triggered
+}
+
+/**
  * Evaluate a calculated jitter value (ms) against the device's alert rules.
  */
 export function checkJitterAlerts(device, jitterMs) {
@@ -215,7 +248,7 @@ export function fireRecoveryAlert(deviceName, toastFn) {
 export function fireAlertToasts(triggered, deviceId, deviceName, toastFn, useCooldown = false) {
   const now = Date.now()
 
-  for (const { severity, ruleName, paramKey } of triggered) {
+  for (const { severity, ruleName, paramKey, ifaceNum, ifaceState } of triggered) {
     if (useCooldown) {
       const key = `${deviceId}::${ruleName}::${paramKey}`
       if (now - (cooldowns.get(key) ?? 0) < COOLDOWN_MS) continue
@@ -223,20 +256,27 @@ export function fireAlertToasts(triggered, deviceId, deviceName, toastFn, useCoo
     }
 
     const timestamp = fmtDateTime(new Date())
-    const title     = `${severity} - ${deviceName}: ${ruleName}`
-    const fullMsg   = `${title}  ${timestamp}`
+    let fullMsg, alertName, isIfaceAlert = false
 
-    // Toast notification
+    if (ifaceNum != null) {
+      // Interface alert format: "Severity – Interface N: Down  DateTime"
+      alertName    = `Interface ${ifaceNum}: ${ifaceState}`
+      fullMsg      = `${severity} – ${alertName}  ${timestamp}`
+      isIfaceAlert = true
+    } else {
+      alertName = ruleName
+      fullMsg   = `${severity} - ${deviceName}: ${ruleName}  ${timestamp}`
+    }
+
     if (HIGH_SEV.has(severity)) toastFn.error(fullMsg, { duration: 6000 })
     else toastFn(fullMsg, { icon: '🔔', duration: 5000 })
 
-    // Persist to Alerts page store — store each field explicitly so the
-    // Alerts page can build the heading without any string parsing
     saveCustomAlert({
       id:              `ca-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      severity_level:  severity,          // exact severity from alert rule ("Emergency", "Warning", …)
-      device_name:     deviceName,        // exact device name
-      alert_name:      ruleName,          // exact alert rule name ("Down", "High Latency", …)
+      severity_level:  severity,
+      device_name:     deviceName,
+      alert_name:      alertName,
+      iface_alert:     isIfaceAlert,
       created_at:      new Date().toISOString(),
       is_resolved:     false,
       is_acknowledged: false,

@@ -46,6 +46,11 @@ function buildHeading(a) {
     return `${a.device_name}: Up  ${ts}`
   }
 
+  if (a.iface_alert) {
+    // Format: "Severity – Interface N: Down  DateTime"
+    return `${a.severity_level} – ${a.alert_name}  ${ts}`
+  }
+
   if (a._source === 'custom_rule') {
     return `${a.severity_level} - ${a.device_name}: ${a.alert_name}  ${ts}`
   }
@@ -174,6 +179,9 @@ export default function Alerts() {
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${s.dot}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 mb-1">{heading}</p>
+                    {a.iface_alert && a.device_name && (
+                      <p className="text-[11px] font-mono text-gray-500 mb-1">{a.device_name}</p>
+                    )}
                     <div className="flex items-center gap-2 flex-wrap">
                       {a._source === 'custom_rule' && (
                         <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">

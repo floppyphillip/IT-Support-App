@@ -658,11 +658,19 @@ function DeviceFormModal({ device, onClose, onSaved, category = 'noc' }) {
                               <p className="text-[11px] truncate" style={{ color: 'var(--text-4)' }}>{rule.description}</p>
                             )}
                           </div>
-                          {topSev && (
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${SEVERITY_COLOR[topSev]}`}>
-                              {topSev}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {rule.parameters?.some(p => p.enabled && p.key === 'iface_state') && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                                style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.22)' }}>
+                                All interfaces
+                              </span>
+                            )}
+                            {topSev && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${SEVERITY_COLOR[topSev]}`}>
+                                {topSev}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )
                     })}

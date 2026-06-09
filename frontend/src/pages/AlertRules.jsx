@@ -66,10 +66,20 @@ const PARAMETERS = [
     defaultSeverity:  'Notification',
     description:      'Variation in ping response time',
   },
+  {
+    key:              'iface_state',
+    label:            'Interface Up / Down',
+    unit:             '',
+    defaultThreshold: 2,        // 2 = Down, 1 = Up
+    defaultCondition: '=',      // fixed — not user-configurable
+    defaultSeverity:  'Critical',
+    description:      'Monitors all interfaces on the device — fires when any interface changes state',
+    ifaceParam:       true,     // special rendering: Up/Down select instead of numeric threshold
+  },
 ]
 
 const defaultSnmpParams = () =>
-  SNMP_VALUE_CATALOG.map(o => ({
+  SNMP_VALUE_CATALOG.filter(o => !o.alertHidden).map(o => ({
     key:       `snmp_${o.key}`,
     oidKey:    o.key,
     enabled:   false,
@@ -89,10 +99,13 @@ const defaultParams = () => [
   ...defaultSnmpParams(),
 ]
 
-// ─── Param meta lookup — covers both ping and SNMP entries ───────────────────
+// ─── Param meta lookup — covers ping, iface, and SNMP entries ─────────────────
 function getParamMeta(key) {
-  const ping = PARAMETERS.find(m => m.key === key)
-  if (ping) return { label: ping.label, unit: ping.unit }
+  const param = PARAMETERS.find(m => m.key === key)
+  if (param) return { label: param.label, unit: param.unit }
+  // iface_state_N keys produced by the alert engine (per-interface breach)
+  const ifaceMatch = key.match(/^iface_state_(\d+)$/)
+  if (ifaceMatch) return { label: `Interface ${ifaceMatch[1]} – State`, unit: '' }
   const oidKey = key.startsWith('snmp_') ? key.slice(5) : key
   const snmp = SNMP_VALUE_CATALOG.find(o => o.key === oidKey)
   if (snmp) return { label: snmp.label, unit: snmp.unit || '—' }
@@ -105,31 +118,23 @@ const RULE_TEMPLATES = [
     id:          'tpl-iface-down',
     icon:        WifiOff,
     label:       'Interface Down',
-    description: 'Fires when any of interfaces 1–12 reports ifOperStatus = 2 (down)',
-    build: () => {
-      const base = defaultParams()
-      return base.map(p => {
-        if (!p.key.startsWith('snmp_ifOperStatus_')) return p
-        return { ...p, enabled: true, condition: '=', threshold: 2, severity: 'Critical' }
-      })
-    },
-    name:        'Interface Down Monitor',
-    ruleName:    'Fires when any monitored interface transitions to down state (ifOperStatus = 2)',
+    description: 'Fires when any interface on the device goes down (ifOperStatus = 2)',
+    build: () => defaultParams().map(p =>
+      p.key === 'iface_state' ? { ...p, enabled: true, threshold: 2, severity: 'Critical' } : p
+    ),
+    name:     'Interface Down Monitor',
+    ruleName: 'Fires when any interface transitions to down state — monitors all device interfaces',
   },
   {
-    id:          'tpl-iface-admin-down',
+    id:          'tpl-iface-up',
     icon:        WifiOff,
-    label:       'Interface Admin Down',
-    description: 'Fires when any of interfaces 1–8 is administratively disabled (ifAdminStatus = 2)',
-    build: () => {
-      const base = defaultParams()
-      return base.map(p => {
-        if (!p.key.startsWith('snmp_ifAdminStatus_')) return p
-        return { ...p, enabled: true, condition: '=', threshold: 2, severity: 'Warning' }
-      })
-    },
-    name:        'Interface Admin Down Monitor',
-    ruleName:    'Fires when any interface is administratively shut down (ifAdminStatus = 2)',
+    label:       'Interface Up',
+    description: 'Fires when any interface on the device comes back up (ifOperStatus = 1)',
+    build: () => defaultParams().map(p =>
+      p.key === 'iface_state' ? { ...p, enabled: true, threshold: 1, severity: 'Notification' } : p
+    ),
+    name:     'Interface Up Monitor',
+    ruleName: 'Fires when any interface transitions to up state — monitors all device interfaces',
   },
 ]
 
@@ -279,6 +284,76 @@ function AlertRuleModal({ rule, onClose, onSave }) {
               <div className="divide-y divide-gray-100">
                 {PARAMETERS.map(meta => {
                   const p = params.find(x => x.key === meta.key)
+
+                  // ── Interface Up/Down — special row ──────────────────────
+                  if (meta.ifaceParam) {
+                    return (
+                      <div
+                        key={meta.key}
+                        className={`grid gap-3 px-4 py-3 items-center transition-colors ${p.enabled ? 'bg-white' : 'bg-gray-50/60'}`}
+                        style={{ gridTemplateColumns: '20px 1fr 280px 160px' }}
+                      >
+                        {/* Checkbox */}
+                        <div
+                          className={`w-4 h-4 rounded border-2 flex items-center justify-center cursor-pointer transition-all flex-shrink-0 ${p.enabled ? 'bg-red-500 border-red-500' : 'border-gray-300'}`}
+                          onClick={() => setParam(meta.key, 'enabled', !p.enabled)}
+                        >
+                          {p.enabled && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
+                              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+
+                        {/* Label */}
+                        <div className={`min-w-0 ${!p.enabled && 'opacity-40'}`}>
+                          <p className="text-sm font-semibold text-gray-800">{meta.label}</p>
+                          <p className="text-[11px] text-gray-400 truncate">{meta.description}</p>
+                        </div>
+
+                        {/* Up / Down selector (replaces condition + threshold + unit) */}
+                        <div className={`flex items-center gap-2 ${!p.enabled && 'opacity-40'}`}>
+                          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap flex-shrink-0">
+                            Alert when interface is
+                          </span>
+                          <div className="flex rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                            {[{ label: 'Down', value: 2 }, { label: 'Up', value: 1 }].map(opt => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                disabled={!p.enabled}
+                                onClick={() => setParam(meta.key, 'threshold', opt.value)}
+                                className={`px-4 py-1.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed ${
+                                  p.threshold === opt.value
+                                    ? opt.value === 2
+                                      ? 'bg-red-500 text-white'
+                                      : 'bg-emerald-500 text-white'
+                                    : 'bg-white text-gray-400 hover:bg-gray-50'
+                                }`}
+                                style={{ borderRight: opt.value === 2 ? '1px solid #e5e7eb' : 'none' }}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Severity */}
+                        <select
+                          className="input text-sm py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                          value={p.severity}
+                          disabled={!p.enabled}
+                          onChange={e => setParam(meta.key, 'severity', e.target.value)}
+                        >
+                          {SEVERITY_LEVELS.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )
+                  }
+
+                  // ── Standard ping / jitter rows ───────────────────────────
                   return (
                     <div
                       key={meta.key}
@@ -575,7 +650,9 @@ function AlertRuleRow({ rule, onEdit, onDelete }) {
               </div>
               <div className="divide-y divide-red-50 bg-white">
                 {active.map(p => {
-                  const meta = getParamMeta(p.key)
+                  const meta    = getParamMeta(p.key)
+                  const isIface = p.key === 'iface_state'
+                  const stateLabel = isIface ? (p.threshold === 1 ? 'Up' : 'Down') : null
                   return (
                     <div
                       key={p.key}
@@ -583,9 +660,17 @@ function AlertRuleRow({ rule, onEdit, onDelete }) {
                       style={{ gridTemplateColumns: '1fr 60px 80px 50px 1fr' }}
                     >
                       <span className="text-[13px] font-medium text-gray-800">{meta.label}</span>
-                      <span className="text-[13px] font-mono text-gray-500">{p.condition}</span>
-                      <span className="text-[13px] font-mono font-semibold text-gray-800">{p.threshold}</span>
-                      <span className="text-[13px] font-mono text-gray-400">{meta.unit}</span>
+                      <span className="text-[13px] font-mono text-gray-500">{isIface ? '=' : p.condition}</span>
+                      <span className={`text-[13px] font-semibold ${
+                        isIface
+                          ? stateLabel === 'Down' ? 'text-red-500' : 'text-emerald-500'
+                          : 'text-gray-800 font-mono'
+                      }`}>
+                        {isIface ? stateLabel : p.threshold}
+                      </span>
+                      <span className="text-[13px] font-mono text-gray-400">
+                        {isIface ? '—' : meta.unit}
+                      </span>
                       <span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${SEVERITY_STYLES[p.severity]}`}>
                           {p.severity}

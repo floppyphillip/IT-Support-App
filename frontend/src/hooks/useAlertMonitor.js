@@ -17,7 +17,7 @@
 import { useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
 import { devicesAPI } from '../api/client'
-import { checkPingAlerts, checkSnmpAlerts, fireAlertToasts, fireRecoveryAlert } from '../utils/alertEngine'
+import { checkPingAlerts, checkSnmpAlerts, checkIfaceAlerts, fireAlertToasts, fireRecoveryAlert } from '../utils/alertEngine'
 
 const POLL_MS       = 2 * 60_000   // full sweep every 2 minutes
 const INTER_PING_MS = 2_000        // gap between consecutive pings
@@ -68,6 +68,7 @@ async function pingDevice(device) {
     const current  = [
       ...checkPingAlerts(device, data),
       ...checkSnmpAlerts(device, snmpData),
+      ...checkIfaceAlerts(device, snmpData),
     ]
 
     const breachingNow = new Set(
