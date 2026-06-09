@@ -17,7 +17,7 @@
 import { useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
 import { devicesAPI } from '../api/client'
-import { checkPingAlerts, checkSnmpAlerts, checkIfaceAlerts, fireAlertToasts, fireRecoveryAlert } from '../utils/alertEngine'
+import { checkPingAlerts, checkSnmpAlerts, checkIfaceAlerts, fireAlertToasts, fireRecoveryAlert, fireIfaceUpAlert } from '../utils/alertEngine'
 
 const POLL_MS       = 2 * 60_000   // full sweep every 2 minutes
 const INTER_PING_MS = 2_000        // gap between consecutive pings
@@ -86,14 +86,18 @@ async function pingDevice(device) {
       paramStates.set(`${device.id}::${ruleName}::${paramKey}`, true)
     }
 
-    // State change breach → ok: reset and fire recovery if it was a timeout breach
+    // State change breach → ok: reset and fire recovery alert
     let didFireRecovery = false
     for (const [key, wasBreaching] of paramStates.entries()) {
       if (wasBreaching && key.startsWith(device.id + '::') && !breachingNow.has(key)) {
         paramStates.set(key, false)
         console.debug(`[AlertMonitor] ${device.name} recovered — ${key.split('::').slice(1).join('/')}`)
-        // Fire one recovery alert when the device becomes reachable again
-        if (!didFireRecovery && key.split('::').pop() === 'ping_timeout') {
+        const paramKey = key.split('::').pop()
+        const ifaceMatch = paramKey?.match(/^iface_state_(\d+)$/)
+        if (ifaceMatch) {
+          // Interface came back up — fire with severity_up from the rule
+          fireIfaceUpAlert(device, ifaceMatch[1], toast)
+        } else if (!didFireRecovery && paramKey === 'ping_timeout') {
           fireRecoveryAlert(device.name, toast)
           didFireRecovery = true
         }

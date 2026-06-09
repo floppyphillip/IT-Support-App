@@ -67,14 +67,14 @@ const PARAMETERS = [
     description:      'Variation in ping response time',
   },
   {
-    key:              'iface_state',
-    label:            'Interface Up / Down',
-    unit:             '',
-    defaultThreshold: 2,        // 2 = Down, 1 = Up
-    defaultCondition: '=',      // fixed — not user-configurable
-    defaultSeverity:  'Critical',
-    description:      'Monitors all interfaces on the device — fires when any interface changes state',
-    ifaceParam:       true,     // special rendering: Up/Down select instead of numeric threshold
+    key:                  'iface_state',
+    label:                'Interface Up / Down',
+    unit:                 '',
+    defaultCondition:     '=',
+    defaultSeverityDown:  'Critical',
+    defaultSeverityUp:    'Notification',
+    description:          'Monitors all interfaces on the device — fires with separate severity for each state change',
+    ifaceParam:           true,
   },
 ]
 
@@ -89,13 +89,13 @@ const defaultSnmpParams = () =>
   }))
 
 const defaultParams = () => [
-  ...PARAMETERS.map(p => ({
-    key:       p.key,
-    enabled:   false,
-    condition: p.defaultCondition,
-    threshold: p.defaultThreshold,
-    severity:  p.defaultSeverity,
-  })),
+  ...PARAMETERS.map(p => {
+    const base = { key: p.key, enabled: false, condition: p.defaultCondition }
+    if (p.ifaceParam) {
+      return { ...base, severity_down: p.defaultSeverityDown ?? 'Critical', severity_up: p.defaultSeverityUp ?? 'Notification' }
+    }
+    return { ...base, threshold: p.defaultThreshold, severity: p.defaultSeverity }
+  }),
   ...defaultSnmpParams(),
 ]
 
@@ -115,26 +115,17 @@ function getParamMeta(key) {
 // ─── Quick-create templates ───────────────────────────────────────────────────
 const RULE_TEMPLATES = [
   {
-    id:          'tpl-iface-down',
+    id:          'tpl-iface-monitor',
     icon:        WifiOff,
-    label:       'Interface Down',
-    description: 'Fires when any interface on the device goes down (ifOperStatus = 2)',
+    label:       'Interface Monitor',
+    description: 'Fires on any interface state change — separate severity for Down and Up transitions',
     build: () => defaultParams().map(p =>
-      p.key === 'iface_state' ? { ...p, enabled: true, threshold: 2, severity: 'Critical' } : p
+      p.key === 'iface_state'
+        ? { ...p, enabled: true, severity_down: 'Critical', severity_up: 'Notification' }
+        : p
     ),
-    name:     'Interface Down Monitor',
-    ruleName: 'Fires when any interface transitions to down state — monitors all device interfaces',
-  },
-  {
-    id:          'tpl-iface-up',
-    icon:        WifiOff,
-    label:       'Interface Up',
-    description: 'Fires when any interface on the device comes back up (ifOperStatus = 1)',
-    build: () => defaultParams().map(p =>
-      p.key === 'iface_state' ? { ...p, enabled: true, threshold: 1, severity: 'Notification' } : p
-    ),
-    name:     'Interface Up Monitor',
-    ruleName: 'Fires when any interface transitions to up state — monitors all device interfaces',
+    name:     'Interface Monitor',
+    ruleName: 'Fires on any interface state change — monitors all device interfaces',
   },
 ]
 
@@ -291,7 +282,7 @@ function AlertRuleModal({ rule, onClose, onSave }) {
                       <div
                         key={meta.key}
                         className={`grid gap-3 px-4 py-3 items-center transition-colors ${p.enabled ? 'bg-white' : 'bg-gray-50/60'}`}
-                        style={{ gridTemplateColumns: '20px 1fr 280px 160px' }}
+                        style={{ gridTemplateColumns: '20px 1fr auto' }}
                       >
                         {/* Checkbox */}
                         <div
@@ -311,44 +302,35 @@ function AlertRuleModal({ rule, onClose, onSave }) {
                           <p className="text-[11px] text-gray-400 truncate">{meta.description}</p>
                         </div>
 
-                        {/* Up / Down selector (replaces condition + threshold + unit) */}
-                        <div className={`flex items-center gap-2 ${!p.enabled && 'opacity-40'}`}>
-                          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap flex-shrink-0">
-                            Alert when interface is
-                          </span>
-                          <div className="flex rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
-                            {[{ label: 'Down', value: 2 }, { label: 'Up', value: 1 }].map(opt => (
-                              <button
-                                key={opt.value}
-                                type="button"
-                                disabled={!p.enabled}
-                                onClick={() => setParam(meta.key, 'threshold', opt.value)}
-                                className={`px-4 py-1.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed ${
-                                  p.threshold === opt.value
-                                    ? opt.value === 2
-                                      ? 'bg-red-500 text-white'
-                                      : 'bg-emerald-500 text-white'
-                                    : 'bg-white text-gray-400 hover:bg-gray-50'
-                                }`}
-                                style={{ borderRight: opt.value === 2 ? '1px solid #e5e7eb' : 'none' }}
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
+                        {/* Down severity + Up severity */}
+                        <div className={`flex items-center gap-3 ${!p.enabled && 'opacity-40'}`}>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[9px] font-bold text-red-500 uppercase tracking-wider">Down</span>
+                            <select
+                              className="input text-sm py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                              value={p.severity_down ?? 'Critical'}
+                              disabled={!p.enabled}
+                              onChange={e => setParam(meta.key, 'severity_down', e.target.value)}
+                            >
+                              {SEVERITY_LEVELS.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Up</span>
+                            <select
+                              className="input text-sm py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                              value={p.severity_up ?? 'Notification'}
+                              disabled={!p.enabled}
+                              onChange={e => setParam(meta.key, 'severity_up', e.target.value)}
+                            >
+                              {SEVERITY_LEVELS.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                              ))}
+                            </select>
                           </div>
                         </div>
-
-                        {/* Severity */}
-                        <select
-                          className="input text-sm py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                          value={p.severity}
-                          disabled={!p.enabled}
-                          onChange={e => setParam(meta.key, 'severity', e.target.value)}
-                        >
-                          {SEVERITY_LEVELS.map(s => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
                       </div>
                     )
                   }
@@ -652,7 +634,26 @@ function AlertRuleRow({ rule, onEdit, onDelete }) {
                 {active.map(p => {
                   const meta    = getParamMeta(p.key)
                   const isIface = p.key === 'iface_state'
-                  const stateLabel = isIface ? (p.threshold === 1 ? 'Up' : 'Down') : null
+                  if (isIface) {
+                    return (
+                      <div key={p.key} className="grid gap-3 px-3 py-2 items-center"
+                        style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+                        <span className="text-[13px] font-medium text-gray-800">{meta.label}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-[9px] font-bold text-red-500 uppercase tracking-wider">Down</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${SEVERITY_STYLES[p.severity_down ?? 'Critical']}`}>
+                            {p.severity_down ?? 'Critical'}
+                          </span>
+                        </span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Up</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${SEVERITY_STYLES[p.severity_up ?? 'Notification']}`}>
+                            {p.severity_up ?? 'Notification'}
+                          </span>
+                        </span>
+                      </div>
+                    )
+                  }
                   return (
                     <div
                       key={p.key}
@@ -660,17 +661,9 @@ function AlertRuleRow({ rule, onEdit, onDelete }) {
                       style={{ gridTemplateColumns: '1fr 60px 80px 50px 1fr' }}
                     >
                       <span className="text-[13px] font-medium text-gray-800">{meta.label}</span>
-                      <span className="text-[13px] font-mono text-gray-500">{isIface ? '=' : p.condition}</span>
-                      <span className={`text-[13px] font-semibold ${
-                        isIface
-                          ? stateLabel === 'Down' ? 'text-red-500' : 'text-emerald-500'
-                          : 'text-gray-800 font-mono'
-                      }`}>
-                        {isIface ? stateLabel : p.threshold}
-                      </span>
-                      <span className="text-[13px] font-mono text-gray-400">
-                        {isIface ? '—' : meta.unit}
-                      </span>
+                      <span className="text-[13px] font-mono text-gray-500">{p.condition}</span>
+                      <span className="text-[13px] font-mono font-semibold text-gray-800">{p.threshold}</span>
+                      <span className="text-[13px] font-mono text-gray-400">{meta.unit}</span>
                       <span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${SEVERITY_STYLES[p.severity]}`}>
                           {p.severity}

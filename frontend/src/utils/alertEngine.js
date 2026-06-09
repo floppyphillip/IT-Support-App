@@ -123,8 +123,9 @@ export function checkSnmpAlerts(device, snmpData) {
 }
 
 /**
- * Evaluate interface Up/Down state across all polled ifOperStatus_N OIDs.
- * Fires a separate breach entry per interface that matches the rule threshold.
+ * Evaluate interface DOWN state across all polled ifOperStatus_N OIDs.
+ * Only fires when an interface transitions to down (value === 2).
+ * Up transitions are handled separately by fireIfaceUpAlert (called on recovery).
  * Returns array of { severity, ruleName, paramKey, ifaceNum, ifaceState }
  */
 export function checkIfaceAlerts(device, snmpData) {
@@ -133,26 +134,53 @@ export function checkIfaceAlerts(device, snmpData) {
   for (const rule of rules) {
     for (const p of rule.parameters ?? []) {
       if (!p.enabled || p.key !== 'iface_state') continue
-      const targetState = Number(p.threshold)  // 1=up  2=down
       for (const [oidKey, value] of Object.entries(snmpData)) {
         const m = oidKey.match(/^ifOperStatus_(\d+)$/)
         if (!m || value == null) continue
-        if (Number(value) === targetState) {
-          const ifaceNum   = m[1]
-          const ifaceState = targetState === 1 ? 'Up' : 'Down'
-          console.debug(`[AlertEngine] ${rule.name} Interface ${ifaceNum} → ${ifaceState}`)
+        if (Number(value) === 2) {
+          const ifaceNum = m[1]
+          const severity = p.severity_down ?? p.severity ?? 'Critical'
+          console.debug(`[AlertEngine] ${rule.name} Interface ${ifaceNum} → Down (severity: ${severity})`)
           triggered.push({
-            severity:   p.severity,
+            severity,
             ruleName:   rule.name,
             paramKey:   `iface_state_${ifaceNum}`,
             ifaceNum,
-            ifaceState,
+            ifaceState: 'Down',
           })
         }
       }
     }
   }
   return triggered
+}
+
+/**
+ * Fire an "interface Up" alert for a single interface using the severity_up
+ * from the device's assigned rule(s). Called by useAlertMonitor on recovery.
+ */
+export function fireIfaceUpAlert(device, ifaceNum, toastFn) {
+  const rules    = getDeviceRules(device)
+  let severityUp = 'Notification'
+  for (const rule of rules) {
+    const p = rule.parameters?.find(x => x.enabled && x.key === 'iface_state')
+    if (p) { severityUp = p.severity_up ?? 'Notification'; break }
+  }
+  const alertName = `Interface ${ifaceNum}: Up`
+  const timestamp = fmtDateTime(new Date())
+  const fullMsg   = `${severityUp} – ${alertName}  ${timestamp}`
+  if (HIGH_SEV.has(severityUp)) toastFn.error(fullMsg, { duration: 6000 })
+  else toastFn(fullMsg, { icon: '🔔', duration: 5000 })
+  saveCustomAlert({
+    id:              `ca-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    severity_level:  severityUp,
+    device_name:     device.name ?? device.hostname ?? '',
+    alert_name:      alertName,
+    iface_alert:     true,
+    created_at:      new Date().toISOString(),
+    is_resolved:     false,
+    is_acknowledged: false,
+  })
 }
 
 /**
