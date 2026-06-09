@@ -73,8 +73,8 @@ const defaultSnmpParams = () =>
     key:       `snmp_${o.key}`,
     oidKey:    o.key,
     enabled:   false,
-    condition: '>',
-    threshold: o.unit === '%' ? 80 : 0,
+    condition: o.defaultCondition ?? '>',
+    threshold: o.defaultThreshold ?? (o.unit === '%' ? 80 : 0),
     severity:  'Warning',
   }))
 

@@ -22,7 +22,7 @@ AI-powered Remote IT Support SaaS Platform for network engineers and ISPs.
 | Terminal | xterm.js + WebSocket |
 | Database | PostgreSQL 16 + SQLAlchemy 2.0 (async) + Alembic |
 | Cache / Queue | Redis 7 + Celery 5 |
-| AI | Anthropic Claude (claude-sonnet-4) |
+| AI | Anthropic Claude (claude-sonnet-4-6) |
 | Remote Access | Paramiko SSH + WebSocket proxy |
 | Monitoring | icmplib (ICMP ping) + pysnmp (SNMP polling) |
 | Notifications | SMTP + Twilio (WhatsApp) + Telegram Bot API |
@@ -39,139 +39,294 @@ netsupportai/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py
-│   │   ├── database.py          # AsyncSession, expire_on_commit=False, autoflush=False
+│   │   ├── config.py
+│   │   ├── database.py              # AsyncSession, expire_on_commit=False, autoflush=False
 │   │   ├── models/
-│   │   │   ├── device.py        # Device model — extra_data: Mapped[dict|None] (JSON)
+│   │   │   ├── device.py            # extra_data: Mapped[dict|None] = mapped_column(JSON)
 │   │   │   ├── device_metric.py
 │   │   │   ├── config_backup.py
-│   │   │   └── ...
+│   │   │   ├── alert.py
+│   │   │   ├── ticket.py
+│   │   │   ├── user.py
+│   │   │   ├── client.py
+│   │   │   ├── customer.py
+│   │   │   ├── audit_log.py
+│   │   │   └── notification_settings.py
 │   │   ├── routers/
-│   │   │   ├── devices.py       # CRUD, ping, SNMP, SSH backup, metrics
-│   │   │   ├── alerts.py
+│   │   │   ├── devices.py           # CRUD, ping, SNMP, SSH backup, metrics
+│   │   │   ├── alerts.py            # alert CRUD + WebSocket device state events
 │   │   │   ├── tickets.py
-│   │   │   └── ...
+│   │   │   ├── auth.py
+│   │   │   ├── ai_diagnostics.py
+│   │   │   ├── customers.py
+│   │   │   ├── clients.py
+│   │   │   ├── dashboard.py         # /ws WebSocket for live stats + activity feed
+│   │   │   ├── remote_access.py
+│   │   │   └── notifications.py
+│   │   ├── schemas/                 # Pydantic v2 request/response models
 │   │   ├── services/
-│   │   │   ├── ping_service.py
-│   │   │   ├── snmp_service.py  # poll_device, walk_storage_table, get_interface_table
-│   │   │   └── ssh_service.py
-│   │   ├── schemas/
+│   │   │   ├── ping_service.py      # ICMP ping via icmplib
+│   │   │   ├── snmp_service.py      # poll_device, walk_storage_table, get_interface_table
+│   │   │   ├── ssh_service.py       # Paramiko SSH + config backup
+│   │   │   ├── ai_service.py        # Anthropic SDK (streaming)
+│   │   │   ├── auth_service.py
+│   │   │   ├── ticket_service.py
+│   │   │   └── notification_service.py
+│   │   ├── workers/
+│   │   │   ├── celery_app.py        # Celery + Redis broker
+│   │   │   ├── alert_task.py        # Per-alert Celery tasks
+│   │   │   └── monitor_task.py      # Celery Beat — periodic device monitoring
 │   │   └── utils/
-│   ├── alembic/
+│   │       ├── security.py          # JWT + bcrypt helpers
+│   │       ├── limiter.py           # Rate limiting (slowapi)
+│   │       ├── logger.py
+│   │       └── network_parser.py
+│   ├── alembic/                     # DB migrations
+│   ├── seed.py                      # Dev seed data
 │   └── requirements.txt
 │
-└── frontend/
-    ├── vite.config.js            # /api → localhost:8000, /ws → ws://localhost:8000
-    ├── tailwind.config.js
-    └── src/
-        ├── App.jsx               # Route definitions — all auth routes under <Layout />
-        ├── index.css             # Global styles, animations (expandDown, shimmer, etc.)
-        ├── api/
-        │   └── client.js         # Axios instance + API modules (devicesAPI, alertsAPI, …)
-        ├── store/
-        │   └── authStore.js      # useAuthStore, useNotifStore, useAlertStore (Zustand)
-        ├── hooks/
-        │   ├── useWebSocket.js   # Auto-reconnect WS → dispatches to stores
-        │   └── useAuth.js        # signIn / signOut with navigation
-        ├── components/
-        │   ├── Layout.jsx        # Sidebar + Navbar + Outlet
-        │   ├── Sidebar.jsx       # Role-filtered nav links
-        │   ├── Navbar.jsx
-        │   ├── Terminal.jsx      # xterm.js SSH terminal
-        │   └── ...
-        ├── utils/
-        │   ├── timeFormat.js     # fmtTime, fmtDateTime — respects user 12/24h pref
-        │   └── alertEngine.js    # checkPingAlerts, fireAlertToasts, calcJitter
-        └── pages/
-            ├── Dashboard.jsx
-            ├── Tickets.jsx / TicketDetail.jsx / NewTicket.jsx
-            ├── Devices.jsx               # NOC devices — ping modal, SNMP, alert rules
-            ├── DeviceDetail.jsx          # Live metrics, SNMP sensors (PRTG charts), backups
-            ├── CustomerDevices.jsx       # Link + customer devices
-            ├── CustomerManagement.jsx    # Customer CRUD + service details + devices
-            ├── AIDiagnostics.jsx
-            ├── RemoteAccess.jsx
-            ├── Alerts.jsx                # Custom-rule-triggered alerts
-            ├── Settings.jsx              # Profile, Team, Date/Time (12/24h, NTP)
-            ├── Services.jsx              # Service catalog tool
-            ├── AlertRules.jsx            # Custom alert rule builder
-            └── ...
+├── frontend/
+│   ├── vite.config.js               # /api → localhost:8000, /ws → ws://localhost:8000
+│   ├── tailwind.config.js
+│   └── src/
+│       ├── App.jsx                  # All auth routes as children of <Layout />
+│       ├── index.css                # Design tokens (CSS vars), global animations
+│       ├── api/
+│       │   └── client.js            # Axios instance + all typed API modules
+│       ├── store/
+│       │   └── authStore.js         # useAuthStore (Zustand, persisted)
+│       ├── hooks/
+│       │   ├── useWebSocket.js      # Generic auto-reconnect WebSocket hook
+│       │   ├── useAuth.js           # isAuthenticated + login/logout helpers
+│       │   └── useAlertMonitor.js   # Background ping monitor — edge-triggered alerts
+│       ├── components/
+│       │   ├── Layout.jsx           # Sidebar + Navbar + Outlet + useAlertMonitor
+│       │   ├── Sidebar.jsx          # Role-filtered nav (Main / Tools / Account groups)
+│       │   ├── Navbar.jsx
+│       │   ├── Terminal.jsx         # xterm.js SSH terminal over WebSocket
+│       │   ├── Skeleton.jsx         # SkeletonCard, SkeletonTable, SkeletonStats
+│       │   ├── EmptyState.jsx
+│       │   ├── StatsCard.jsx
+│       │   └── StatusIndicator.jsx
+│       ├── utils/
+│       │   ├── timeFormat.js        # fmtTime, fmtDateTime — respects 12/24h preference
+│       │   ├── alertEngine.js       # checkPingAlerts, checkSnmpAlerts, fireAlertToasts,
+│       │   │                        # fireRecoveryAlert, clearCooldowns + localStorage helpers
+│       │   └── snmpCatalog.js       # SNMP_VALUE_CATALOG — single source of truth for all OIDs
+│       └── pages/
+│           ├── Login.jsx
+│           ├── Dashboard.jsx        # Live stats cards + activity feed (WebSocket)
+│           ├── Tickets.jsx          # List with SLA badges and priority strips
+│           ├── TicketDetail.jsx     # AI diagnosis, streaming chat, comments
+│           ├── NewTicket.jsx
+│           ├── Devices.jsx          # NOC devices: CRUD, EndpointPopup ping, SNMP, link devices
+│           ├── DeviceDetail.jsx     # SNMP sensors (PRTG charts), config backups, state log
+│           ├── CustomerDevices.jsx  # Customer devices: link + endpoint devices, ping
+│           ├── CustomerManagement.jsx  # Customer CRUD + service details + inline columns
+│           ├── AIDiagnostics.jsx
+│           ├── RemoteAccess.jsx     # SSH terminal
+│           ├── Alerts.jsx           # Custom-rule alerts (edge-triggered) + recovery alerts
+│           ├── AlertRules.jsx       # Rule builder: ping params + SNMP OID params (grouped by category)
+│           ├── Services.jsx         # Service catalog (localStorage)
+│           ├── Settings.jsx         # Profile, Team, Date/Time (12/24h + NTP/Manual)
+│           ├── UserManagement.jsx
+│           ├── Clients.jsx
+│           └── ClientPortal.jsx
+│
+├── deploy/
+│   ├── setup_server.sh
+│   ├── backup.sh
+│   └── netsupportai.service         # systemd unit
+├── nginx/
+│   ├── nginx.conf
+│   └── ssl.conf
+├── docker-compose.yml
+├── docker-compose.prod.yml
+└── deploy.sh
 ```
+
+---
+
+## Routes
+
+| Route | Page | Notes |
+|---|---|---|
+| `/login` | Login | Public |
+| `/client-portal` | ClientPortal | Client role |
+| `/dashboard` | Dashboard | Staff |
+| `/tickets` | Tickets | Staff |
+| `/tickets/new` | NewTicket | Staff |
+| `/tickets/:id` | TicketDetail | Staff |
+| `/devices` | Devices | Staff |
+| `/devices/:id` | DeviceDetail | Staff |
+| `/customer-devices` | CustomerDevices | Staff |
+| `/customer-devices/:id` | DeviceDetail | Staff |
+| `/ai-diagnostics` | AIDiagnostics | Staff |
+| `/remote-access` | RemoteAccess | Staff |
+| `/alerts` | Alerts | Staff |
+| `/alert-rules` | AlertRules | Staff |
+| `/customer-management` | CustomerManagement | Staff |
+| `/services` | Services | Staff |
+| `/clients` | Clients | Staff |
+| `/users` | UserManagement | Staff |
+| `/settings` | Settings | All |
 
 ---
 
 ## Features Built
 
 ### Core Platform
-- **Ticket management** — CRUD, auto-numbering (NSA-00001), priority/SLA, AI diagnostics, comments
-- **NOC device monitoring** — ICMP ping, SNMP polling (CPU/memory/uptime/interfaces), SSH config backup
-- **Customer device management** — link devices (fiber/radio, A/B endpoints), customer devices
-- **Remote SSH terminal** — browser-based via WebSocket (xterm.js + Paramiko)
-- **AI Diagnostics** — Claude-powered root cause analysis with streaming chat
-- **Real-time alerts** — WebSocket dashboard feed, Celery background workers
-- **Notifications** — Email, WhatsApp (Twilio), Telegram Bot
+- **Ticket management** — CRUD, auto-numbering (NSA-00001), priority/SLA countdown badges, AI auto-triage, streaming chat, comments
+- **NOC device monitoring** — ICMP ping (EndpointPopup with live/counted modes), SNMP polling (CPU/memory/uptime/interfaces), SSH config backup with diff viewer
+- **Customer device management** — link devices (fiber/radio, point-to-point/ring topologies, A/B endpoints), customer devices, endpoint ping
+- **Remote SSH terminal** — browser-based via WebSocket (xterm.js + Paramiko), command palette
+- **AI Diagnostics** — Claude-powered root cause analysis with streaming chat, CLI command suggestions, confidence bars
+- **Dashboard** — live stats (open tickets, online devices, active alerts, SLA breach rate) via WebSocket; activity feed; weekly chart
+- **Notifications** — Email, WhatsApp (Twilio), Telegram Bot; configurable per user
 - **Client portal** — separate login for clients to submit and track tickets
-- **JWT auth** — access + refresh tokens, bcrypt, role-based (superadmin / admin / engineer / noc / client)
+- **JWT auth** — access + refresh tokens (httpOnly cookie), bcrypt, role-based (superadmin / admin / engineer / noc / client); force-password-change on first login
+- **Audit log** — all write operations recorded with actor + diff
+- **SNMP Sensor Monitor** (DeviceDetail) — bandwidth (PRTG-style ComposedChart: green area total, amber line in, blue line out), ping latency, and SNMP Value sensors; period selector (Live → 1 Year); CSV export; sensor data persisted to localStorage per device
 
-### Built More Recently
-- **SNMP Sensor Monitor** (DeviceDetail) — bandwidth, ping latency, and SNMP Value sensors; PRTG-style ComposedChart with green-area total/amber-line in/blue-line out; period selector (Live → 1 Year); CSV export; localStorage persistence
-- **Services tool** (`/services`) — service catalog; each service has a name and multiple Name/Value entries; stored in localStorage
-- **Alert Rules tool** (`/alert-rules`) — custom alert rule builder; 4 network parameters (Ping Latency, Ping Timeout, Ping Response Stability, Jitter) each with condition, threshold, and one of 7 severity levels (Emergency → Informational)
-- **Alert engine** (`src/utils/alertEngine.js`) — evaluates live ping results against device's assigned alert rules; fires toast notifications and persists triggered alerts to localStorage
-- **Alerts page** — shows only custom-rule-triggered alerts in the format `Severity Level - Device Name: Alert Name  Date and Time`; Acknowledge / Resolve / Delete
-- **Alert Rules on devices** — toggle + selectable list in Add/Edit Device form (NOC devices, customer devices, link devices); saved to `device.extra_data.alert_rule_ids`
-- **Customer Management enhancements** — Service Details section (Service Type dropdown from Services tool, Service Name, Capacity/Bandwidth); Services column in table; customer name click → read-only view modal
-- **Date/Time settings** (Settings page, superadmin + admin only) — 12/24h clock toggle, Manual date/time, NTP server picker (50+ servers across 7 regions); all timestamps in the app respect this preference via `src/utils/timeFormat.js`
-- **Live metrics tile** — Uptime replaces Disk; shows `DDd:HH:MM:SS` from SNMP sysUpTime (TimeTicks)
+### Alert System (custom rule engine)
+- **Alert Rules** (`/alert-rules`) — rule builder with two parameter groups:
+  - *Ping*: Latency (ms), Timeout (fires on any unreachable ping), Stability (packet loss %), Jitter (ms)
+  - *SNMP*: All OIDs from `SNMP_VALUE_CATALOG` grouped by category (CPU, Memory, Storage, Sessions, System, Interfaces) — auto-updated as OIDs are added to the catalog
+  - Each parameter has: condition (`>` `>=` `<` `<=` `=`), numeric threshold, one of 7 severity levels (Emergency → Informational)
+- **Interface Up/Down alerts** — `ifOperStatus_1..12` and `ifAdminStatus_1..8` from IF-MIB (RFC 2863), universal across all device types and vendors; default condition `= 2` (down)
+- **Background monitor** (`useAlertMonitor`) — runs in `Layout.jsx` continuously:
+  - Sweeps every 2 minutes: fetches all alert-enabled devices, pings each one (2 s gap), evaluates ping + SNMP rules
+  - **Edge-triggered**: alert fires only on state transition `ok → breaching`; no duplicates while state is unchanged
+  - **Immediate start**: when a device is saved with `alerts_enabled: true`, `nsa:device-saved` is dispatched and the device is pinged at once
+  - **Recovery alerts**: when `ping_timeout` clears, fires `Device Name: Up  DD Mon YYYY, HH:MM:SS` (green, success toast)
+- **Alerts page** — shows custom-rule alerts and recovery alerts; Active / All / Resolved tabs; Acknowledge / Resolve / Delete actions; auto-refreshes via `nsa:alert-saved` event
+- **State reset**: deleting or resolving an alert dispatches `nsa:state-reset`, clearing breach states so the same condition can re-fire immediately on next poll
+
+### Other Tools
+- **Services tool** (`/services`) — service catalog; each service has a name and Name/Value entries; referenced from Customer Management
+- **Customer Management** — Service Details (type from Services catalog, name, capacity/bandwidth); Services and Customer Devices columns with inline table expansion; read-only customer view modal
+- **Date/Time settings** (Settings, superadmin + admin) — 12/24h clock toggle, Manual date/time, NTP server picker (50+ servers, 7 regions); all timestamps respect this via `timeFormat.js`
 
 ---
 
 ## Coding Conventions
 
 ### General
-- **No auto-commit** — user commits manually every time
-- **No comments** unless the WHY is non-obvious
-- **No unused imports** — remove them when refactoring
-- **No `alert()` / `confirm()`** — use `toast` from react-hot-toast; use custom modals for destructive confirmations (except quick deletes which may use `window.confirm`)
+- **No auto-commit** — user commits manually
+- **No comments** unless the WHY is non-obvious (hidden constraint, subtle invariant, workaround)
+- **No unused imports** — remove on refactor
+- **No `alert()` / `confirm()`** — use `toast` (react-hot-toast) and custom modals
+- **No `<form>` elements** — use button `onClick` handlers
+- **No inline styles** except for dynamic values (`style={{ width: \`${pct}%\` }}`)
+- **No `border-gray-*`** — use `border-white/[opacity]` for all borders
+- **Icons exclusively from `lucide-react`** — never `react-icons`
 
 ### State
 - Global state → Zustand stores only (no React Context)
 - Per-component state → `useState` / `useReducer`
-- Non-backend feature data → `localStorage` with `netsupportai-*` key prefix
+- Non-backend persistent data → `localStorage` with `netsupportai-*` key prefix
+
+### API calls
+- Always use typed modules from `src/api/client.js` — never call `axios` directly in components
+- All fetching in `useEffect` with `try/catch` — always provide mock fallback in `catch`
+- Token refresh handled by Axios interceptor — never manually refresh in components
 
 ### Time formatting
-Always import from `src/utils/timeFormat.js` — never call `.toLocaleString()` directly in components:
+Always use `src/utils/timeFormat.js` — never call `.toLocaleString()` directly:
 ```js
 import { fmtTime, fmtDateTime } from '../utils/timeFormat'
 ```
 
-### localStorage keys
-```
-netsupportai-auth                    Zustand auth state
-netsupportai-sensors-{deviceId}      SNMP sensor data arrays
-netsupportai-services                Service catalog
-netsupportai-alert-rules             Alert rule definitions
-netsupportai-custom-alerts           Triggered alert records
-netsupportai-customer-service-details  {customerId → serviceDetails[]}
-netsupportai-datetime                Clock format + NTP/manual settings
-```
-
-### Device extra_data
-Device-level config that must survive API round-trips goes in `device.extra_data`:
-- `snmp_oids` — SNMP OID picker selections
-- `alerts_enabled` — boolean toggle
-- `alert_rule_ids` — array of alert rule IDs
-- `link_type`, `topology`, `endpoints_b`, etc. (link devices)
-
-Always include `flag_modified(device, 'extra_data')` in the backend after assigning a new dict.
-
 ### Alert notification format
 ```
-Emergency - CoreRouter: Down  01 Jun 2026, 14:30:22
+Severity - DeviceName: AlertRuleName  DD Mon YYYY, HH:MM:SS   ← breach
+DeviceName: Up  DD Mon YYYY, HH:MM:SS                          ← recovery
 ```
-- Severity Level: exact name from alert rule param (`Emergency`, `Warning`, …)
-- Device Name: exact device name
-- Alert Name: exact alert rule name
-- Timestamp: `fmtDateTime(new Date())`
+
+### Custom event bus (same-tab communication)
+| Event | Fired by | Consumed by |
+|---|---|---|
+| `nsa:alert-saved` | `alertEngine.saveCustomAlert` | `Alerts.jsx` (auto-refresh) |
+| `nsa:state-reset` | `alertEngine.clearCooldowns` | `useAlertMonitor` (clears breach states) |
+| `nsa:device-saved` | `Devices.jsx`, `CustomerDevices.jsx` save handlers | `useAlertMonitor` (immediate ping) |
+
+### Device `extra_data`
+Device-level config stored in `device.extra_data` (JSON column):
+```
+snmp_oids          SNMP OID picker selections
+alerts_enabled     boolean — controls useAlertMonitor
+alert_rule_ids     string[] — IDs from netsupportai-alert-rules
+link_type          'fiber' | 'radio' | 'copper' | 'other'
+topology           'point_to_point' | 'ring' | 'star' | 'mesh'
+endpoints_b        string[] — IP list for B-side endpoints
+names_b            string[] — display names for B endpoints
+name_a             string — display name for A endpoint
+bandwidth          string — circuit capacity label
+```
+
+Always include `flag_modified(device, 'extra_data')` in the backend router after writing a new dict.
+
+### SNMP OID catalog
+Any new OID goes in `src/utils/snmpCatalog.js` — it automatically appears in both the DeviceDetail sensor picker and the AlertRules form. Optional fields per entry:
+```js
+defaultCondition   // overrides '>' default (e.g. '=' for ifOperStatus)
+defaultThreshold   // overrides 0/80 default (e.g. 2 for ifOperStatus)
+description        // shown as a hint row in the AlertRules form
+```
+
+### Alert engine patterns
+- `checkPingAlerts(device, pingData)` → `{ severity, ruleName, paramKey }[]`
+- `checkSnmpAlerts(device, snmpData)` → `{ severity, ruleName, paramKey }[]` (snmpData: `{ oidKey → value }`)
+- `checkJitterAlerts(device, jitterMs)` → same shape
+- `fireAlertToasts(triggered, deviceId, deviceName, toast, useCooldown)` — writes to localStorage + shows toast
+- `fireRecoveryAlert(deviceName, toast)` — saves recovery record + shows success toast
+- `clearCooldowns()` — clears cooldown Map + dispatches `nsa:state-reset`
+
+### SNMP display values
+Always use `fmtOidValue(rawVal, unit)` from `DeviceDetail.jsx` to render sensor values.
+Unit handling: `%` → float%, `s` → TimeTicks to `DDd:HH:MM:SS`, `B` → auto KB/MB/GB/TB, `KB` → auto MB/GB, `bit`/`bits` → auto Kbit/Mbit/Gbit.
+
+---
+
+## localStorage Keys
+
+| Key | Shape | Used by |
+|---|---|---|
+| `netsupportai-auth` | Zustand persist (`{ state: { user, accessToken } }`) | All pages |
+| `netsupportai-sensors-{deviceId}` | `Sensor[]` (bandwidth / latency / snmp) | DeviceDetail |
+| `netsupportai-services` | `{ id, name, entries[], created_at }[]` | Services, CustomerManagement |
+| `netsupportai-alert-rules` | `{ id, name, description, parameters[], created_at, updated_at }[]` | AlertRules, useAlertMonitor |
+| `netsupportai-custom-alerts` | `{ id, severity_level, device_name, alert_name, created_at, is_resolved, is_acknowledged }[]` | alertEngine, Alerts |
+| `netsupportai-customer-service-details` | `{ [customerId]: ServiceDetail[] }` | CustomerManagement |
+| `netsupportai-datetime` | `{ mode, ntpServer, clockFormat, manualDate, manualTime }` | Settings, timeFormat |
+
+---
+
+## Architecture
+
+```
+Browser (React + Vite)
+       │
+       ▼
+    Nginx (TLS termination)
+       │
+       ▼
+FastAPI (Gunicorn + Uvicorn × 4 workers)
+       │
+  ┌────┴────────────────┐
+  ▼                     ▼
+PostgreSQL 16        Redis 7
+(SQLAlchemy async)   (Celery broker + result cache)
+                          │
+                   ┌──────┴──────────┐
+                   ▼                 ▼
+             Celery Beat        Celery Worker
+             (scheduler)        (async tasks)
+                                     │
+                          ┌──────────┴──────────┐
+                          ▼                     ▼
+                   Anthropic Claude    Twilio / Telegram / SMTP
+```
 
 ---
 
@@ -181,20 +336,19 @@ Emergency - CoreRouter: Down  01 Jun 2026, 14:30:22
 git clone <repo>
 cd netsupportai
 cp backend/.env.example backend/.env
-# Edit backend/.env with API keys, SMTP, Twilio, Telegram credentials
+# Fill in ANTHROPIC_API_KEY, SMTP, Twilio, Telegram, SECRET_KEY, DATABASE_URL
 
 docker-compose up -d
 docker-compose exec backend alembic upgrade head
 
-open http://localhost:5173
-open http://localhost:8000/api/docs
+# App at http://localhost:5173
+# API docs at http://localhost:8000/api/docs
 ```
 
 ## Production Deployment (Ubuntu 24.04)
 
 ```bash
 sudo bash deploy/setup_server.sh
-sudo cp backend/.env.example /opt/netsupportai/backend/.env
 sudo nano /opt/netsupportai/backend/.env
 
 cd frontend && npm ci && npm run build
@@ -208,34 +362,27 @@ sudo systemctl start netsupportai netsupportai-worker
 sudo certbot --nginx -d your-domain.com
 ```
 
-## Architecture
+## Development
 
-```
-Browser (React/Vite)
-       │
-       ▼
-    Nginx (TLS)
-       │
-       ▼
-FastAPI (Gunicorn + Uvicorn x4)
-       │
-  ┌────┴────────────────┐
-  ▼                     ▼
-PostgreSQL           Redis
-(SQLAlchemy)    (Celery queue + cache)
-                      │
-               ┌──────┴──────┐
-               ▼             ▼
-          Celery Beat    Celery Worker
-          (scheduler)   (async jobs)
-                             │
-                      Anthropic API (Claude)
-                      Twilio / Telegram / SMTP
+```bash
+# Backend
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
+
+# Frontend
+cd frontend
+npm install
+npm run dev          # http://localhost:5173
+npm run build        # production build → /dist
+npm run lint         # ESLint
 ```
 
 ## API Docs
 
-Available at `/api/docs` (Swagger UI) or `/api/redoc` when backend is running.
+Available at `/api/docs` (Swagger UI) or `/api/redoc` when the backend is running.
 
 ## License
 
