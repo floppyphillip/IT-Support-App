@@ -51,6 +51,11 @@ function buildHeading(a) {
     return `${a.severity_level} – ${a.alert_name}  ${ts}`
   }
 
+  if (a.iface_speed_alert) {
+    // Format: "Severity – Device Name: Interface N Speed Duplex  DateTime"
+    return `${a.severity_level} – ${a.device_name}: ${a.alert_name}  ${ts}`
+  }
+
   if (a._source === 'custom_rule') {
     return `${a.severity_level} - ${a.device_name}: ${a.alert_name}  ${ts}`
   }

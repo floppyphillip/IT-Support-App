@@ -41,8 +41,8 @@ export const SNMP_VALUE_CATALOG = [
   { key: 'ifNumber',                 label: 'Interface Count',      unit: '',   cat: 'System',     vendors: null },
 
   // ── Interfaces — IF-MIB (RFC 2863) — kept for DeviceDetail sensor charts only ─
-  // alertHidden: true — excluded from AlertRules params. Use 'iface_state' param in
-  // the main Parameters section instead (monitors all interfaces with Up/Down select).
+  // alertHidden: true — excluded from AlertRules params. Use 'iface_state' or
+  // 'iface_speed_duplex' params in the main Parameters section instead.
   { key: 'ifOperStatus_1',  label: 'Interface 1 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
   { key: 'ifOperStatus_2',  label: 'Interface 2 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
   { key: 'ifOperStatus_3',  label: 'Interface 3 – Oper Status',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
@@ -63,6 +63,28 @@ export const SNMP_VALUE_CATALOG = [
   { key: 'ifAdminStatus_6', label: 'Interface 6 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
   { key: 'ifAdminStatus_7', label: 'Interface 7 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
   { key: 'ifAdminStatus_8', label: 'Interface 8 – Admin Status', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  // ifSpeed — bits/sec (10M=10000000, 100M=100000000, 1G=1000000000)
+  { key: 'ifSpeed_1',  label: 'Interface 1 – Speed',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifSpeed_2',  label: 'Interface 2 – Speed',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifSpeed_3',  label: 'Interface 3 – Speed',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifSpeed_4',  label: 'Interface 4 – Speed',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifSpeed_5',  label: 'Interface 5 – Speed',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifSpeed_6',  label: 'Interface 6 – Speed',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifSpeed_7',  label: 'Interface 7 – Speed',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifSpeed_8',  label: 'Interface 8 – Speed',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifSpeed_9',  label: 'Interface 9 – Speed',  unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifSpeed_10', label: 'Interface 10 – Speed', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifSpeed_11', label: 'Interface 11 – Speed', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'ifSpeed_12', label: 'Interface 12 – Speed', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  // dot3StatsDuplexStatus — EtherLike MIB (2=halfDuplex, 3=fullDuplex)
+  { key: 'dot3StatsDuplexStatus_1', label: 'Interface 1 – Duplex', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'dot3StatsDuplexStatus_2', label: 'Interface 2 – Duplex', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'dot3StatsDuplexStatus_3', label: 'Interface 3 – Duplex', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'dot3StatsDuplexStatus_4', label: 'Interface 4 – Duplex', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'dot3StatsDuplexStatus_5', label: 'Interface 5 – Duplex', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'dot3StatsDuplexStatus_6', label: 'Interface 6 – Duplex', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'dot3StatsDuplexStatus_7', label: 'Interface 7 – Duplex', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
+  { key: 'dot3StatsDuplexStatus_8', label: 'Interface 8 – Duplex', unit: '', cat: 'Interfaces', vendors: null, alertHidden: true },
 ]
 
 export const SNMP_CATS = [...new Set(SNMP_VALUE_CATALOG.map(o => o.cat))]

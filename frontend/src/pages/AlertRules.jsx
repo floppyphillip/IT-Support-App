@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Search, Edit2, Trash2, X, ShieldAlert, ChevronDown, ChevronUp, Layers, WifiOff } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, X, ShieldAlert, ChevronDown, ChevronUp, Layers, WifiOff, Gauge } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { fmtDateTime } from '../utils/timeFormat'
 import { SNMP_VALUE_CATALOG, SNMP_CATS } from '../utils/snmpCatalog'
@@ -76,6 +76,15 @@ const PARAMETERS = [
     description:          'Monitors all interfaces on the device — fires with separate severity for each state change',
     ifaceParam:           true,
   },
+  {
+    key:              'iface_speed_duplex',
+    label:            'Interface Speed / Duplex',
+    unit:             '',
+    defaultCondition: '=',
+    defaultSeverity:  'Warning',
+    description:      'Fires when any interface negotiates at a selected speed or duplex — monitors all interfaces',
+    ifaceSpeedParam:  true,
+  },
 ]
 
 const defaultSnmpParams = () =>
@@ -94,6 +103,17 @@ const defaultParams = () => [
     if (p.ifaceParam) {
       return { ...base, severity_down: p.defaultSeverityDown ?? 'Critical', severity_up: p.defaultSeverityUp ?? 'Notification' }
     }
+    if (p.ifaceSpeedParam) {
+      return {
+        ...base,
+        speed_10_half:  false,
+        speed_10_full:  false,
+        speed_100_half: false,
+        speed_100_full: false,
+        speed_1g:       false,
+        severity:       p.defaultSeverity ?? 'Warning',
+      }
+    }
     return { ...base, threshold: p.defaultThreshold, severity: p.defaultSeverity }
   }),
   ...defaultSnmpParams(),
@@ -106,6 +126,9 @@ function getParamMeta(key) {
   // iface_state_N keys produced by the alert engine (per-interface breach)
   const ifaceMatch = key.match(/^iface_state_(\d+)$/)
   if (ifaceMatch) return { label: `Interface ${ifaceMatch[1]} – State`, unit: '' }
+  // iface_speed_N_comboKey keys produced by checkIfaceSpeedAlerts
+  const speedMatch = key.match(/^iface_speed_(\d+)_/)
+  if (speedMatch) return { label: `Interface ${speedMatch[1]} – Speed/Duplex`, unit: '' }
   const oidKey = key.startsWith('snmp_') ? key.slice(5) : key
   const snmp = SNMP_VALUE_CATALOG.find(o => o.key === oidKey)
   if (snmp) return { label: snmp.label, unit: snmp.unit || '—' }
@@ -126,6 +149,19 @@ const RULE_TEMPLATES = [
     ),
     name:     'Interface Monitor',
     ruleName: 'Fires on any interface state change — monitors all device interfaces',
+  },
+  {
+    id:          'tpl-iface-speed',
+    icon:        Gauge,
+    label:       'Speed / Duplex Monitor',
+    description: 'Fires when an interface negotiates below 1 Gbps or at half duplex',
+    build: () => defaultParams().map(p =>
+      p.key === 'iface_speed_duplex'
+        ? { ...p, enabled: true, speed_10_half: true, speed_10_full: true, speed_100_half: true, speed_100_full: false, speed_1g: false, severity: 'Warning' }
+        : p
+    ),
+    name:     'Speed / Duplex Monitor',
+    ruleName: 'Fires when any interface negotiates at 10 Mbps or 100 Mbps half duplex',
   },
 ]
 
@@ -324,6 +360,81 @@ function AlertRuleModal({ rule, onClose, onSave }) {
                               value={p.severity_up ?? 'Notification'}
                               disabled={!p.enabled}
                               onChange={e => setParam(meta.key, 'severity_up', e.target.value)}
+                            >
+                              {SEVERITY_LEVELS.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // ── Interface Speed / Duplex — special row ───────────────
+                  if (meta.ifaceSpeedParam) {
+                    const COMBOS = [
+                      { field: 'speed_10_half',  label: '10M Half',  color: 'red'     },
+                      { field: 'speed_10_full',  label: '10M Full',  color: 'amber'   },
+                      { field: 'speed_100_half', label: '100M Half', color: 'red'     },
+                      { field: 'speed_100_full', label: '100M Full', color: 'amber'   },
+                      { field: 'speed_1g',       label: '1 Gbps',    color: 'emerald' },
+                    ]
+                    return (
+                      <div
+                        key={meta.key}
+                        className={`grid gap-3 px-4 py-3 items-center transition-colors ${p.enabled ? 'bg-white' : 'bg-gray-50/60'}`}
+                        style={{ gridTemplateColumns: '20px 1fr auto' }}
+                      >
+                        {/* Checkbox */}
+                        <div
+                          className={`w-4 h-4 rounded border-2 flex items-center justify-center cursor-pointer transition-all flex-shrink-0 ${p.enabled ? 'bg-red-500 border-red-500' : 'border-gray-300'}`}
+                          onClick={() => setParam(meta.key, 'enabled', !p.enabled)}
+                        >
+                          {p.enabled && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
+                              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+
+                        {/* Label */}
+                        <div className={`min-w-0 ${!p.enabled && 'opacity-40'}`}>
+                          <p className="text-sm font-semibold text-gray-800">{meta.label}</p>
+                          <p className="text-[11px] text-gray-400 truncate">{meta.description}</p>
+                        </div>
+
+                        {/* Speed/duplex toggles + severity */}
+                        <div className={`flex items-center gap-4 flex-shrink-0 ${!p.enabled && 'opacity-40'}`}>
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Alert when interface negotiates at</span>
+                            <div className="flex items-center gap-1.5">
+                              {COMBOS.map(combo => (
+                                <button
+                                  key={combo.field}
+                                  type="button"
+                                  disabled={!p.enabled}
+                                  onClick={() => setParam(meta.key, combo.field, !p[combo.field])}
+                                  className={`px-2.5 py-1 text-[11px] font-bold rounded border transition-colors disabled:cursor-not-allowed ${
+                                    p[combo.field]
+                                      ? combo.color === 'red'     ? 'bg-red-500/15 text-red-600 border-red-500/30'
+                                        : combo.color === 'amber'   ? 'bg-amber-500/15 text-amber-600 border-amber-500/30'
+                                        : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
+                                      : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'
+                                  }`}
+                                >
+                                  {combo.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Severity</span>
+                            <select
+                              className="input text-sm py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                              value={p.severity ?? 'Warning'}
+                              disabled={!p.enabled}
+                              onChange={e => setParam(meta.key, 'severity', e.target.value)}
                             >
                               {SEVERITY_LEVELS.map(s => (
                                 <option key={s} value={s}>{s}</option>
@@ -632,8 +743,10 @@ function AlertRuleRow({ rule, onEdit, onDelete }) {
               </div>
               <div className="divide-y divide-red-50 bg-white">
                 {active.map(p => {
-                  const meta    = getParamMeta(p.key)
-                  const isIface = p.key === 'iface_state'
+                  const meta           = getParamMeta(p.key)
+                  const isIface        = p.key === 'iface_state'
+                  const isIfaceSpeed   = p.key === 'iface_speed_duplex'
+
                   if (isIface) {
                     return (
                       <div key={p.key} className="grid gap-3 px-3 py-2 items-center"
@@ -654,6 +767,35 @@ function AlertRuleRow({ rule, onEdit, onDelete }) {
                       </div>
                     )
                   }
+
+                  if (isIfaceSpeed) {
+                    const COMBO_MAP = {
+                      speed_10_half:  '10M Half',
+                      speed_10_full:  '10M Full',
+                      speed_100_half: '100M Half',
+                      speed_100_full: '100M Full',
+                      speed_1g:       '1 Gbps',
+                    }
+                    const selected = Object.entries(COMBO_MAP).filter(([k]) => p[k]).map(([, v]) => v)
+                    return (
+                      <div key={p.key} className="grid gap-3 px-3 py-2 items-center"
+                        style={{ gridTemplateColumns: '1fr auto auto' }}>
+                        <span className="text-[13px] font-medium text-gray-800">{meta.label}</span>
+                        <span className="flex flex-wrap gap-1">
+                          {selected.length > 0
+                            ? selected.map(l => (
+                                <span key={l} className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">{l}</span>
+                              ))
+                            : <span className="text-[11px] text-gray-400">none selected</span>
+                          }
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${SEVERITY_STYLES[p.severity ?? 'Warning']}`}>
+                          {p.severity ?? 'Warning'}
+                        </span>
+                      </div>
+                    )
+                  }
+
                   return (
                     <div
                       key={p.key}

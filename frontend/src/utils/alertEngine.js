@@ -184,6 +184,68 @@ export function fireIfaceUpAlert(device, ifaceNum, toastFn) {
 }
 
 /**
+ * Evaluate interface speed and duplex against the device's alert rules.
+ * Reads ifSpeed_N (bits/sec) and dot3StatsDuplexStatus_N (2=half, 3=full) from snmpData.
+ * Returns array of { severity, ruleName, paramKey, ifaceNum, speedLabel, duplexLabel, ifaceSpeedAlert }
+ */
+export function checkIfaceSpeedAlerts(device, snmpData) {
+  const rules = getDeviceRules(device)
+  const triggered = []
+
+  for (const rule of rules) {
+    for (const p of rule.parameters ?? []) {
+      if (!p.enabled || p.key !== 'iface_speed_duplex') continue
+
+      for (const [oidKey, rawSpeed] of Object.entries(snmpData)) {
+        const m = oidKey.match(/^ifSpeed_(\d+)$/)
+        if (!m || rawSpeed == null) continue
+
+        const ifaceNum   = m[1]
+        const bps        = Number(rawSpeed)
+        const rawDuplex  = snmpData[`dot3StatsDuplexStatus_${ifaceNum}`]
+        const duplexCode = rawDuplex != null ? Number(rawDuplex) : null
+
+        // Build list of matching combo keys for this speed+duplex reading
+        const matches = []
+
+        if (bps === 10_000_000) {
+          if      (duplexCode === 2 && p.speed_10_half) matches.push({ comboKey: 'speed_10_half', speed: '10Mbps',  duplex: 'Half Duplex' })
+          else if (duplexCode === 3 && p.speed_10_full) matches.push({ comboKey: 'speed_10_full', speed: '10Mbps',  duplex: 'Full Duplex' })
+          else if (duplexCode === null) {
+            if (p.speed_10_half) matches.push({ comboKey: 'speed_10_half', speed: '10Mbps', duplex: '' })
+            if (p.speed_10_full) matches.push({ comboKey: 'speed_10_full', speed: '10Mbps', duplex: '' })
+          }
+        } else if (bps === 100_000_000) {
+          if      (duplexCode === 2 && p.speed_100_half) matches.push({ comboKey: 'speed_100_half', speed: '100Mbps', duplex: 'Half Duplex' })
+          else if (duplexCode === 3 && p.speed_100_full) matches.push({ comboKey: 'speed_100_full', speed: '100Mbps', duplex: 'Full Duplex' })
+          else if (duplexCode === null) {
+            if (p.speed_100_half) matches.push({ comboKey: 'speed_100_half', speed: '100Mbps', duplex: '' })
+            if (p.speed_100_full) matches.push({ comboKey: 'speed_100_full', speed: '100Mbps', duplex: '' })
+          }
+        } else if (bps >= 1_000_000_000 && p.speed_1g) {
+          const label = bps === 1_000_000_000 ? '1Gbps' : `${bps / 1_000_000_000}Gbps`
+          matches.push({ comboKey: 'speed_1g', speed: label, duplex: 'Full Duplex' })
+        }
+
+        for (const { comboKey, speed, duplex } of matches) {
+          console.debug(`[AlertEngine] ${rule.name} Interface ${ifaceNum} → ${speed} ${duplex}`)
+          triggered.push({
+            severity:        p.severity ?? 'Warning',
+            ruleName:        rule.name,
+            paramKey:        `iface_speed_${ifaceNum}_${comboKey}`,
+            ifaceNum,
+            speedLabel:      speed,
+            duplexLabel:     duplex,
+            ifaceSpeedAlert: true,
+          })
+        }
+      }
+    }
+  }
+  return triggered
+}
+
+/**
  * Evaluate a calculated jitter value (ms) against the device's alert rules.
  */
 export function checkJitterAlerts(device, jitterMs) {
@@ -276,7 +338,7 @@ export function fireRecoveryAlert(deviceName, toastFn) {
 export function fireAlertToasts(triggered, deviceId, deviceName, toastFn, useCooldown = false) {
   const now = Date.now()
 
-  for (const { severity, ruleName, paramKey, ifaceNum, ifaceState } of triggered) {
+  for (const { severity, ruleName, paramKey, ifaceNum, ifaceState, ifaceSpeedAlert, speedLabel, duplexLabel } of triggered) {
     if (useCooldown) {
       const key = `${deviceId}::${ruleName}::${paramKey}`
       if (now - (cooldowns.get(key) ?? 0) < COOLDOWN_MS) continue
@@ -284,10 +346,16 @@ export function fireAlertToasts(triggered, deviceId, deviceName, toastFn, useCoo
     }
 
     const timestamp = fmtDateTime(new Date())
-    let fullMsg, alertName, isIfaceAlert = false
+    let fullMsg, alertName, isIfaceAlert = false, isIfaceSpeedAlert = false
 
-    if (ifaceNum != null) {
-      // Interface alert format: "Severity – Interface N: Down  DateTime"
+    if (ifaceSpeedAlert) {
+      // Format: "Severity – Device Name: Interface N Speed Duplex  DateTime"
+      const duplexPart = duplexLabel ? ` ${duplexLabel}` : ''
+      alertName         = `Interface ${ifaceNum} ${speedLabel}${duplexPart}`
+      fullMsg           = `${severity} – ${deviceName}: ${alertName}  ${timestamp}`
+      isIfaceSpeedAlert = true
+    } else if (ifaceNum != null) {
+      // Interface Up/Down format: "Severity – Interface N: Down  DateTime"
       alertName    = `Interface ${ifaceNum}: ${ifaceState}`
       fullMsg      = `${severity} – ${alertName}  ${timestamp}`
       isIfaceAlert = true
@@ -300,14 +368,15 @@ export function fireAlertToasts(triggered, deviceId, deviceName, toastFn, useCoo
     else toastFn(fullMsg, { icon: '🔔', duration: 5000 })
 
     saveCustomAlert({
-      id:              `ca-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      severity_level:  severity,
-      device_name:     deviceName,
-      alert_name:      alertName,
-      iface_alert:     isIfaceAlert,
-      created_at:      new Date().toISOString(),
-      is_resolved:     false,
-      is_acknowledged: false,
+      id:               `ca-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      severity_level:   severity,
+      device_name:      deviceName,
+      alert_name:       alertName,
+      iface_alert:      isIfaceAlert,
+      iface_speed_alert: isIfaceSpeedAlert,
+      created_at:       new Date().toISOString(),
+      is_resolved:      false,
+      is_acknowledged:  false,
     })
   }
 }
