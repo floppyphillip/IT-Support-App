@@ -189,22 +189,23 @@ netsupportai/
 - **SNMP Sensor Monitor** (DeviceDetail) — bandwidth (PRTG-style ComposedChart: green area total, amber line in, blue line out), ping latency, and SNMP Value sensors; period selector (Live → 1 Year); CSV export; sensor data persisted to localStorage per device
 
 ### Alert System (custom rule engine)
-- **Alert Rules** (`/alert-rules`) — rule builder with two parameter groups:
-  - *Ping*: Latency (ms), Timeout (fires on any unreachable ping), Stability (packet loss %), Jitter (ms)
-  - *SNMP*: All OIDs from `SNMP_VALUE_CATALOG` grouped by category (CPU, Memory, Storage, Sessions, System, Interfaces) — auto-updated as OIDs are added to the catalog
-  - Each parameter has: condition (`>` `>=` `<` `<=` `=`), numeric threshold, one of 7 severity levels (Emergency → Informational)
-- **Interface Up/Down alerts** — `ifOperStatus_1..12` and `ifAdminStatus_1..8` from IF-MIB (RFC 2863), universal across all device types and vendors; default condition `= 2` (down)
+- **Alert Rules** (`/alert-rules`) — rule builder with three parameter groups:
+  - *Ping*: Latency (ms), Timeout (fires on any unreachable ping), Stability (packet loss %), Jitter (ms) — each with condition, threshold, and severity
+  - *Interface Up/Down* (`iface_state`) — unified param monitors all interfaces; **separate severity levels** for Down and Up transitions; quick-create "Interface Monitor" template; `ifOperStatus_N` OIDs drive evaluation but are hidden from the rule form (`alertHidden: true` in catalog)
+  - *Interface Speed / Duplex* (`iface_speed_duplex`) — toggle-chip selector: **10M Half**, **10M Full**, **100M Half**, **100M Full**, **1 Gbps**; reads `ifSpeed_N` (bits/sec) and `dot3StatsDuplexStatus_N` (2=half, 3=full) from SNMP sensor cache; single severity for all selected combos; quick-create "Speed / Duplex Monitor" template
+  - *SNMP*: All OIDs from `SNMP_VALUE_CATALOG` grouped by category (CPU, Memory, Storage, Sessions, System, Interfaces) — OIDs with `alertHidden: true` are excluded from the rule form but remain available in DeviceDetail sensor picker
 - **Background monitor** (`useAlertMonitor`) — runs in `Layout.jsx` continuously:
-  - Sweeps every 2 minutes: fetches all alert-enabled devices, pings each one (2 s gap), evaluates ping + SNMP rules
-  - **Edge-triggered**: alert fires only on state transition `ok → breaching`; no duplicates while state is unchanged
-  - **Immediate start**: when a device is saved with `alerts_enabled: true`, `nsa:device-saved` is dispatched and the device is pinged at once
-  - **Recovery alerts**: when `ping_timeout` clears, fires `Device Name: Up  DD Mon YYYY, HH:MM:SS` (green, success toast)
-- **Alerts page** — shows custom-rule alerts and recovery alerts; Active / All / Resolved tabs; Acknowledge / Resolve / Delete actions; auto-refreshes via `nsa:alert-saved` event
-- **State reset**: deleting or resolving an alert dispatches `nsa:state-reset`, clearing breach states so the same condition can re-fire immediately on next poll
+  - Sweeps every 2 minutes: fetches all alert-enabled devices, pings each, evaluates ping + SNMP + iface-state + iface-speed rules
+  - **Edge-triggered**: `paramStates` Map tracks previous breach state per `deviceId::ruleName::paramKey`; alert fires only on `ok → breaching` transition
+  - **Immediate start**: `nsa:device-saved` event triggers an immediate check the moment a device is saved with alerts enabled
+  - **Recovery**: `ping_timeout` clearance → `fireRecoveryAlert`; `iface_state_N` clearance → `fireIfaceUpAlert` (uses `severity_up` from the rule)
+- **Alerts page** — Active / All / Resolved tabs; Acknowledge / Resolve / Delete; auto-refreshes via `nsa:alert-saved` event
+- **State reset**: resolving/deleting an alert dispatches `nsa:state-reset`, clearing breach states so the same condition can re-fire
 
 ### Other Tools
 - **Services tool** (`/services`) — service catalog; each service has a name and Name/Value entries; referenced from Customer Management
 - **Customer Management** — Service Details (type from Services catalog, name, capacity/bandwidth); Services and Customer Devices columns with inline table expansion; read-only customer view modal
+  - **Delete guards**: a customer cannot be deleted while it has linked devices (shows count in toast); a customer device cannot be deleted while attached to a customer (delete modal shows which customer and blocks the button)
 - **Date/Time settings** (Settings, superadmin + admin) — 12/24h clock toggle, Manual date/time, NTP server picker (50+ servers, 7 regions); all timestamps respect this via `timeFormat.js`
 
 ---
@@ -237,11 +238,14 @@ Always use `src/utils/timeFormat.js` — never call `.toLocaleString()` directly
 import { fmtTime, fmtDateTime } from '../utils/timeFormat'
 ```
 
-### Alert notification format
+### Alert notification formats
 ```
-Severity - DeviceName: AlertRuleName  DD Mon YYYY, HH:MM:SS   ← breach
-DeviceName: Up  DD Mon YYYY, HH:MM:SS                          ← recovery
+Standard breach:      Severity - Device Name: Alert Rule Name  DD Mon YYYY, HH:MM:SS
+Recovery:             Device Name: Up  DD Mon YYYY, HH:MM:SS
+Interface Up/Down:    Severity – Interface N: Down/Up  DD Mon YYYY, HH:MM:SS
+Interface Speed:      Severity – Device Name: Interface N Speed Duplex  DD Mon YYYY, HH:MM:SS
 ```
+Note: Interface Up/Down and Interface Speed formats use an **en dash** (–) not a hyphen (-). Interface Up/Down stores `iface_alert: true`; Interface Speed stores `iface_speed_alert: true` on the custom alert record.
 
 ### Custom event bus (same-tab communication)
 | Event | Fired by | Consumed by |
@@ -272,14 +276,20 @@ Any new OID goes in `src/utils/snmpCatalog.js` — it automatically appears in b
 defaultCondition   // overrides '>' default (e.g. '=' for ifOperStatus)
 defaultThreshold   // overrides 0/80 default (e.g. 2 for ifOperStatus)
 description        // shown as a hint row in the AlertRules form
+alertHidden: true  // keeps OID in DeviceDetail sensor picker but hides it from AlertRules SNMP params
+                   // use for OIDs whose alert logic is handled by a special unified param
+                   // (e.g. ifOperStatus_N → iface_state, ifSpeed_N → iface_speed_duplex)
 ```
 
-### Alert engine patterns
+### Alert engine exports (`src/utils/alertEngine.js`)
 - `checkPingAlerts(device, pingData)` → `{ severity, ruleName, paramKey }[]`
-- `checkSnmpAlerts(device, snmpData)` → `{ severity, ruleName, paramKey }[]` (snmpData: `{ oidKey → value }`)
-- `checkJitterAlerts(device, jitterMs)` → same shape
-- `fireAlertToasts(triggered, deviceId, deviceName, toast, useCooldown)` — writes to localStorage + shows toast
-- `fireRecoveryAlert(deviceName, toast)` — saves recovery record + shows success toast
+- `checkSnmpAlerts(device, snmpData)` → `{ severity, ruleName, paramKey }[]`
+- `checkIfaceAlerts(device, snmpData)` → `{ severity, ruleName, paramKey, ifaceNum, ifaceState:'Down' }[]` — fires only on DOWN (value=2); uses `p.severity_down`
+- `checkIfaceSpeedAlerts(device, snmpData)` → `{ severity, ruleName, paramKey, ifaceNum, speedLabel, duplexLabel, ifaceSpeedAlert:true }[]` — reads `ifSpeed_N` + `dot3StatsDuplexStatus_N`
+- `checkJitterAlerts(device, jitterMs)` → `{ severity, ruleName, paramKey }[]`
+- `fireAlertToasts(triggered, deviceId, deviceName, toast, useCooldown)` — writes to localStorage + shows toast; handles standard, iface Up/Down, and iface speed formats
+- `fireRecoveryAlert(deviceName, toast)` — saves `severity_level:'recovery'` record + success toast
+- `fireIfaceUpAlert(device, ifaceNum, toast)` — looks up `severity_up` from device rules, fires Up alert
 - `clearCooldowns()` — clears cooldown Map + dispatches `nsa:state-reset`
 
 ### SNMP display values
@@ -296,7 +306,7 @@ Unit handling: `%` → float%, `s` → TimeTicks to `DDd:HH:MM:SS`, `B` → auto
 | `netsupportai-sensors-{deviceId}` | `Sensor[]` (bandwidth / latency / snmp) | DeviceDetail |
 | `netsupportai-services` | `{ id, name, entries[], created_at }[]` | Services, CustomerManagement |
 | `netsupportai-alert-rules` | `{ id, name, description, parameters[], created_at, updated_at }[]` | AlertRules, useAlertMonitor |
-| `netsupportai-custom-alerts` | `{ id, severity_level, device_name, alert_name, created_at, is_resolved, is_acknowledged }[]` | alertEngine, Alerts |
+| `netsupportai-custom-alerts` | `{ id, severity_level, device_name, alert_name, iface_alert?, iface_speed_alert?, created_at, is_resolved, is_acknowledged }[]` | alertEngine, Alerts |
 | `netsupportai-customer-service-details` | `{ [customerId]: ServiceDetail[] }` | CustomerManagement |
 | `netsupportai-datetime` | `{ mode, ntpServer, clockFormat, manualDate, manualTime }` | Settings, timeFormat |
 
