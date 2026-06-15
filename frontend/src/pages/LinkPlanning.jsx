@@ -1,6 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Radio, Plus, Trash2, MapPin, ChevronRight, Signal, Zap, Activity } from 'lucide-react'
-import LinkPlanModal, { loadPlans } from '../components/LinkPlanModal'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
+import { Radio, Plus, Trash2, MapPin, ChevronRight, Signal, Zap, Activity, Loader2 } from 'lucide-react'
+
+const LinkPlanModal = lazy(() => import('../components/LinkPlanModal'))
+
+// loadPlans is a pure localStorage helper — import separately so the page
+// doesn't pull in Leaflet just to read stored plans on mount.
+function loadPlans() {
+  try { return JSON.parse(localStorage.getItem('netsupportai-link-plans') ?? '[]') } catch { return [] }
+}
 
 const LS_KEY = 'netsupportai-link-plans'
 
@@ -224,13 +231,19 @@ export default function LinkPlanning() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal — Leaflet chunk loads lazily on first open */}
       {modalOpen && (
-        <LinkPlanModal
-          initialPlan={editPlan}
-          onClose={closeModal}
-          onSave={refresh}
-        />
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0f1a]">
+            <Loader2 size={24} className="animate-spin text-blue-400" />
+          </div>
+        }>
+          <LinkPlanModal
+            initialPlan={editPlan}
+            onClose={closeModal}
+            onSave={refresh}
+          />
+        </Suspense>
       )}
     </div>
   )

@@ -22,9 +22,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          charts: ['recharts'],
-          terminal: ['@xterm/xterm', '@xterm/addon-fit'],
+          vendor:   ['react', 'react-dom', 'react-router-dom'],
+          state:    ['zustand', 'axios', 'react-hot-toast'],
+          icons:    ['lucide-react'],
+          dates:    ['date-fns'],
+          charts:   ['recharts'],
+          terminal: ['@xterm/xterm', '@xterm/addon-fit', '@xterm/addon-web-links'],
+          leaflet:  ['leaflet', 'react-leaflet'],
         },
       },
     },
