@@ -20,6 +20,7 @@ import UserManagement       from './pages/UserManagement'
 import CustomerDevices      from './pages/CustomerDevices'
 import Services             from './pages/Services'
 import AlertRules           from './pages/AlertRules'
+import LinkPlanning         from './pages/LinkPlanning'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="users"                     element={<UserManagement />} />
         <Route path="services"                  element={<Services />} />
         <Route path="alert-rules"               element={<AlertRules />} />
+        <Route path="link-planning"             element={<LinkPlanning />} />
       </Route>
     </Routes>
   )
