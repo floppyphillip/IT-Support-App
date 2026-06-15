@@ -991,6 +991,14 @@ export default function CustomerManagement() {
   }
 
   const handleDelete = async (customer) => {
+    const linkedCount = customer.device_ids?.length ?? 0
+    if (linkedCount > 0) {
+      toast.error(
+        `Detach all ${linkedCount} linked device${linkedCount !== 1 ? 's' : ''} before deleting this customer.`,
+        { duration: 5000 }
+      )
+      return
+    }
     if (!window.confirm(`Delete customer "${customer.customer_name}"? This cannot be undone.`)) return
     setDeleting(customer.id)
     try {

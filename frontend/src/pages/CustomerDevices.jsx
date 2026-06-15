@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { devicesAPI } from '../api/client'
+import { devicesAPI, customersAPI } from '../api/client'
 import { fmtDateTime } from '../utils/timeFormat'
 import StatusIndicator from '../components/StatusIndicator'
 import { SkeletonCard } from '../components/Skeleton'
@@ -373,7 +373,20 @@ function DeleteConfirmModal({ device, onClose, onDeleted }) {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [])
-  const [deleting, setDeleting] = useState(false)
+
+  const [deleting, setDeleting]             = useState(false)
+  const [checking, setChecking]             = useState(true)
+  const [linkedCustomer, setLinkedCustomer] = useState(null)
+
+  useEffect(() => {
+    customersAPI.list({ limit: 200 })
+      .then(({ data }) => {
+        const list = data.items ?? data ?? []
+        setLinkedCustomer(list.find(c => (c.device_ids ?? []).includes(device.id)) ?? null)
+      })
+      .catch(() => {})
+      .finally(() => setChecking(false))
+  }, [device.id])
 
   const confirm = async () => {
     setDeleting(true)
@@ -390,6 +403,8 @@ function DeleteConfirmModal({ device, onClose, onDeleted }) {
     }
   }
 
+  const isBlocked = !checking && linkedCustomer != null
+
   return createPortal(
     <div className="absolute inset-0 z-50 flex items-center justify-center p-4"
          style={{ background: 'rgba(0,0,0,0.75)' }}
@@ -397,29 +412,55 @@ function DeleteConfirmModal({ device, onClose, onDeleted }) {
       <div className="w-full max-w-[461px] rounded-2xl border overflow-hidden"
            style={{ background: 'var(--surface)', borderColor: 'var(--border-mid)' }}>
         <div className="px-6 pt-6 pb-5 text-center">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
-               style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}>
-            <AlertTriangle className="w-5 h-5 text-red-400" />
-          </div>
-          <p className="font-semibold text-gray-900 mb-1">Delete Device</p>
-          <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-            Are you sure you want to delete{' '}
-            <span className="font-mono font-semibold text-gray-900">{device.name}</span>?
-          </p>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-4)' }}>
-            This will remove all associated metrics, backups, and alerts. This cannot be undone.
-          </p>
+          {checking ? (
+            <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-400" />
+          ) : isBlocked ? (
+            <>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
+                   style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.30)' }}>
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+              </div>
+              <p className="font-semibold text-gray-900 mb-1">Cannot Delete Device</p>
+              <p className="text-sm mb-1" style={{ color: 'var(--text-3)' }}>
+                <span className="font-mono font-semibold text-gray-900">{device.name}</span> is currently linked to customer{' '}
+                <span className="font-semibold text-amber-600">{linkedCustomer.customer_name}</span>
+                {linkedCustomer.customer_id ? ` (${linkedCustomer.customer_id})` : ''}.
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-4)' }}>
+                Go to Customer Management, edit the customer, and detach this device before deleting it.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
+                   style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}>
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+              </div>
+              <p className="font-semibold text-gray-900 mb-1">Delete Device</p>
+              <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+                Are you sure you want to delete{' '}
+                <span className="font-mono font-semibold text-gray-900">{device.name}</span>?
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-4)' }}>
+                This will remove all associated metrics, backups, and alerts. This cannot be undone.
+              </p>
+            </>
+          )}
         </div>
         <div className="flex gap-3 px-6 pb-6">
-          <button onClick={onClose} disabled={deleting} className="btn-secondary flex-1 justify-center">Cancel</button>
-          <button onClick={confirm} disabled={deleting}
-            className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 border border-red-500/20
-                       text-red-400 hover:bg-red-500/20 text-sm font-semibold px-4 py-2 rounded-lg
-                       transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-            {deleting
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Deleting…</>
-              : <><Trash2 className="w-3.5 h-3.5" />Delete</>}
+          <button onClick={onClose} disabled={deleting} className="btn-secondary flex-1 justify-center">
+            {isBlocked ? 'Close' : 'Cancel'}
           </button>
+          {!checking && !isBlocked && (
+            <button onClick={confirm} disabled={deleting}
+              className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 border border-red-500/20
+                         text-red-400 hover:bg-red-500/20 text-sm font-semibold px-4 py-2 rounded-lg
+                         transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              {deleting
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Deleting…</>
+                : <><Trash2 className="w-3.5 h-3.5" />Delete</>}
+            </button>
+          )}
         </div>
       </div>
     </div>,
