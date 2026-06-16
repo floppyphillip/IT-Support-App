@@ -20,6 +20,7 @@ AI-powered Remote IT Support SaaS Platform for network engineers and ISPs.
 | State | Zustand (auth, toasts, alert badges) |
 | Charts | Recharts (ComposedChart, AreaChart, LineChart) |
 | Terminal | xterm.js + WebSocket |
+| Maps | react-leaflet v4.2 + leaflet 1.9 (install with `--legacy-peer-deps`) |
 | Database | PostgreSQL 16 + SQLAlchemy 2.0 (async) + Alembic |
 | Cache / Queue | Redis 7 + Celery 5 |
 | AI | Anthropic Claude (claude-sonnet-4-6) |
@@ -87,10 +88,12 @@ netsupportai/
 │
 ├── frontend/
 │   ├── vite.config.js               # /api → localhost:8000, /ws → ws://localhost:8000
+│   │                                # manualChunks: vendor, state, icons, dates, charts,
+│   │                                #   terminal, leaflet (lazy-loaded via React.lazy)
 │   ├── tailwind.config.js
 │   └── src/
 │       ├── App.jsx                  # All auth routes as children of <Layout />
-│       ├── index.css                # Design tokens (CSS vars), global animations
+│       ├── index.css                # Design tokens (CSS vars), utility classes, animations
 │       ├── api/
 │       │   └── client.js            # Axios instance + all typed API modules
 │       ├── store/
@@ -104,6 +107,7 @@ netsupportai/
 │       │   ├── Sidebar.jsx          # Role-filtered nav (Main / Tools / Account groups)
 │       │   ├── Navbar.jsx
 │       │   ├── Terminal.jsx         # xterm.js SSH terminal over WebSocket
+│       │   ├── LinkPlanModal.jsx    # Full-screen RF link planner (Leaflet map + elevation chart)
 │       │   ├── Skeleton.jsx         # SkeletonCard, SkeletonTable, SkeletonStats
 │       │   ├── EmptyState.jsx
 │       │   ├── StatsCard.jsx
@@ -126,8 +130,9 @@ netsupportai/
 │           ├── AIDiagnostics.jsx
 │           ├── RemoteAccess.jsx     # SSH terminal
 │           ├── Alerts.jsx           # Custom-rule alerts (edge-triggered) + recovery alerts
-│           ├── AlertRules.jsx       # Rule builder: ping params + SNMP OID params (grouped by category)
+│           ├── AlertRules.jsx       # Rule builder: ping params + SNMP OID params
 │           ├── Services.jsx         # Service catalog (localStorage)
+│           ├── LinkPlanning.jsx     # 5 GHz RF link plan list + stats (lazy-loads modal)
 │           ├── Settings.jsx         # Profile, Team, Date/Time (12/24h + NTP/Manual)
 │           ├── UserManagement.jsx
 │           ├── Clients.jsx
@@ -167,6 +172,7 @@ netsupportai/
 | `/alert-rules` | AlertRules | Staff |
 | `/customer-management` | CustomerManagement | Staff |
 | `/services` | Services | Staff |
+| `/link-planning` | LinkPlanning | Staff |
 | `/clients` | Clients | Staff |
 | `/users` | UserManagement | Staff |
 | `/settings` | Settings | All |
@@ -207,6 +213,13 @@ netsupportai/
 - **Customer Management** — Service Details (type from Services catalog, name, capacity/bandwidth); Services and Customer Devices columns with inline table expansion; read-only customer view modal
   - **Delete guards**: a customer cannot be deleted while it has linked devices (shows count in toast); a customer device cannot be deleted while attached to a customer (delete modal shows which customer and blocks the button)
 - **Date/Time settings** (Settings, superadmin + admin) — 12/24h clock toggle, Manual date/time, NTP server picker (50+ servers, 7 regions); all timestamps respect this via `timeFormat.js`
+- **Link Planning** (`/link-planning`) — 5 GHz RF point-to-point link planning tool (localStorage). Full-screen modal with:
+  - Live satellite map (Esri World Imagery via react-leaflet v4 + leaflet 1.9) with Satellite/Topo/Dark tile switcher
+  - Point A and Point B: coordinate inputs (decimal degrees) + height AGL; markers draggable on map; "Set on Map" click-to-place mode
+  - Frequency slider + text input (5000–6000 MHz); Channel width selector (5/10/20/40 MHz)
+  - RF calculations: FSPL (`20·log10(d_km) + 20·log10(f_MHz) + 32.45`), RSL (23 dBm Tx + 23 dBi ant × 2 − 1 dB cable each − FSPL), link margin, 1st Fresnel zone radius, modulation estimate (256-QAM → BPSK → No Link), throughput, quality (excellent/good/marginal/poor)
+  - Elevation profile: 60-point path sampled from Open-Elevation API with deterministic sinusoidal fallback; `ComposedChart` with terrain area (light gray gradient), LOS line (blue dashed), Fresnel zone bounds (light blue dashed), obstructed terrain (red overlay)
+  - Leaflet chunk is lazy-loaded via `React.lazy()` + `Suspense` (only loads on modal open); isolated in `manualChunks.leaflet` to keep main bundle small
 
 ---
 
@@ -218,9 +231,68 @@ netsupportai/
 - **No unused imports** — remove on refactor
 - **No `alert()` / `confirm()`** — use `toast` (react-hot-toast) and custom modals
 - **No `<form>` elements** — use button `onClick` handlers
-- **No inline styles** except for dynamic values (`style={{ width: \`${pct}%\` }}`)
-- **No `border-gray-*`** — use `border-white/[opacity]` for all borders
 - **Icons exclusively from `lucide-react`** — never `react-icons`
+
+### Frontend Design System
+The app uses a **light theme** defined via CSS custom properties in `src/index.css`. Always match these conventions:
+
+**CSS variable tokens** — use via inline `style` prop:
+```
+var(--bg)          #ffffff      page background
+var(--surface)     #ffffff      card background
+var(--surface-2)   #f8fafc      nested bg (inputs, code blocks, mini-cards)
+var(--hover)       #f1f5f9      hover state bg
+var(--border)      rgba(0,0,0,0.09)    default border
+var(--border-mid)  rgba(0,0,0,0.14)    hover border / input border
+var(--border-strong) rgba(0,0,0,0.22)  active/selected border
+var(--sidebar)     #f8fafc      sidebar background
+var(--blue)        #3b82f6      primary accent
+var(--blue-dim)    rgba(59,130,246,0.10)  active nav bg
+var(--text-1)      #111827      headings, primary values
+var(--text-2)      #374151      body text
+var(--text-3)      #6b7280      secondary labels, descriptions
+var(--text-4)      #9ca3af      placeholders, timestamps, metadata
+```
+
+**Utility classes** — use via `className`:
+```
+.card           white bg + border + rounded-xl
+.btn-primary    blue bg, white text, 18px
+.btn-secondary  surface-2 bg, border-mid, text-2, 18px
+.btn-ghost      transparent, text-3, hover: surface bg
+.btn-danger     red tint bg + border + text
+.input          white bg, border-mid, text-1, 18px, focus ring
+.label          uppercase, tracking-wider, text-4, 15px
+.page-title     text-1, 24px, weight 600
+.page-sub       text-4, 17px
+.skeleton       shimmer animation (light gradient)
+.th / .td / .tr table header / cell / row styles
+```
+
+**Font**: `'Inter Tight', system-ui, sans-serif` at **18px base**. Use `font-mono` for IPs, hostnames, metrics, timestamps, CLI output.
+
+**Status colors** — use these hex values directly in `style` props (not Tailwind `text-*-400` which is too light on white):
+```
+Green  (online, success, resolved): #059669
+Amber  (warning, degraded):         #d97706
+Red    (critical, error, offline):  #dc2626
+Blue   (primary, info):             #2563eb
+Purple (AI / Claude):               #7c3aed
+```
+
+**Dos:**
+- Use `style={{ color: 'var(--text-X)' }}` for semantic text colors
+- Use `style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}` for nested panels
+- Use `onMouseEnter/Leave` with inline style for hover states that require CSS variable values
+- Add `transition-all duration-150` to every interactive element
+- Use `font-mono` on every metric, IP, command, timestamp
+
+**Don'ts:**
+- Never use `bg-[#0b0f1a]`, `bg-[#111827]`, `bg-[#1a2236]` — use CSS variable equivalents
+- Never use `text-slate-*` for themed text — use `var(--text-1..4)`
+- Never use `border-white/[opacity]` — use `var(--border)`, `var(--border-mid)`, `var(--border-strong)`
+- Never use a white or dark page background without the CSS variable system
+- Never import from `react-icons` — use `lucide-react` exclusively
 
 ### State
 - Global state → Zustand stores only (no React Context)
@@ -309,6 +381,7 @@ Unit handling: `%` → float%, `s` → TimeTicks to `DDd:HH:MM:SS`, `B` → auto
 | `netsupportai-custom-alerts` | `{ id, severity_level, device_name, alert_name, iface_alert?, iface_speed_alert?, created_at, is_resolved, is_acknowledged }[]` | alertEngine, Alerts |
 | `netsupportai-customer-service-details` | `{ [customerId]: ServiceDetail[] }` | CustomerManagement |
 | `netsupportai-datetime` | `{ mode, ntpServer, clockFormat, manualDate, manualTime }` | Settings, timeFormat |
+| `netsupportai-link-plans` | `{ id, name, pointA, pointB, frequency, channelWidth, created_at, updated_at, results }[]` | LinkPlanning, LinkPlanModal |
 
 ---
 
@@ -388,6 +461,9 @@ npm install
 npm run dev          # http://localhost:5173
 npm run build        # production build → /dist
 npm run lint         # ESLint
+
+# Installing react-leaflet (requires legacy peer deps — React 18 project)
+npm install react-leaflet@4 leaflet --legacy-peer-deps
 ```
 
 ## API Docs
