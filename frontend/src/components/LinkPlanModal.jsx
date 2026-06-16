@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, Tooltip,
 } from 'recharts'
 import {
-  X, Radio, MapPin, Mountain, Zap, Crosshair,
+  X, Radio, Mountain, Zap, Crosshair,
   CheckCircle, AlertTriangle, Loader2, Save, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
@@ -70,21 +70,15 @@ function rfAnalyze(ptA, ptB, freqMHz, chWidth, elevations) {
   const distKm = haversineKm(la, lna, lb, lnb)
   const n = elevations.length
   const elevA = elevations[0], elevB = elevations[n - 1]
-  const antA = elevA + hA, antB = elevB + hB   // ASL metres
+  const antA = elevA + hA, antB = elevB + hB
   const freqGHz = freqMHz / 1000
 
-  // FSPL (dB) = 20·log10(d_km) + 20·log10(f_MHz) + 32.45
   const fspl = 20 * Math.log10(distKm) + 20 * Math.log10(freqMHz) + 32.45
-
-  // 1st Fresnel zone radius at midpoint (metres)
   const f1Mid = 17.3 * Math.sqrt(distKm / (4 * freqGHz))
-
-  // Standard 5 GHz PtP link budget: Tx 23 dBm, Ant 23 dBi each, Cable 1 dB each
-  const rsl = 23 + 2 * 23 - 2 * 1 - fspl    // = 67 − fspl
+  const rsl = 23 + 2 * 23 - 2 * 1 - fspl
   const sensMap = { 5: -91, 10: -88, 20: -85, 40: -82 }
   const margin = rsl - (sensMap[chWidth] ?? -85)
 
-  // Elevation profile with LOS and Fresnel data
   const profile = elevations.map((elev, i) => {
     const t = i / (n - 1)
     const d = t * distKm
@@ -150,10 +144,10 @@ function persistPlans(plans) { localStorage.setItem(LS_KEY, JSON.stringify(plans
 // ─── Quality colour map ───────────────────────────────────────────────────────
 
 const QUALITY = {
-  excellent: { color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', label: 'Excellent' },
-  good:      { color: 'text-blue-400',    bg: 'bg-blue-500/10 border-blue-500/20',       label: 'Good'      },
-  marginal:  { color: 'text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20',     label: 'Marginal'  },
-  poor:      { color: 'text-red-400',     bg: 'bg-red-500/10 border-red-500/20',         label: 'Poor'      },
+  excellent: { color: '#059669', bg: 'bg-emerald-500/10 border-emerald-500/20', label: 'Excellent' },
+  good:      { color: '#2563eb', bg: 'bg-blue-500/10 border-blue-500/20',       label: 'Good'      },
+  marginal:  { color: '#d97706', bg: 'bg-amber-500/10 border-amber-500/20',     label: 'Marginal'  },
+  poor:      { color: '#dc2626', bg: 'bg-red-500/10 border-red-500/20',         label: 'Poor'      },
 }
 
 // ─── Map tile layers ──────────────────────────────────────────────────────────
@@ -179,11 +173,11 @@ const TILES = {
 // ─── Custom Leaflet marker icons ──────────────────────────────────────────────
 
 const ICON_A = L.divIcon({
-  html: `<div style="width:28px;height:28px;border-radius:50%;background:#3b82f6;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;box-shadow:0 2px 10px rgba(0,0,0,0.7);font-family:monospace;cursor:grab">A</div>`,
+  html: `<div style="width:28px;height:28px;border-radius:50%;background:#3b82f6;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;box-shadow:0 2px 10px rgba(0,0,0,0.4);font-family:monospace;cursor:grab">A</div>`,
   className: '', iconSize: [28, 28], iconAnchor: [14, 14],
 })
 const ICON_B = L.divIcon({
-  html: `<div style="width:28px;height:28px;border-radius:50%;background:#10b981;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;box-shadow:0 2px 10px rgba(0,0,0,0.7);font-family:monospace;cursor:grab">B</div>`,
+  html: `<div style="width:28px;height:28px;border-radius:50%;background:#10b981;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;box-shadow:0 2px 10px rgba(0,0,0,0.4);font-family:monospace;cursor:grab">B</div>`,
   className: '', iconSize: [28, 28], iconAnchor: [14, 14],
 })
 
@@ -192,9 +186,7 @@ const ICON_B = L.divIcon({
 function MapClickHandler({ clickMode, onPlace }) {
   useMapEvents({
     click(e) {
-      if (clickMode) {
-        onPlace(clickMode, e.latlng.lat.toFixed(6), e.latlng.lng.toFixed(6))
-      }
+      if (clickMode) onPlace(clickMode, e.latlng.lat.toFixed(6), e.latlng.lng.toFixed(6))
     },
   })
   return null
@@ -224,12 +216,13 @@ function ProfileTooltip({ active, payload }) {
   const d = payload[0]?.payload
   if (!d) return null
   return (
-    <div className="bg-[#111827] border border-white/[0.07] rounded-lg p-2 text-[10px] font-mono space-y-0.5 shadow-xl">
-      <p className="text-slate-400">{d.dist} km along path</p>
-      <p className="text-slate-300">Terrain: <span className="text-slate-100">{d.terrain} m</span></p>
-      <p className="text-blue-400">LOS: {d.los} m</p>
+    <div className="rounded-lg p-2 shadow-lg space-y-0.5"
+      style={{ background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 12, fontFamily: 'monospace' }}>
+      <p style={{ color: 'var(--text-3)' }}>{d.dist} km along path</p>
+      <p style={{ color: 'var(--text-2)' }}>Terrain: <span style={{ color: 'var(--text-1)' }}>{d.terrain} m</span></p>
+      <p style={{ color: '#2563eb' }}>LOS: {d.los} m</p>
       <p style={{ color: 'rgba(59,130,246,0.6)' }}>F1 ↑ {d.fresnelUpper} m  ↓ {d.fresnelLower} m</p>
-      {d.obstructed && <p className="text-red-400 font-bold">⚠ Fresnel obstructed</p>}
+      {d.obstructed && <p style={{ color: '#dc2626', fontWeight: 700 }}>⚠ Fresnel obstructed</p>}
     </div>
   )
 }
@@ -243,18 +236,18 @@ function CoordPanel({ point, label, color, clickMode, onCoordChange, onToggleCli
     <div>
       <div className="flex items-center gap-1.5 mb-2">
         <div
-          className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-          style={{ background: color }}
+          className="w-4 h-4 rounded-full flex items-center justify-center text-white flex-shrink-0"
+          style={{ background: color, fontSize: 9, fontWeight: 700 }}
         >
           {label}
         </div>
-        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Point {label}</h3>
+        <span className="label" style={{ marginBottom: 0 }}>Point {label}</span>
       </div>
       <div className="space-y-2">
         <div className="grid grid-cols-2 gap-1.5">
           {['lat', 'lng'].map(field => (
             <div key={field}>
-              <label className="block text-[10px] text-slate-600 mb-0.5 capitalize">
+              <label className="label" style={{ fontSize: 13, marginBottom: 3 }}>
                 {field === 'lat' ? 'Latitude' : 'Longitude'}
               </label>
               <input
@@ -265,14 +258,15 @@ function CoordPanel({ point, label, color, clickMode, onCoordChange, onToggleCli
                 max={field === 'lat' ? 90 : 180}
                 value={point[field]}
                 onChange={e => onCoordChange(field, e.target.value)}
-                className="w-full bg-[#0b0f1a] border border-white/[0.07] focus:border-blue-500/50 rounded-lg px-2 py-1.5 text-xs text-slate-200 placeholder-slate-700 outline-none font-mono transition-colors"
+                className="input font-mono"
+                style={{ fontSize: 15, padding: '5px 8px' }}
               />
             </div>
           ))}
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           <div>
-            <label className="block text-[10px] text-slate-600 mb-0.5">Height AGL (m)</label>
+            <label className="label" style={{ fontSize: 13, marginBottom: 3 }}>Height AGL (m)</label>
             <input
               type="number"
               placeholder="10"
@@ -280,26 +274,28 @@ function CoordPanel({ point, label, color, clickMode, onCoordChange, onToggleCli
               max="500"
               value={point.height}
               onChange={e => onCoordChange('height', e.target.value)}
-              className="w-full bg-[#0b0f1a] border border-white/[0.07] focus:border-blue-500/50 rounded-lg px-2 py-1.5 text-xs text-slate-200 placeholder-slate-700 outline-none font-mono transition-colors"
+              className="input font-mono"
+              style={{ fontSize: 15, padding: '5px 8px' }}
             />
           </div>
           <div className="flex items-end">
             <button
               onClick={onToggleClick}
-              className={`w-full flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
-                isPlacing
-                  ? 'text-white border-transparent'
-                  : 'bg-[#0b0f1a] border-white/[0.07] text-slate-400 hover:border-white/20 hover:text-slate-200'
-              }`}
-              style={isPlacing ? { background: color, borderColor: color } : {}}
+              className="w-full flex items-center justify-center gap-1 py-1.5 rounded-lg font-semibold transition-all"
+              style={isPlacing
+                ? { background: color, color: 'white', border: `1px solid ${color}`, fontSize: 14 }
+                : { background: 'var(--surface-2)', border: '1px solid var(--border-mid)', color: 'var(--text-3)', fontSize: 14 }
+              }
+              onMouseEnter={e => { if (!isPlacing) e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+              onMouseLeave={e => { if (!isPlacing) e.currentTarget.style.borderColor = 'var(--border-mid)' }}
             >
-              <Crosshair size={11} />
+              <Crosshair size={12} />
               {isPlacing ? 'Placing…' : 'Set on Map'}
             </button>
           </div>
         </div>
         {hasCoord && (
-          <p className="text-[10px] font-mono text-slate-700">
+          <p className="font-mono" style={{ fontSize: 12, color: 'var(--text-4)' }}>
             {parseFloat(point.lat).toFixed(5)}, {parseFloat(point.lng).toFixed(5)}
           </p>
         )}
@@ -316,7 +312,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
   const [ptB, setPtB]             = useState(initialPlan?.pointB ?? { lat: '', lng: '', height: '10' })
   const [freq, setFreq]           = useState(initialPlan?.frequency ?? 5800)
   const [chWidth, setChWidth]     = useState(initialPlan?.channelWidth ?? 20)
-  const [clickMode, setClickMode] = useState(null)   // 'A' | 'B' | null
+  const [clickMode, setClickMode] = useState(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [elevSrc, setElevSrc]     = useState(initialPlan ? 'saved' : null)
   const [results, setResults]     = useState(initialPlan?.results ?? null)
@@ -385,7 +381,6 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
     onClose()
   }, [results, planName, ptA, ptB, freq, chWidth, initialPlan, onClose, onSave])
 
-  // Y-axis domain for elevation profile
   let yDomain = ['auto', 'auto']
   if (results?.profile?.length) {
     const allY = results.profile.flatMap(p => [p.terrain, p.fresnelUpper, p.antA, p.antB]).filter(Boolean)
@@ -398,33 +393,39 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
   const tileConf = TILES[tile]
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0b0f1a' }}>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--bg)' }}>
 
       {/* ── Header ── */}
       <div
-        className="flex items-center gap-3 px-5 py-2.5 border-b border-white/[0.07] flex-shrink-0"
-        style={{ background: '#111827' }}
+        className="flex items-center gap-3 px-5 py-2.5 flex-shrink-0"
+        style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}
       >
-        <div className="w-7 h-7 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
-          <Radio size={14} className="text-blue-400" />
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.22)' }}>
+          <Radio size={14} className="text-blue-600" />
         </div>
 
         {/* Editable plan name */}
         <input
           value={planName}
           onChange={e => setPlanName(e.target.value)}
-          className="flex-1 min-w-0 bg-transparent text-[14px] font-bold text-slate-100 outline-none truncate"
-          style={{ caretColor: '#3b82f6' }}
+          className="flex-1 min-w-0 bg-transparent font-semibold outline-none truncate"
+          style={{ color: 'var(--text-1)', fontSize: 18, caretColor: '#3b82f6' }}
           placeholder="Plan name…"
         />
 
         {/* Tile switcher */}
-        <div className="flex gap-0.5 p-0.5 bg-[#0b0f1a] rounded-lg border border-white/[0.07] flex-shrink-0">
+        <div className="flex gap-0.5 p-0.5 rounded-lg flex-shrink-0"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border-mid)' }}>
           {Object.entries(TILES).map(([k, v]) => (
             <button
               key={k}
               onClick={() => setTile(k)}
-              className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${tile === k ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+              className="px-2.5 py-1 rounded-md font-semibold transition-all"
+              style={tile === k
+                ? { background: '#3b82f6', color: 'white', fontSize: 13 }
+                : { color: 'var(--text-3)', fontSize: 13 }
+              }
             >
               {v.label}
             </button>
@@ -432,19 +433,19 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
         </div>
 
         {results && (
-          <button
-            onClick={handleSave}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
-          >
-            <Save size={12} /> Save Plan
+          <button onClick={handleSave} className="btn-primary flex-shrink-0" style={{ fontSize: 15 }}>
+            <Save size={13} /> Save Plan
           </button>
         )}
 
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.07] transition-all flex-shrink-0"
+          className="p-1.5 rounded-lg transition-all flex-shrink-0"
+          style={{ color: 'var(--text-3)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover)'; e.currentTarget.style.color = 'var(--text-1)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-3)' }}
         >
-          <X size={15} />
+          <X size={16} />
         </button>
       </div>
 
@@ -453,8 +454,8 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
 
         {/* ── Left parameter panel ── */}
         <div
-          className="w-72 border-r border-white/[0.07] flex flex-col overflow-y-auto flex-shrink-0"
-          style={{ background: '#111827' }}
+          className="w-72 flex flex-col overflow-y-auto flex-shrink-0"
+          style={{ background: 'var(--surface)', borderRight: '1px solid var(--border)' }}
         >
           <div className="p-4 space-y-4">
 
@@ -468,7 +469,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
               onToggleClick={() => setClickMode(clickMode === 'A' ? null : 'A')}
             />
 
-            <div className="border-t border-white/[0.04]" />
+            <div style={{ borderTop: '1px solid var(--border)' }} />
 
             {/* Point B */}
             <CoordPanel
@@ -480,19 +481,17 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
               onToggleClick={() => setClickMode(clickMode === 'B' ? null : 'B')}
             />
 
-            <div className="border-t border-white/[0.04]" />
+            <div style={{ borderTop: '1px solid var(--border)' }} />
 
             {/* Link parameters */}
             <div>
-              <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">
-                Link Parameters
-              </h3>
+              <p className="label mb-3">Link Parameters</p>
               <div className="space-y-3">
                 {/* Frequency slider */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] text-slate-600">Frequency</label>
-                    <span className="text-[10px] font-mono font-bold text-blue-400">{freq} MHz</span>
+                    <span style={{ color: 'var(--text-3)', fontSize: 15 }}>Frequency</span>
+                    <span className="font-mono font-bold text-blue-600" style={{ fontSize: 14 }}>{freq} MHz</span>
                   </div>
                   <input
                     type="range"
@@ -503,16 +502,14 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                     onChange={e => { setFreq(+e.target.value); setResults(null) }}
                     className="w-full accent-blue-500 cursor-pointer"
                   />
-                  <div className="flex justify-between text-[9px] text-slate-700 mt-0.5 font-mono">
+                  <div className="flex justify-between mt-0.5 font-mono" style={{ fontSize: 12, color: 'var(--text-4)' }}>
                     <span>5000</span><span>5500</span><span>6000 MHz</span>
                   </div>
                 </div>
                 {/* Manual freq input */}
                 <div>
-                  <label className="block text-[10px] text-slate-600 mb-1">
-                    Frequency (type value)
-                  </label>
-                  <div className="flex items-center gap-1">
+                  <label className="label" style={{ fontSize: 13, marginBottom: 4 }}>Frequency (type value)</label>
+                  <div className="flex items-center gap-1.5">
                     <input
                       type="number"
                       min="5000"
@@ -524,30 +521,31 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                         setFreq(v)
                         setResults(null)
                       }}
-                      className="w-full bg-[#0b0f1a] border border-white/[0.07] focus:border-blue-500/50 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none font-mono transition-colors"
+                      className="input font-mono"
+                      style={{ fontSize: 15, padding: '5px 8px' }}
                     />
-                    <span className="text-[10px] text-slate-600 flex-shrink-0">MHz</span>
+                    <span className="flex-shrink-0" style={{ fontSize: 14, color: 'var(--text-3)' }}>MHz</span>
                   </div>
                 </div>
                 {/* Channel width */}
                 <div>
-                  <label className="block text-[10px] text-slate-600 mb-1.5">Channel Width</label>
+                  <label className="label" style={{ fontSize: 13, marginBottom: 6 }}>Channel Width</label>
                   <div className="grid grid-cols-4 gap-1">
                     {[5, 10, 20, 40].map(w => (
                       <button
                         key={w}
                         onClick={() => { setChWidth(w); setResults(null) }}
-                        className={`py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
-                          chWidth === w
-                            ? 'bg-blue-600 border-blue-500 text-white'
-                            : 'bg-[#0b0f1a] border-white/[0.07] text-slate-500 hover:border-white/20 hover:text-slate-300'
-                        }`}
+                        className="py-1.5 rounded-lg font-semibold transition-all"
+                        style={chWidth === w
+                          ? { background: '#3b82f6', color: 'white', border: '1px solid #3b82f6', fontSize: 14 }
+                          : { background: 'var(--surface-2)', border: '1px solid var(--border-mid)', color: 'var(--text-3)', fontSize: 14 }
+                        }
                       >
                         {w}
                       </button>
                     ))}
                   </div>
-                  <p className="text-[9px] text-slate-700 mt-1 font-mono">MHz channel width</p>
+                  <p className="font-mono mt-1" style={{ fontSize: 12, color: 'var(--text-4)' }}>MHz channel width</p>
                 </div>
               </div>
             </div>
@@ -556,15 +554,15 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
             <button
               onClick={analyze}
               disabled={!canAnalyze || analyzing}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="btn-primary w-full justify-center"
             >
               {analyzing
-                ? <><Loader2 size={12} className="animate-spin" /> Analyzing…</>
-                : <><Zap size={12} /> Analyze Link</>}
+                ? <><Loader2 size={14} className="animate-spin" /> Analyzing…</>
+                : <><Zap size={14} /> Analyze Link</>}
             </button>
 
             {!canAnalyze && (
-              <p className="text-[10px] text-slate-600 text-center -mt-2">
+              <p className="text-center -mt-2" style={{ fontSize: 14, color: 'var(--text-4)' }}>
                 Set both Point A and B to analyze
               </p>
             )}
@@ -572,24 +570,22 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
             {/* ── Results ── */}
             {results && (
               <>
-                <div className="border-t border-white/[0.04]" />
+                <div style={{ borderTop: '1px solid var(--border)' }} />
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Analysis Results
-                    </h3>
+                    <p className="label" style={{ marginBottom: 0 }}>Analysis Results</p>
                     {elevSrc === 'fallback' && (
-                      <span className="text-[9px] text-amber-500/80 font-mono">simulated terrain</span>
+                      <span className="font-mono" style={{ fontSize: 12, color: '#d97706' }}>simulated terrain</span>
                     )}
                     {elevSrc === 'api' && (
-                      <span className="text-[9px] text-emerald-600 font-mono">live elevation</span>
+                      <span className="font-mono" style={{ fontSize: 12, color: '#059669' }}>live elevation</span>
                     )}
                   </div>
 
                   {/* Quality badge */}
                   <div className={`flex items-center justify-between p-2.5 rounded-lg border mb-3 ${QUALITY[results.quality]?.bg ?? 'bg-slate-500/10 border-slate-500/20'}`}>
-                    <span className="text-[10px] font-bold text-slate-400">Link Quality</span>
-                    <span className={`text-sm font-bold ${QUALITY[results.quality]?.color}`}>
+                    <span style={{ fontSize: 14, color: 'var(--text-3)' }}>Link Quality</span>
+                    <span className="font-bold" style={{ fontSize: 16, color: QUALITY[results.quality]?.color }}>
                       {QUALITY[results.quality]?.label}
                     </span>
                   </div>
@@ -597,18 +593,18 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                   {/* Metric rows */}
                   <div className="space-y-1.5">
                     {[
-                      { label: 'Distance',         val: `${results.distKm.toFixed(2)} km` },
-                      { label: 'Bearing A→B',      val: `${results.bearing}°` },
-                      { label: 'FSPL',             val: `${results.fspl.toFixed(1)} dB` },
-                      { label: 'Est. RSL',         val: `${results.rsl.toFixed(1)} dBm`, color: results.rsl > -75 ? 'text-emerald-400' : results.rsl > -85 ? 'text-amber-400' : 'text-red-400' },
-                      { label: 'Link Margin',      val: `${results.margin >= 0 ? '+' : ''}${results.margin.toFixed(1)} dB`, color: results.margin >= 10 ? 'text-emerald-400' : results.margin >= 0 ? 'text-amber-400' : 'text-red-400' },
-                      { label: '1st Fresnel (mid)',val: `${results.f1Mid.toFixed(1)} m` },
-                      { label: 'Modulation',       val: results.mod, color: results.mod === 'No Link' ? 'text-red-400' : 'text-slate-200' },
-                      { label: 'Est. Throughput',  val: `~${results.throughput} Mbps`, color: 'text-blue-400' },
+                      { label: 'Distance',          val: `${results.distKm.toFixed(2)} km` },
+                      { label: 'Bearing A→B',       val: `${results.bearing}°` },
+                      { label: 'FSPL',              val: `${results.fspl.toFixed(1)} dB` },
+                      { label: 'Est. RSL',          val: `${results.rsl.toFixed(1)} dBm`,   color: results.rsl > -75 ? '#059669' : results.rsl > -85 ? '#d97706' : '#dc2626' },
+                      { label: 'Link Margin',       val: `${results.margin >= 0 ? '+' : ''}${results.margin.toFixed(1)} dB`, color: results.margin >= 10 ? '#059669' : results.margin >= 0 ? '#d97706' : '#dc2626' },
+                      { label: '1st Fresnel (mid)', val: `${results.f1Mid.toFixed(1)} m` },
+                      { label: 'Modulation',        val: results.mod,                        color: results.mod === 'No Link' ? '#dc2626' : 'var(--text-1)' },
+                      { label: 'Est. Throughput',   val: `~${results.throughput} Mbps`,      color: '#2563eb' },
                     ].map(({ label, val, color }) => (
                       <div key={label} className="flex items-center justify-between">
-                        <span className="text-[10px] text-slate-600">{label}</span>
-                        <span className={`text-[10px] font-bold font-mono ${color ?? 'text-slate-300'}`}>{val}</span>
+                        <span style={{ fontSize: 14, color: 'var(--text-3)' }}>{label}</span>
+                        <span className="font-bold font-mono" style={{ fontSize: 14, color: color ?? 'var(--text-1)' }}>{val}</span>
                       </div>
                     ))}
                   </div>
@@ -616,9 +612,9 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                   {/* LOS / Fresnel clearance status */}
                   <div className={`flex items-center gap-2 mt-3 p-2 rounded-lg border ${results.losObstructed ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
                     {results.losObstructed
-                      ? <AlertTriangle size={12} className="text-red-400 flex-shrink-0" />
-                      : <CheckCircle size={12} className="text-emerald-400 flex-shrink-0" />}
-                    <span className={`text-[10px] font-bold ${results.losObstructed ? 'text-red-400' : 'text-emerald-400'}`}>
+                      ? <AlertTriangle size={13} style={{ color: '#dc2626', flexShrink: 0 }} />
+                      : <CheckCircle size={13} style={{ color: '#059669', flexShrink: 0 }} />}
+                    <span className="font-semibold" style={{ fontSize: 13, color: results.losObstructed ? '#dc2626' : '#059669' }}>
                       {results.losObstructed
                         ? `Fresnel obstructed (${results.obstructedCount} sample pts)`
                         : '60% Fresnel zone clear'}
@@ -626,23 +622,22 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                   </div>
 
                   {/* Site elevations */}
-                  <div className="mt-2 p-2 bg-[#0b0f1a] rounded-lg">
+                  <div className="mt-2 p-2 rounded-lg" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <p className="text-[9px] text-slate-700 mb-0.5">Site A ground</p>
-                        <p className="text-[10px] font-mono text-slate-400">{results.elevA} m ASL</p>
-                        <p className="text-[9px] font-mono text-blue-500">Ant: {results.antA} m ASL</p>
+                        <p style={{ fontSize: 12, color: 'var(--text-4)', marginBottom: 2 }}>Site A ground</p>
+                        <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-2)' }}>{results.elevA} m ASL</p>
+                        <p className="font-mono" style={{ fontSize: 12, color: '#2563eb' }}>Ant: {results.antA} m ASL</p>
                       </div>
                       <div>
-                        <p className="text-[9px] text-slate-700 mb-0.5">Site B ground</p>
-                        <p className="text-[10px] font-mono text-slate-400">{results.elevB} m ASL</p>
-                        <p className="text-[9px] font-mono text-emerald-500">Ant: {results.antB} m ASL</p>
+                        <p style={{ fontSize: 12, color: 'var(--text-4)', marginBottom: 2 }}>Site B ground</p>
+                        <p className="font-mono" style={{ fontSize: 13, color: 'var(--text-2)' }}>{results.elevB} m ASL</p>
+                        <p className="font-mono" style={{ fontSize: 12, color: '#059669' }}>Ant: {results.antB} m ASL</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Assumptions note */}
-                  <p className="text-[9px] text-slate-700 mt-2 leading-relaxed">
+                  <p className="mt-2 leading-relaxed" style={{ fontSize: 12, color: 'var(--text-4)' }}>
                     Budget assumes 23 dBm Tx · 23 dBi antennas · 1 dB cable loss each end.
                     Throughput estimate based on 802.11ac MIMO 2×2.
                   </p>
@@ -662,13 +657,17 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
           >
             {/* Click mode banner */}
             {clickMode && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-[#111827]/95 border border-blue-500/40 rounded-full px-4 py-1.5 shadow-xl backdrop-blur-sm">
-                <Crosshair size={12} className={clickMode === 'A' ? 'text-blue-400' : 'text-emerald-400'} />
-                <span className="text-[11px] font-semibold text-slate-200">
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 rounded-full px-4 py-1.5 shadow-lg backdrop-blur-sm"
+                style={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(59,130,246,0.35)' }}>
+                <Crosshair size={13} style={{ color: clickMode === 'A' ? '#3b82f6' : '#10b981', flexShrink: 0 }} />
+                <span className="font-semibold" style={{ fontSize: 14, color: 'var(--text-1)' }}>
                   Click the map to place Point {clickMode}
                 </span>
-                <button onClick={() => setClickMode(null)} className="text-slate-500 hover:text-slate-300 ml-1 transition-colors">
-                  <X size={11} />
+                <button onClick={() => setClickMode(null)} className="ml-1 transition-colors"
+                  style={{ color: 'var(--text-3)' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-1)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)' }}>
+                  <X size={12} />
                 </button>
               </div>
             )}
@@ -724,19 +723,22 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
             </MapContainer>
 
             {/* Map info overlay */}
-            <div className="absolute bottom-3 right-3 z-[1000] bg-[#111827]/90 border border-white/[0.07] rounded-lg px-3 py-2 text-[10px] space-y-1 backdrop-blur-sm">
+            <div className="absolute bottom-3 right-3 z-[1000] rounded-lg px-3 py-2 space-y-1 backdrop-blur-sm shadow-md"
+              style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid var(--border)' }}>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center text-[7px] font-bold text-white">A</div>
-                <span className="text-slate-500">Point A — drag to move</span>
+                <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center"
+                  style={{ fontSize: 7, fontWeight: 700, color: 'white' }}>A</div>
+                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Point A — drag to move</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-emerald-500 flex items-center justify-center text-[7px] font-bold text-white">B</div>
-                <span className="text-slate-500">Point B — drag to move</span>
+                <div className="w-3 h-3 rounded-full bg-emerald-500 flex items-center justify-center"
+                  style={{ fontSize: 7, fontWeight: 700, color: 'white' }}>B</div>
+                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Point B — drag to move</span>
               </div>
               {polyline && (
-                <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/[0.04]">
+                <div className="flex items-center gap-1.5 pt-0.5" style={{ borderTop: '1px solid var(--border)' }}>
                   <div className={`w-4 h-0.5 ${results?.losObstructed ? 'bg-red-500' : 'bg-blue-500'}`} />
-                  <span className="text-slate-500 font-mono">
+                  <span className="font-mono" style={{ fontSize: 13, color: 'var(--text-3)' }}>
                     {results ? `${results.distKm.toFixed(2)} km` : 'Link path'}
                   </span>
                 </div>
@@ -744,7 +746,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
               {results && (
                 <div className="flex items-center gap-1.5">
                   <div className={`w-2 h-2 rounded-full ${results.losObstructed ? 'bg-red-500' : 'bg-emerald-500'}`} />
-                  <span className="text-slate-500">{results.losObstructed ? 'Obstructed' : 'Clear LOS'}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{results.losObstructed ? 'Obstructed' : 'Clear LOS'}</span>
                 </div>
               )}
             </div>
@@ -752,34 +754,35 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
 
           {/* ── Elevation Profile ── */}
           {results?.profile?.length > 0 && (
-            <div
-              className="border-t border-white/[0.07] flex-shrink-0"
-              style={{ background: '#0b0f1a' }}
-            >
+            <div className="flex-shrink-0" style={{ background: 'var(--surface-2)', borderTop: '1px solid var(--border)' }}>
+
               {/* Profile header */}
-              <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04]">
+              <div className="flex items-center justify-between px-4 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
                 <div className="flex items-center gap-2">
-                  <Mountain size={12} className="text-slate-600" />
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  <Mountain size={13} style={{ color: 'var(--text-4)' }} />
+                  <span className="font-semibold uppercase tracking-wider" style={{ fontSize: 13, color: 'var(--text-3)' }}>
                     Elevation Profile
                   </span>
                   {elevSrc === 'api' && (
-                    <span className="text-[9px] text-emerald-700 font-mono">• live data</span>
+                    <span className="font-mono" style={{ fontSize: 12, color: '#059669' }}>• live data</span>
                   )}
                   {elevSrc === 'fallback' && (
-                    <span className="text-[9px] text-amber-700 font-mono">• simulated terrain</span>
+                    <span className="font-mono" style={{ fontSize: 12, color: '#d97706' }}>• simulated terrain</span>
                   )}
                   {results.losObstructed && (
-                    <span className="flex items-center gap-1 text-[9px] text-red-500 font-mono">
-                      <AlertTriangle size={9} /> {results.obstructedCount} obstruction pts
+                    <span className="flex items-center gap-1 font-mono" style={{ fontSize: 12, color: '#dc2626' }}>
+                      <AlertTriangle size={10} /> {results.obstructedCount} obstruction pts
                     </span>
                   )}
                 </div>
                 <button
                   onClick={() => setProfileCollapsed(c => !c)}
-                  className="text-slate-600 hover:text-slate-400 transition-colors p-0.5"
+                  className="p-0.5 transition-colors"
+                  style={{ color: 'var(--text-4)' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-2)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-4)' }}
                 >
-                  {profileCollapsed ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                  {profileCollapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </button>
               </div>
 
@@ -790,33 +793,33 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                       <ComposedChart data={results.profile} margin={{ top: 8, right: 12, bottom: 4, left: 40 }}>
                         <defs>
                           <linearGradient id="terrainGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%"   stopColor="#475569" stopOpacity={0.85} />
-                            <stop offset="100%" stopColor="#1e2a42" stopOpacity={0.25} />
+                            <stop offset="0%"   stopColor="#94a3b8" stopOpacity={0.7} />
+                            <stop offset="100%" stopColor="#f1f5f9" stopOpacity={0.2} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="2 5" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                        <CartesianGrid strokeDasharray="2 5" stroke="rgba(0,0,0,0.06)" vertical={false} />
                         <XAxis
                           dataKey="dist"
-                          tick={{ fontSize: 8, fill: '#475569', fontFamily: 'monospace' }}
+                          tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'monospace' }}
                           tickFormatter={v => `${v}km`}
                           interval="preserveStartEnd"
-                          stroke="rgba(255,255,255,0.06)"
+                          stroke="rgba(0,0,0,0.10)"
                         />
                         <YAxis
                           domain={yDomain}
-                          tick={{ fontSize: 8, fill: '#475569', fontFamily: 'monospace' }}
+                          tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'monospace' }}
                           tickFormatter={v => `${v}m`}
-                          stroke="rgba(255,255,255,0.06)"
+                          stroke="rgba(0,0,0,0.10)"
                           width={38}
                         />
                         <Tooltip content={<ProfileTooltip />} />
-                        {/* 1st Fresnel zone boundaries (dashed blue lines) */}
-                        <Line type="monotone" dataKey="fresnelUpper" stroke="rgba(59,130,246,0.28)" strokeWidth={1} strokeDasharray="3 4" dot={false} legendType="none" />
-                        <Line type="monotone" dataKey="fresnelLower" stroke="rgba(59,130,246,0.28)" strokeWidth={1} strokeDasharray="3 4" dot={false} legendType="none" />
+                        {/* 1st Fresnel zone boundaries */}
+                        <Line type="monotone" dataKey="fresnelUpper" stroke="rgba(59,130,246,0.30)" strokeWidth={1} strokeDasharray="3 4" dot={false} legendType="none" />
+                        <Line type="monotone" dataKey="fresnelLower" stroke="rgba(59,130,246,0.30)" strokeWidth={1} strokeDasharray="3 4" dot={false} legendType="none" />
                         {/* Terrain fill */}
-                        <Area type="monotone" dataKey="terrain" fill="url(#terrainGrad)" stroke="#475569" strokeWidth={1} dot={false} legendType="none" />
+                        <Area type="monotone" dataKey="terrain" fill="url(#terrainGrad)" stroke="#94a3b8" strokeWidth={1} dot={false} legendType="none" />
                         {/* Obstructed terrain (red overlay) */}
-                        <Area type="monotone" dataKey="obstructedTerrain" fill="rgba(239,68,68,0.38)" stroke="rgba(239,68,68,0.7)" strokeWidth={1.5} dot={false} legendType="none" connectNulls={false} />
+                        <Area type="monotone" dataKey="obstructedTerrain" fill="rgba(239,68,68,0.30)" stroke="rgba(220,38,38,0.7)" strokeWidth={1.5} dot={false} legendType="none" connectNulls={false} />
                         {/* LOS line */}
                         <Line type="monotone" dataKey="los" stroke="#3b82f6" strokeWidth={2} strokeDasharray="7 4" dot={false} legendType="none" />
                       </ComposedChart>
@@ -825,10 +828,10 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                   {/* Profile legend */}
                   <div className="flex items-center gap-5 px-4 pb-2 mt-1 flex-wrap">
                     {[
-                      { color: '#475569',                  dash: false, label: 'Terrain' },
-                      { color: 'rgba(239,68,68,0.7)',      dash: false, label: 'Obstruction (60% Fresnel)' },
-                      { color: '#3b82f6',                  dash: true,  label: 'LOS' },
-                      { color: 'rgba(59,130,246,0.4)',     dash: true,  label: '1st Fresnel zone' },
+                      { color: '#94a3b8',             dash: false, label: 'Terrain' },
+                      { color: 'rgba(220,38,38,0.7)', dash: false, label: 'Obstruction (60% Fresnel)' },
+                      { color: '#3b82f6',             dash: true,  label: 'LOS' },
+                      { color: 'rgba(59,130,246,0.4)',dash: true,  label: '1st Fresnel zone' },
                     ].map(({ color, dash, label }) => (
                       <div key={label} className="flex items-center gap-1.5">
                         <svg width="18" height="8">
@@ -836,7 +839,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                             ? <line x1="0" y1="4" x2="18" y2="4" stroke={color} strokeWidth="1.5" strokeDasharray="4 3" />
                             : <rect x="0" y="2" width="18" height="4" fill={color} rx="1" />}
                         </svg>
-                        <span className="text-[9px] text-slate-600">{label}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{label}</span>
                       </div>
                     ))}
                   </div>
