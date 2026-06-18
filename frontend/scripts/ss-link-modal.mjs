@@ -31,22 +31,55 @@ for (const btn of buttons) {
 }
 await new Promise(r => setTimeout(r, 3000))
 
-// Check DOM state
+// Type Point A coordinates
+const inputs = await page.$$('input[type="number"]')
+console.log('Number inputs found:', inputs.length)
+if (inputs.length >= 2) {
+  await inputs[0].triple_click?.() // clear
+  await inputs[0].click({ clickCount: 3 })
+  await inputs[0].type('6.4541')
+  await new Promise(r => setTimeout(r, 300))
+  await inputs[1].click({ clickCount: 3 })
+  await inputs[1].type('3.3947')
+  await new Promise(r => setTimeout(r, 1500)) // wait for debounce
+}
+
+// Check DOM state after typing
 const info = await page.evaluate(() => {
-  const modal = document.querySelector('.fixed.inset-0')
   const leaflet = document.querySelector('.leaflet-container')
-  const header = document.querySelector('.fixed.inset-0 header, .fixed.inset-0 [class*="border-b"]')
+  const markers = document.querySelectorAll('.leaflet-marker-icon')
   return {
-    modalFound: !!modal,
-    modalBg: modal ? modal.style.background : null,
-    leafletFound: !!leaflet,
-    leafletBg: leaflet ? getComputedStyle(leaflet).background : null,
-    leafletRect: leaflet ? JSON.stringify(leaflet.getBoundingClientRect()) : null,
-    bodyBg: getComputedStyle(document.body).background,
+    markerCount: markers.length,
+    leafletTransform: leaflet?.querySelector('.leaflet-map-pane')?.style.transform,
+    numberInputValues: Array.from(document.querySelectorAll('input[type="number"]')).map(i => i.value),
+    // Try to call setView directly on the leaflet map instance
+    leafletMapId: leaflet ? leaflet._leaflet_id : null,
   }
 })
-console.log('DOM info:', JSON.stringify(info, null, 2))
+console.log('After typing:', JSON.stringify(info, null, 2))
 
-await page.screenshot({ path: 'screenshots/link-modal.png', fullPage: false })
+// Now try calling Leaflet setView directly to verify Leaflet itself responds
+await page.evaluate(() => {
+  const container = document.querySelector('.leaflet-container')
+  if (container && container._leaflet_id) {
+    // Access the map via the global L object
+    const map = window.L?.map ? null : null // L might not be global
+    // Try via the leaflet internal maps registry
+    const mapId = container._leaflet_id
+    // react-leaflet stores map on _leaflet_events or we can try window
+    console.log('leaflet container id:', mapId)
+  }
+})
+const directCallResult = await page.evaluate(() => {
+  // Try to trigger a pan by dispatching to any exposed leaflet reference
+  const container = document.querySelector('.leaflet-container')
+  if (!container) return 'no container'
+  // Leaflet attaches the map object reference to the DOM element via internal key
+  const keys = Object.keys(container).filter(k => k.startsWith('_leaflet'))
+  return { keys, leafletId: container._leaflet_id }
+})
+console.log('Leaflet DOM keys:', JSON.stringify(directCallResult))
+
+await page.screenshot({ path: 'screenshots/link-modal-typed.png', fullPage: false })
 await browser.close()
 console.log('Done')
