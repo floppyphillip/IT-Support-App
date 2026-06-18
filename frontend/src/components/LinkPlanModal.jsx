@@ -195,23 +195,17 @@ function MapClickHandler({ clickMode, onPlace }) {
   return null
 }
 
-function MapFitter({ ptA, ptB }) {
+function MapInit({ mapRef, initialPlan }) {
   const map = useMap()
   useEffect(() => {
-    const la = parseFloat(ptA?.lat), lna = parseFloat(ptA?.lng)
-    const lb = parseFloat(ptB?.lat), lnb = parseFloat(ptB?.lng)
-    const aValid = !isNaN(la) && !isNaN(lna) && (Math.abs(la) + Math.abs(lna) > 0.0001)
-    const bValid = !isNaN(lb) && !isNaN(lnb) && (Math.abs(lb) + Math.abs(lnb) > 0.0001)
-    try {
-      if (aValid && bValid) {
-        map.fitBounds([[la, lna], [lb, lnb]], { padding: [70, 70], maxZoom: 15, animate: true })
-      } else if (aValid) {
-        map.setView([la, lna], Math.max(map.getZoom(), 13), { animate: true })
-      } else if (bValid) {
-        map.setView([lb, lnb], Math.max(map.getZoom(), 13), { animate: true })
-      }
-    } catch {}
-  }, [ptA?.lat, ptA?.lng, ptB?.lat, ptB?.lng, map])
+    mapRef.current = map
+    if (!initialPlan) return
+    const la = parseFloat(initialPlan.pointA?.lat), lna = parseFloat(initialPlan.pointA?.lng)
+    const lb = parseFloat(initialPlan.pointB?.lat), lnb = parseFloat(initialPlan.pointB?.lng)
+    if ([la, lna, lb, lnb].every(v => !isNaN(v) && isFinite(v))) {
+      map.fitBounds([[la, lna], [lb, lnb]], { padding: [70, 70], maxZoom: 15 })
+    }
+  }, [map]) // eslint-disable-line
   return null
 }
 
@@ -324,6 +318,28 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
   const [results, setResults]     = useState(initialPlan?.results ?? null)
   const [tile, setTile]           = useState('satellite')
   const [profileCollapsed, setProfileCollapsed] = useState(false)
+
+  const mapRef   = useRef(null)
+  const panTimer = useRef(null)
+
+  const panToCoords = useCallback((aLat, aLng, bLat, bLng) => {
+    clearTimeout(panTimer.current)
+    panTimer.current = setTimeout(() => {
+      const map = mapRef.current
+      if (!map) return
+      const la = parseFloat(aLat), lna = parseFloat(aLng)
+      const lb = parseFloat(bLat), lnb = parseFloat(bLng)
+      const aOk = !isNaN(la) && !isNaN(lna)
+      const bOk = !isNaN(lb) && !isNaN(lnb)
+      if (aOk && bOk) {
+        map.flyToBounds([[la, lna], [lb, lnb]], { padding: [70, 70], maxZoom: 15 })
+      } else if (aOk) {
+        map.flyTo([la, lna], Math.max(map.getZoom(), 13))
+      } else if (bOk) {
+        map.flyTo([lb, lnb], Math.max(map.getZoom(), 13))
+      }
+    }, 350)
+  }, [])
 
   const hasA = !isNaN(parseFloat(ptA.lat)) && !isNaN(parseFloat(ptA.lng))
   const hasB = !isNaN(parseFloat(ptB.lat)) && !isNaN(parseFloat(ptB.lng))
@@ -471,7 +487,17 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
               label="A"
               color="#3b82f6"
               clickMode={clickMode}
-              onCoordChange={(field, val) => { setPtA(p => ({ ...p, [field]: val })); setResults(null) }}
+              onCoordChange={(field, val) => {
+                setPtA(p => ({ ...p, [field]: val }))
+                setResults(null)
+                if (field !== 'height') {
+                  panToCoords(
+                    field === 'lat' ? val : ptA.lat,
+                    field === 'lng' ? val : ptA.lng,
+                    ptB.lat, ptB.lng,
+                  )
+                }
+              }}
               onToggleClick={() => setClickMode(clickMode === 'A' ? null : 'A')}
             />
 
@@ -483,7 +509,17 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
               label="B"
               color="#10b981"
               clickMode={clickMode}
-              onCoordChange={(field, val) => { setPtB(p => ({ ...p, [field]: val })); setResults(null) }}
+              onCoordChange={(field, val) => {
+                setPtB(p => ({ ...p, [field]: val }))
+                setResults(null)
+                if (field !== 'height') {
+                  panToCoords(
+                    ptA.lat, ptA.lng,
+                    field === 'lat' ? val : ptB.lat,
+                    field === 'lng' ? val : ptB.lng,
+                  )
+                }
+              }}
               onToggleClick={() => setClickMode(clickMode === 'B' ? null : 'B')}
             />
 
@@ -687,7 +723,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
             >
               <TileLayer url={tileConf.url} attribution={tileConf.attr} subdomains={tileConf.subdomains ?? 'abc'} />
               <MapClickHandler clickMode={clickMode} onPlace={handlePlace} />
-              <MapFitter ptA={ptA} ptB={ptB} />
+              <MapInit mapRef={mapRef} initialPlan={initialPlan} />
 
               {hasA && (
                 <Marker
