@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Polyline, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -9,7 +9,6 @@ import {
 import {
   X, Radio, Mountain, Zap, Crosshair,
   CheckCircle, AlertTriangle, Loader2, Save, ChevronDown, ChevronUp,
-  Globe, ExternalLink,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
@@ -155,19 +154,22 @@ const QUALITY = {
 
 const TILES = {
   satellite: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attr: 'Tiles &copy; Esri',
+    url: 'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+    subdomains: '0123',
+    attr: '&copy; Google',
     label: 'Satellite',
+  },
+  hybrid: {
+    url: 'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    subdomains: '0123',
+    attr: '&copy; Google',
+    label: 'Hybrid',
   },
   topo: {
     url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    subdomains: 'abc',
     attr: '&copy; OpenTopoMap contributors',
     label: 'Topo',
-  },
-  dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attr: '&copy; OpenStreetMap contributors &copy; CARTO',
-    label: 'Dark',
   },
 }
 
@@ -195,16 +197,19 @@ function MapClickHandler({ clickMode, onPlace }) {
 
 function MapFitter({ ptA, ptB }) {
   const map = useMap()
-  const fitted = useRef(false)
   useEffect(() => {
-    if (fitted.current) return
     const la = parseFloat(ptA?.lat), lna = parseFloat(ptA?.lng)
     const lb = parseFloat(ptB?.lat), lnb = parseFloat(ptB?.lng)
-    if ([la, lna, lb, lnb].some(isNaN)) return
-    if (Math.abs(la) + Math.abs(lna) + Math.abs(lb) + Math.abs(lnb) < 0.0001) return
+    const aValid = !isNaN(la) && !isNaN(lna) && (Math.abs(la) + Math.abs(lna) > 0.0001)
+    const bValid = !isNaN(lb) && !isNaN(lnb) && (Math.abs(lb) + Math.abs(lnb) > 0.0001)
     try {
-      map.fitBounds([[la, lna], [lb, lnb]], { padding: [70, 70], maxZoom: 15, animate: true })
-      fitted.current = true
+      if (aValid && bValid) {
+        map.fitBounds([[la, lna], [lb, lnb]], { padding: [70, 70], maxZoom: 15, animate: true })
+      } else if (aValid) {
+        map.setView([la, lna], Math.max(map.getZoom(), 13), { animate: true })
+      } else if (bValid) {
+        map.setView([lb, lnb], Math.max(map.getZoom(), 13), { animate: true })
+      }
     } catch {}
   }, [ptA?.lat, ptA?.lng, ptB?.lat, ptB?.lng, map])
   return null
@@ -392,19 +397,6 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
   }
 
   const tileConf = TILES[tile]
-
-  const googleEarthUrl = useMemo(() => {
-    const midLat = hasA && hasB
-      ? (parseFloat(ptA.lat) + parseFloat(ptB.lat)) / 2
-      : hasA ? parseFloat(ptA.lat) : 20
-    const midLng = hasA && hasB
-      ? (parseFloat(ptA.lng) + parseFloat(ptB.lng)) / 2
-      : hasA ? parseFloat(ptA.lng) : 0
-    const rangeM = results?.distKm
-      ? Math.max(5000, Math.round(results.distKm * 1500))
-      : 50000
-    return `https://earth.google.com/web/@${midLat.toFixed(5)},${midLng.toFixed(5)},0a,${rangeM}d,0t,0r`
-  }, [ptA.lat, ptA.lng, ptB.lat, ptB.lng, hasA, hasB, results?.distKm])
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--bg)' }}>
@@ -693,7 +685,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
               zoomControl
               attributionControl={false}
             >
-              <TileLayer url={tileConf.url} attribution={tileConf.attr} />
+              <TileLayer url={tileConf.url} attribution={tileConf.attr} subdomains={tileConf.subdomains ?? 'abc'} />
               <MapClickHandler clickMode={clickMode} onPlace={handlePlace} />
               <MapFitter ptA={ptA} ptB={ptB} />
 
@@ -735,21 +727,6 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                 />
               )}
             </MapContainer>
-
-            {/* Google Earth link */}
-            <a
-              href={googleEarthUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5 rounded-lg px-3 py-1.5 shadow-md backdrop-blur-sm transition-all"
-              style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-1)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-2)' }}
-            >
-              <Globe size={13} />
-              Google Earth
-              <ExternalLink size={11} style={{ color: 'var(--text-4)' }} />
-            </a>
 
             {/* Map info overlay */}
             <div className="absolute bottom-3 right-3 z-[1000] rounded-lg px-3 py-2 space-y-1 backdrop-blur-sm shadow-md"
