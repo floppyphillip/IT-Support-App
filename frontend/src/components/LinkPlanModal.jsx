@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { MapContainer, TileLayer, Marker, Polyline, useMapEvents, useMap } from 'react-leaflet'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import { GoogleMap, useJsApiLoader, Marker as GMarker, Polyline as GPolyline } from '@react-google-maps/api'
 import {
   ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Tooltip,
@@ -150,63 +148,36 @@ const QUALITY = {
   poor:      { color: '#dc2626', bg: 'bg-red-500/10 border-red-500/20',         label: 'Poor'      },
 }
 
-// ─── Map tile layers ──────────────────────────────────────────────────────────
+// ─── Google Maps config ───────────────────────────────────────────────────────
 
-const TILES = {
-  satellite: {
-    url: 'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-    subdomains: '0123',
-    attr: '&copy; Google',
-    label: 'Satellite',
-  },
-  hybrid: {
-    url: 'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-    subdomains: '0123',
-    attr: '&copy; Google',
-    label: 'Hybrid',
-  },
-  topo: {
-    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    subdomains: 'abc',
-    attr: '&copy; OpenTopoMap contributors',
-    label: 'Topo',
-  },
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? ''
+
+const MAP_TYPES = {
+  satellite: { id: 'satellite', label: 'Satellite' },
+  hybrid:    { id: 'hybrid',    label: 'Hybrid'    },
+  terrain:   { id: 'terrain',   label: 'Terrain'   },
 }
 
-// ─── Custom Leaflet marker icons ──────────────────────────────────────────────
-
-const ICON_A = L.divIcon({
-  html: `<div style="width:28px;height:28px;border-radius:50%;background:#3b82f6;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;box-shadow:0 2px 10px rgba(0,0,0,0.4);font-family:monospace;cursor:grab">A</div>`,
-  className: '', iconSize: [28, 28], iconAnchor: [14, 14],
-})
-const ICON_B = L.divIcon({
-  html: `<div style="width:28px;height:28px;border-radius:50%;background:#10b981;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;box-shadow:0 2px 10px rgba(0,0,0,0.4);font-family:monospace;cursor:grab">B</div>`,
-  className: '', iconSize: [28, 28], iconAnchor: [14, 14],
-})
-
-// ─── Leaflet sub-components ───────────────────────────────────────────────────
-
-function MapClickHandler({ clickMode, onPlace }) {
-  useMapEvents({
-    click(e) {
-      if (clickMode) onPlace(clickMode, e.latlng.lat.toFixed(6), e.latlng.lng.toFixed(6))
-    },
-  })
-  return null
+const MAP_OPTIONS = {
+  mapTypeControl: false,
+  streetViewControl: false,
+  fullscreenControl: false,
+  zoomControl: true,
+  zoomControlOptions: { position: 3 }, // RIGHT_TOP
+  gestureHandling: 'greedy',
+  styles: [],
 }
 
-function MapCaptureRef({ mapRef, initialPlan }) {
-  const map = useMap()
-  mapRef.current = map  // synchronous — available immediately after first render
-  useEffect(() => {
-    if (!initialPlan) return
-    const la = parseFloat(initialPlan.pointA?.lat), lna = parseFloat(initialPlan.pointA?.lng)
-    const lb = parseFloat(initialPlan.pointB?.lat), lnb = parseFloat(initialPlan.pointB?.lng)
-    if ([la, lna, lb, lnb].every(v => !isNaN(v) && isFinite(v))) {
-      map.fitBounds([[la, lna], [lb, lnb]], { padding: [70, 70], maxZoom: 15 })
-    }
-  }, []) // eslint-disable-line
-  return null
+function mkIcon(color) {
+  if (!window.google?.maps) return undefined
+  return {
+    path: window.google.maps.SymbolPath.CIRCLE,
+    scale: 14,
+    fillColor: color,
+    fillOpacity: 1,
+    strokeColor: '#ffffff',
+    strokeWeight: 2.5,
+  }
 }
 
 // ─── Elevation profile tooltip ────────────────────────────────────────────────
@@ -321,23 +292,45 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
 
   const mapRef = useRef(null)
 
+  const { isLoaded: mapsLoaded, loadError: mapsError } = useJsApiLoader({
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+  })
+
+  const onMapLoad = useCallback((map) => {
+    mapRef.current = map
+    if (!initialPlan) return
+    const la = parseFloat(initialPlan.pointA?.lat), lna = parseFloat(initialPlan.pointA?.lng)
+    const lb = parseFloat(initialPlan.pointB?.lat), lnb = parseFloat(initialPlan.pointB?.lng)
+    if ([la, lna, lb, lnb].every(v => !isNaN(v) && isFinite(v))) {
+      const bounds = new window.google.maps.LatLngBounds()
+      bounds.extend({ lat: la, lng: lna })
+      bounds.extend({ lat: lb, lng: lnb })
+      map.fitBounds(bounds, 70)
+    }
+  }, [initialPlan])
+
   useEffect(() => {
     const t = setTimeout(() => {
       const map = mapRef.current
-      if (!map) return
+      if (!map || !window.google?.maps) return
       const la = parseFloat(ptA.lat), lna = parseFloat(ptA.lng)
       const lb = parseFloat(ptB.lat), lnb = parseFloat(ptB.lng)
       const aOk = !isNaN(la) && isFinite(la) && !isNaN(lna) && isFinite(lna)
       const bOk = !isNaN(lb) && isFinite(lb) && !isNaN(lnb) && isFinite(lnb)
       try {
         if (aOk && bOk) {
-          map.fitBounds([[la, lna], [lb, lnb]], { padding: [70, 70], maxZoom: 15 })
+          const bounds = new window.google.maps.LatLngBounds()
+          bounds.extend({ lat: la, lng: lna })
+          bounds.extend({ lat: lb, lng: lnb })
+          map.fitBounds(bounds, 70)
         } else if (aOk) {
-          map.setView([la, lna], Math.max(map.getZoom() || 3, 13))
+          map.panTo({ lat: la, lng: lna })
+          map.setZoom(Math.max(map.getZoom() || 3, 13))
         } else if (bOk) {
-          map.setView([lb, lnb], Math.max(map.getZoom() || 3, 13))
+          map.panTo({ lat: lb, lng: lnb })
+          map.setZoom(Math.max(map.getZoom() || 3, 13))
         }
-      } catch { /* map may not be ready yet */ }
+      } catch { /* map not ready */ }
     }, 400)
     return () => clearTimeout(t)
   }, [ptA.lat, ptA.lng, ptB.lat, ptB.lng])
@@ -413,7 +406,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
     ]
   }
 
-  const tileConf = TILES[tile]
+  const mapTypeId = MAP_TYPES[tile]?.id ?? 'satellite'
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--bg)' }}>
@@ -437,10 +430,10 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
           placeholder="Plan name…"
         />
 
-        {/* Tile switcher */}
+        {/* Map type switcher */}
         <div className="flex gap-0.5 p-0.5 rounded-lg flex-shrink-0"
           style={{ background: 'var(--surface)', border: '1px solid var(--border-mid)' }}>
-          {Object.entries(TILES).map(([k, v]) => (
+          {Object.entries(MAP_TYPES).map(([k, v]) => (
             <button
               key={k}
               onClick={() => setTile(k)}
@@ -701,55 +694,76 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
               </div>
             )}
 
-            <MapContainer
-              center={[20, 0]}
-              zoom={3}
-              style={{ position: 'absolute', inset: 0 }}
-              zoomControl
-              attributionControl={false}
-            >
-              <TileLayer url={tileConf.url} attribution={tileConf.attr} subdomains={tileConf.subdomains ?? 'abc'} />
-              <MapClickHandler clickMode={clickMode} onPlace={handlePlace} />
-              <MapCaptureRef mapRef={mapRef} initialPlan={initialPlan} />
-
-              {hasA && (
-                <Marker
-                  position={[parseFloat(ptA.lat), parseFloat(ptA.lng)]}
-                  icon={ICON_A}
-                  draggable
-                  eventHandlers={{
-                    dragend(e) {
-                      const { lat, lng } = e.target.getLatLng()
-                      setPtA(p => ({ ...p, lat: lat.toFixed(6), lng: lng.toFixed(6) }))
+            {mapsError ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3"
+                style={{ background: 'var(--surface-2)' }}>
+                <AlertTriangle size={32} style={{ color: '#d97706' }} />
+                <p className="font-semibold" style={{ color: 'var(--text-2)', fontSize: 16 }}>
+                  Google Maps failed to load
+                </p>
+                <p style={{ color: 'var(--text-4)', fontSize: 14 }}>
+                  Add VITE_GOOGLE_MAPS_API_KEY to your .env file
+                </p>
+              </div>
+            ) : !mapsLoaded ? (
+              <div className="absolute inset-0 flex items-center justify-center"
+                style={{ background: 'var(--surface-2)' }}>
+                <Loader2 size={24} className="animate-spin" style={{ color: 'var(--blue)' }} />
+              </div>
+            ) : (
+              <GoogleMap
+                mapContainerStyle={{ position: 'absolute', inset: 0 }}
+                center={{ lat: 20, lng: 0 }}
+                zoom={3}
+                mapTypeId={mapTypeId}
+                options={MAP_OPTIONS}
+                onLoad={onMapLoad}
+                onClick={(e) => {
+                  if (!clickMode) return
+                  handlePlace(clickMode, e.latLng.lat().toFixed(6), e.latLng.lng().toFixed(6))
+                }}
+              >
+                {hasA && (
+                  <GMarker
+                    position={{ lat: parseFloat(ptA.lat), lng: parseFloat(ptA.lng) }}
+                    icon={mkIcon('#3b82f6')}
+                    label={{ text: 'A', color: '#fff', fontWeight: '700', fontFamily: 'monospace', fontSize: '12px' }}
+                    draggable
+                    onDragEnd={(e) => {
+                      setPtA(p => ({ ...p, lat: e.latLng.lat().toFixed(6), lng: e.latLng.lng().toFixed(6) }))
                       setResults(null)
-                    },
-                  }}
-                />
-              )}
-              {hasB && (
-                <Marker
-                  position={[parseFloat(ptB.lat), parseFloat(ptB.lng)]}
-                  icon={ICON_B}
-                  draggable
-                  eventHandlers={{
-                    dragend(e) {
-                      const { lat, lng } = e.target.getLatLng()
-                      setPtB(p => ({ ...p, lat: lat.toFixed(6), lng: lng.toFixed(6) }))
+                    }}
+                  />
+                )}
+                {hasB && (
+                  <GMarker
+                    position={{ lat: parseFloat(ptB.lat), lng: parseFloat(ptB.lng) }}
+                    icon={mkIcon('#10b981')}
+                    label={{ text: 'B', color: '#fff', fontWeight: '700', fontFamily: 'monospace', fontSize: '12px' }}
+                    draggable
+                    onDragEnd={(e) => {
+                      setPtB(p => ({ ...p, lat: e.latLng.lat().toFixed(6), lng: e.latLng.lng().toFixed(6) }))
                       setResults(null)
-                    },
-                  }}
-                />
-              )}
-              {polyline && (
-                <Polyline
-                  positions={polyline}
-                  color={results?.losObstructed ? '#ef4444' : '#3b82f6'}
-                  weight={2.5}
-                  dashArray={results ? null : '6 5'}
-                  opacity={0.9}
-                />
-              )}
-            </MapContainer>
+                    }}
+                  />
+                )}
+                {polyline && (
+                  <GPolyline
+                    path={polyline.map(([lat, lng]) => ({ lat, lng }))}
+                    options={{
+                      strokeColor: results?.losObstructed ? '#ef4444' : '#3b82f6',
+                      strokeWeight: 2.5,
+                      strokeOpacity: 0.9,
+                      icons: results ? [] : [{
+                        icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 4 },
+                        offset: '0',
+                        repeat: '12px',
+                      }],
+                    }}
+                  />
+                )}
+              </GoogleMap>
+            )}
 
             {/* Map info overlay */}
             <div className="absolute bottom-3 right-3 z-[1000] rounded-lg px-3 py-2 space-y-1 backdrop-blur-sm shadow-md"
