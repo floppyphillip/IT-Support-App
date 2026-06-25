@@ -64,7 +64,7 @@ if (!opened) {
     if (txt === 'Lagos HQ to Island Tower') { await d.click(); break }
   }
 }
-await new Promise(r => setTimeout(r, 5000))
+await new Promise(r => setTimeout(r, 9000))
 await page.screenshot({ path: 'screenshots/link-modal-filled.png', fullPage: false })
 
 await browser.close()

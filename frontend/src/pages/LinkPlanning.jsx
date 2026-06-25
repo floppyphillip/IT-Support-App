@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
-import { Radio, Plus, Trash2, MapPin, ChevronRight, Signal, Zap, Activity, Loader2, Key, Eye, EyeOff, CheckCircle } from 'lucide-react'
-
-const MAPS_KEY_LS = 'netsupportai-googlemaps-key'
-function loadMapsKey() { return localStorage.getItem(MAPS_KEY_LS) ?? '' }
-function saveMapsKey(k) { localStorage.setItem(MAPS_KEY_LS, k.trim()) }
+import { Radio, Plus, Trash2, MapPin, ChevronRight, Signal, Zap, Activity, Loader2 } from 'lucide-react'
 
 const LinkPlanModal = lazy(() => import('../components/LinkPlanModal'))
 
@@ -135,19 +131,8 @@ export default function LinkPlanning() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editPlan, setEditPlan]   = useState(null)
 
-  const [apiKey, setApiKey]     = useState('')
-  const [showKey, setShowKey]   = useState(false)
-  const [keySaved, setKeySaved] = useState(false)
-
-  useEffect(() => { setApiKey(loadMapsKey()) }, [])
 
   useEffect(() => { setPlans(loadPlans()) }, [])
-
-  const handleSaveKey = () => {
-    saveMapsKey(apiKey)
-    setKeySaved(true)
-    setTimeout(() => setKeySaved(false), 2500)
-  }
 
   const refresh    = useCallback(() => setPlans(loadPlans()), [])
   const openNew    = () => { setEditPlan(null); setModalOpen(true) }
@@ -211,69 +196,6 @@ export default function LinkPlanning() {
               Click <strong style={{ color: 'var(--text-3)' }}>Add New Link Plan</strong> → place markers on the satellite map →
               set frequency and channel width → click <em>Analyze Link</em>.
             </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Maps API Key card */}
-      <div className="card p-4 mb-6">
-        <div className="flex items-start gap-3">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-            style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.22)' }}>
-            <Key size={13} className="text-blue-500" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <p className="font-semibold" style={{ color: 'var(--text-1)', fontSize: 16 }}>
-                Maps JavaScript API Key
-              </p>
-              {loadMapsKey() && (
-                <span className="flex items-center gap-1 font-semibold"
-                  style={{ fontSize: 13, color: '#059669' }}>
-                  <CheckCircle size={12} /> Configured
-                </span>
-              )}
-            </div>
-            <p className="mb-3" style={{ fontSize: 15, color: 'var(--text-3)' }}>
-              Required for Google Earth satellite imagery in the map.
-              Get a key at <span className="font-mono" style={{ color: 'var(--text-2)' }}>console.cloud.google.com</span> — enable the <em>Maps JavaScript API</em>.
-            </p>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 min-w-0">
-                <input
-                  type={showKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={e => { setApiKey(e.target.value); setKeySaved(false) }}
-                  onKeyDown={e => { if (e.key === 'Enter') handleSaveKey() }}
-                  placeholder="AIzaSy…"
-                  className="input font-mono w-full"
-                  style={{ fontSize: 15, paddingRight: 38 }}
-                />
-                <button
-                  onClick={() => setShowKey(s => !s)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 transition-colors"
-                  style={{ color: 'var(--text-4)' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-2)' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-4)' }}
-                >
-                  {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-              <button onClick={handleSaveKey} className="btn-primary flex-shrink-0">
-                Save Key
-              </button>
-              {keySaved && (
-                <span className="flex items-center gap-1 font-semibold flex-shrink-0"
-                  style={{ fontSize: 14, color: '#059669' }}>
-                  <CheckCircle size={13} /> Saved
-                </span>
-              )}
-            </div>
-            {!loadMapsKey() && (
-              <p className="mt-2" style={{ fontSize: 13, color: 'var(--text-4)' }}>
-                Without a key the map loads in development mode with a watermark.
-              </p>
-            )}
           </div>
         </div>
       </div>
