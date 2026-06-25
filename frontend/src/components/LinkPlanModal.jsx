@@ -150,7 +150,10 @@ const QUALITY = {
 
 // ─── Google Maps config ───────────────────────────────────────────────────────
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? ''
+function getGoogleMapsKey() {
+  return localStorage.getItem('netsupportai-googlemaps-key')?.trim() ||
+         (import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '')
+}
 
 const MAP_TYPES = {
   satellite: { id: 'satellite', label: 'Satellite' },
@@ -293,7 +296,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
   const mapRef = useRef(null)
 
   const { isLoaded: mapsLoaded, loadError: mapsError } = useJsApiLoader({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: getGoogleMapsKey(),
   })
 
   const onMapLoad = useCallback((map) => {
