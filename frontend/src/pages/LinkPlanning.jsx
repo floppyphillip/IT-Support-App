@@ -68,13 +68,13 @@ function PlanCard({ plan, onOpen, onDelete }) {
         <div className="w-3 h-3 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0"
           style={{ fontSize: 7, fontWeight: 700, color: 'white' }}>A</div>
         <span className="truncate">
-          {parseFloat(plan.pointA?.lat ?? 0).toFixed(4)}, {parseFloat(plan.pointA?.lng ?? 0).toFixed(4)}
+          {plan.pointA?.name || `${parseFloat(plan.pointA?.lat ?? 0).toFixed(4)}, ${parseFloat(plan.pointA?.lng ?? 0).toFixed(4)}`}
         </span>
         <ChevronRight size={9} className="flex-shrink-0" style={{ color: 'var(--text-4)' }} />
         <div className="w-3 h-3 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0"
           style={{ fontSize: 7, fontWeight: 700, color: 'white' }}>B</div>
         <span className="truncate">
-          {parseFloat(plan.pointB?.lat ?? 0).toFixed(4)}, {parseFloat(plan.pointB?.lng ?? 0).toFixed(4)}
+          {plan.pointB?.name || `${parseFloat(plan.pointB?.lat ?? 0).toFixed(4)}, ${parseFloat(plan.pointB?.lng ?? 0).toFixed(4)}`}
         </span>
       </div>
 

@@ -214,12 +214,15 @@ netsupportai/
   - **Delete guards**: a customer cannot be deleted while it has linked devices (shows count in toast); a customer device cannot be deleted while attached to a customer (delete modal shows which customer and blocks the button)
 - **Date/Time settings** (Settings, superadmin + admin) — 12/24h clock toggle, Manual date/time, NTP server picker (50+ servers, 7 regions); all timestamps respect this via `timeFormat.js`
 - **Link Planning** (`/link-planning`) — 5 GHz RF point-to-point link planning tool (localStorage). Full-screen modal with:
-  - Live satellite map (Esri World Imagery via react-leaflet v4 + leaflet 1.9) with Satellite/Topo/Dark tile switcher
-  - Point A and Point B: coordinate inputs (decimal degrees) + height AGL; markers draggable on map; "Set on Map" click-to-place mode
-  - Frequency slider + text input (5000–6000 MHz); Channel width selector (5/10/20/40 MHz)
-  - RF calculations: FSPL (`20·log10(d_km) + 20·log10(f_MHz) + 32.45`), RSL (23 dBm Tx + 23 dBi ant × 2 − 1 dB cable each − FSPL), link margin, 1st Fresnel zone radius, modulation estimate (256-QAM → BPSK → No Link), throughput, quality (excellent/good/marginal/poor)
-  - Elevation profile: 60-point path sampled from Open-Elevation API with deterministic sinusoidal fallback; `ComposedChart` with terrain area (light gray gradient), LOS line (blue dashed), Fresnel zone bounds (light blue dashed), obstructed terrain (red overlay)
-  - Leaflet chunk is lazy-loaded via `React.lazy()` + `Suspense` (only loads on modal open); isolated in `manualChunks.leaflet` to keep main bundle small
+  - Live satellite map (Esri World Imagery via react-leaflet v4 + leaflet 1.9). **Free — no API key required.** Tile switcher: Satellite / Street / Topo.
+  - Point A and Point B: coordinate inputs accept **decimal degrees or DMS** — typing `6°27′14″N` / `6 27 14.76 N` / `S6°27′14.76″` auto-converts to decimal on blur. `parseDMSToDecimal()` in `LinkPlanModal.jsx`.
+  - Map auto-pans to show entered coordinates 400 ms after typing (debounced `useEffect` + `MapContainer ref={handleMapRef}` pattern).
+  - **Locate** button (blue, `MapPin` icon) — when coordinates are entered, pans the map to them. **Pick on Map** button (crosshair icon) — when no coordinates are entered, enters click-to-place mode so the user can click the satellite map to set the point.
+  - Markers are draggable; drag updates the coordinate inputs in real time.
+  - Frequency slider + text input (5000–6000 MHz); Channel width selector (5/10/20/40 MHz).
+  - RF calculations: FSPL (`20·log10(d_km) + 20·log10(f_MHz) + 32.45`), RSL (23 dBm Tx + 23 dBi ant × 2 − 1 dB cable each − FSPL), link margin, 1st Fresnel zone radius, modulation estimate (256-QAM → BPSK → No Link), throughput, quality (excellent/good/marginal/poor).
+  - Elevation profile: 60-point path sampled from Open-Elevation API with deterministic sinusoidal fallback; `ComposedChart` with terrain area (gray gradient), LOS line (blue dashed), Fresnel zone bounds (light blue dashed), obstructed terrain (red overlay).
+  - Leaflet chunk lazy-loaded via `React.lazy()` + `Suspense` (loads only on first modal open).
 
 ---
 

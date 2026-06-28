@@ -203,14 +203,18 @@ const TILES = {
 
 // ─── Custom Leaflet marker icons ──────────────────────────────────────────────
 
-const ICON_A = L.divIcon({
-  html: `<div style="width:28px;height:28px;border-radius:50%;background:#3b82f6;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;box-shadow:0 2px 10px rgba(0,0,0,0.4);font-family:monospace;cursor:grab">A</div>`,
-  className: '', iconSize: [28, 28], iconAnchor: [14, 14],
-})
-const ICON_B = L.divIcon({
-  html: `<div style="width:28px;height:28px;border-radius:50%;background:#10b981;border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;box-shadow:0 2px 10px rgba(0,0,0,0.4);font-family:monospace;cursor:grab">B</div>`,
-  className: '', iconSize: [28, 28], iconAnchor: [14, 14],
-})
+function makeMarkerIcon(letter, color, name) {
+  const circle = `<div style="width:28px;height:28px;border-radius:50%;background:${color};border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;box-shadow:0 2px 10px rgba(0,0,0,0.4);font-family:monospace;cursor:grab">${letter}</div>`
+  const label = name
+    ? `<div style="background:rgba(0,0,0,0.72);color:white;font-family:monospace;font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;margin-top:3px">${name}</div>`
+    : ''
+  return L.divIcon({
+    html: `<div style="display:flex;flex-direction:column;align-items:center">${circle}${label}</div>`,
+    className: '',
+    iconSize: [28, name ? 50 : 28],
+    iconAnchor: [14, 14],
+  })
+}
 
 // ─── Leaflet sub-components ───────────────────────────────────────────────────
 
@@ -259,6 +263,17 @@ function CoordPanel({ point, label, color, clickMode, onCoordChange, onToggleCli
         <span className="label" style={{ marginBottom: 0 }}>Point {label}</span>
       </div>
       <div className="space-y-2">
+        <div>
+          <label className="label" style={{ fontSize: 13, marginBottom: 3 }}>Site Name</label>
+          <input
+            type="text"
+            placeholder={label === 'A' ? 'e.g. Main Tower' : 'e.g. Remote Site'}
+            value={point.name ?? ''}
+            onChange={e => onCoordChange('name', e.target.value)}
+            className="input"
+            style={{ fontSize: 14, padding: '5px 8px' }}
+          />
+        </div>
         <div className="grid grid-cols-2 gap-1.5">
           {['lat', 'lng'].map(field => (
             <div key={field}>
@@ -332,8 +347,8 @@ function CoordPanel({ point, label, color, clickMode, onCoordChange, onToggleCli
 
 export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
   const [planName, setPlanName]   = useState(initialPlan?.name ?? 'New Link Plan')
-  const [ptA, setPtA]             = useState(initialPlan?.pointA ?? { lat: '', lng: '', height: '10' })
-  const [ptB, setPtB]             = useState(initialPlan?.pointB ?? { lat: '', lng: '', height: '10' })
+  const [ptA, setPtA]             = useState(initialPlan?.pointA ?? { name: '', lat: '', lng: '', height: '10' })
+  const [ptB, setPtB]             = useState(initialPlan?.pointB ?? { name: '', lat: '', lng: '', height: '10' })
   const [freq, setFreq]           = useState(initialPlan?.frequency ?? 5800)
   const [chWidth, setChWidth]     = useState(initialPlan?.channelWidth ?? 20)
   const [clickMode, setClickMode] = useState(null)
@@ -527,7 +542,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
               clickMode={clickMode}
               onCoordChange={(field, val) => {
                 setPtA(p => ({ ...p, [field]: val }))
-                setResults(null)
+                if (field !== 'name') setResults(null)
               }}
               onToggleClick={() => {
                 const la = parseFloat(ptA.lat), lna = parseFloat(ptA.lng)
@@ -549,7 +564,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
               clickMode={clickMode}
               onCoordChange={(field, val) => {
                 setPtB(p => ({ ...p, [field]: val }))
-                setResults(null)
+                if (field !== 'name') setResults(null)
               }}
               onToggleClick={() => {
                 const lb = parseFloat(ptB.lat), lnb = parseFloat(ptB.lng)
@@ -755,6 +770,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
             <MapContainer
               center={[20, 0]}
               zoom={3}
+              minZoom={3}
               ref={handleMapRef}
               style={{ position: 'absolute', inset: 0 }}
               zoomControl
@@ -766,7 +782,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
               {hasA && (
                 <Marker
                   position={[parseFloat(ptA.lat), parseFloat(ptA.lng)]}
-                  icon={ICON_A}
+                  icon={makeMarkerIcon('A', '#3b82f6', ptA.name)}
                   draggable
                   eventHandlers={{
                     dragend(e) {
@@ -780,7 +796,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
               {hasB && (
                 <Marker
                   position={[parseFloat(ptB.lat), parseFloat(ptB.lng)]}
-                  icon={ICON_B}
+                  icon={makeMarkerIcon('B', '#10b981', ptB.name)}
                   draggable
                   eventHandlers={{
                     dragend(e) {
