@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { MapContainer, TileLayer, Marker, Polyline, useMapEvents, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Polyline, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
@@ -193,19 +193,6 @@ function MapClickHandler({ clickMode, onPlace }) {
   return null
 }
 
-function MapCaptureRef({ mapRef, initialPlan }) {
-  const map = useMap()
-  mapRef.current = map  // synchronous — available immediately after first render
-  useEffect(() => {
-    if (!initialPlan) return
-    const la = parseFloat(initialPlan.pointA?.lat), lna = parseFloat(initialPlan.pointA?.lng)
-    const lb = parseFloat(initialPlan.pointB?.lat), lnb = parseFloat(initialPlan.pointB?.lng)
-    if ([la, lna, lb, lnb].every(v => !isNaN(v) && isFinite(v))) {
-      map.fitBounds([[la, lna], [lb, lnb]], { padding: [70, 70], maxZoom: 15 })
-    }
-  }, []) // eslint-disable-line
-  return null
-}
 
 // ─── Elevation profile tooltip ────────────────────────────────────────────────
 
@@ -318,6 +305,19 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
   const [profileCollapsed, setProfileCollapsed] = useState(false)
 
   const mapRef = useRef(null)
+
+  // Called by MapContainer's ref — guaranteed to fire before any useEffect in this component
+  const handleMapRef = useCallback((map) => {
+    mapRef.current = map
+    if (!map || !initialPlan) return
+    const la = parseFloat(initialPlan.pointA?.lat), lna = parseFloat(initialPlan.pointA?.lng)
+    const lb = parseFloat(initialPlan.pointB?.lat), lnb = parseFloat(initialPlan.pointB?.lng)
+    if ([la, lna, lb, lnb].every(v => !isNaN(v) && isFinite(v))) {
+      setTimeout(() => {
+        try { map.fitBounds([[la, lna], [lb, lnb]], { padding: [70, 70], maxZoom: 15 }) } catch {}
+      }, 100)
+    }
+  }, [initialPlan]) // eslint-disable-line
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -702,13 +702,13 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
             <MapContainer
               center={[20, 0]}
               zoom={3}
+              ref={handleMapRef}
               style={{ position: 'absolute', inset: 0 }}
               zoomControl
               attributionControl={false}
             >
               <TileLayer url={tileConf.url} attribution={tileConf.attr} subdomains={tileConf.subdomains ?? ''} />
               <MapClickHandler clickMode={clickMode} onPlace={handlePlace} />
-              <MapCaptureRef mapRef={mapRef} initialPlan={initialPlan} />
 
               {hasA && (
                 <Marker
