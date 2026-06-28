@@ -133,6 +133,36 @@ function rfAnalyze(ptA, ptB, freqMHz, chWidth, elevations) {
   }
 }
 
+// ─── DMS → decimal converter ─────────────────────────────────────────────────
+
+function parseDMSToDecimal(str) {
+  if (!str || str.trim() === '') return ''
+  const s = str.trim()
+
+  // Already a plain decimal — leave untouched
+  if (/^-?\d+\.?\d*$/.test(s)) return s
+
+  // Extract hemisphere (N/S/E/W)
+  const dirMatch = s.toUpperCase().match(/[NSEW]/)
+  const dir = dirMatch ? dirMatch[0] : null
+  const negative = dir === 'S' || dir === 'W'
+
+  // Strip symbols: °  ′  ″  '  "  `  ,  direction letters
+  const stripped = s.replace(/[°′″'"`,NSEW]/gi, ' ').trim()
+  const parts = stripped.split(/\s+/).map(Number).filter(p => !isNaN(p))
+
+  if (parts.length === 0) return s  // unrecognised — leave as-is
+
+  const deg = parts[0] ?? 0
+  const min = parts[1] ?? 0
+  const sec = parts[2] ?? 0
+
+  let decimal = Math.abs(deg) + min / 60 + sec / 3600
+  if (deg < 0 || negative) decimal = -decimal
+
+  return isNaN(decimal) ? s : decimal.toFixed(6)
+}
+
 // ─── localStorage ────────────────────────────────────────────────────────────
 
 const LS_KEY = 'netsupportai-link-plans'
@@ -236,15 +266,17 @@ function CoordPanel({ point, label, color, clickMode, onCoordChange, onToggleCli
                 {field === 'lat' ? 'Latitude' : 'Longitude'}
               </label>
               <input
-                type="number"
-                placeholder={field === 'lat' ? '0.000000' : '0.000000'}
-                step="0.000001"
-                min={field === 'lat' ? -90 : -180}
-                max={field === 'lat' ? 90 : 180}
+                type="text"
+                inputMode="decimal"
+                placeholder={field === 'lat' ? '6.4541 or 6°27′14″N' : '3.3947 or 3°23′40″E'}
                 value={point[field]}
                 onChange={e => onCoordChange(field, e.target.value)}
+                onBlur={e => {
+                  const converted = parseDMSToDecimal(e.target.value)
+                  if (converted !== e.target.value) onCoordChange(field, converted)
+                }}
                 className="input font-mono"
-                style={{ fontSize: 15, padding: '5px 8px' }}
+                style={{ fontSize: 14, padding: '5px 8px' }}
               />
             </div>
           ))}
