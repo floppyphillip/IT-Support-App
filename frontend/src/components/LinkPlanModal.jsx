@@ -534,6 +534,21 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
         >
           <div className="p-4 space-y-4">
 
+            {/* Plan name */}
+            <div>
+              <label className="label" style={{ fontSize: 13, marginBottom: 3 }}>Plan Name</label>
+              <input
+                type="text"
+                placeholder="e.g. Lagos HQ to Island Tower"
+                value={planName}
+                onChange={e => setPlanName(e.target.value)}
+                className="input"
+                style={{ fontSize: 15, padding: '5px 8px' }}
+              />
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+
             {/* Point A */}
             <CoordPanel
               point={ptA}
