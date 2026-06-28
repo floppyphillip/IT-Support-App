@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, Tooltip,
 } from 'recharts'
 import {
-  X, Radio, Mountain, Zap, Crosshair,
+  X, Radio, Mountain, Zap, Crosshair, MapPin,
   CheckCircle, AlertTriangle, Loader2, Save, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
@@ -267,15 +267,22 @@ function CoordPanel({ point, label, color, clickMode, onCoordChange, onToggleCli
             <button
               onClick={onToggleClick}
               className="w-full flex items-center justify-center gap-1 py-1.5 rounded-lg font-semibold transition-all"
-              style={isPlacing
-                ? { background: color, color: 'white', border: `1px solid ${color}`, fontSize: 14 }
-                : { background: 'var(--surface-2)', border: '1px solid var(--border-mid)', color: 'var(--text-3)', fontSize: 14 }
+              style={
+                isPlacing
+                  ? { background: color, color: 'white', border: `1px solid ${color}`, fontSize: 14 }
+                  : hasCoord
+                  ? { background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.25)', color: '#2563eb', fontSize: 14 }
+                  : { background: 'var(--surface-2)', border: '1px solid var(--border-mid)', color: 'var(--text-3)', fontSize: 14 }
               }
-              onMouseEnter={e => { if (!isPlacing) e.currentTarget.style.borderColor = 'var(--border-strong)' }}
-              onMouseLeave={e => { if (!isPlacing) e.currentTarget.style.borderColor = 'var(--border-mid)' }}
+              onMouseEnter={e => {
+                if (!isPlacing && !hasCoord) e.currentTarget.style.borderColor = 'var(--border-strong)'
+              }}
+              onMouseLeave={e => {
+                if (!isPlacing && !hasCoord) e.currentTarget.style.borderColor = 'var(--border-mid)'
+              }}
             >
-              <Crosshair size={12} />
-              {isPlacing ? 'Placing…' : 'Set on Map'}
+              {isPlacing ? <Crosshair size={12} /> : hasCoord ? <MapPin size={12} /> : <Crosshair size={12} />}
+              {isPlacing ? 'Placing…' : hasCoord ? 'Locate' : 'Pick on Map'}
             </button>
           </div>
         </div>
@@ -490,7 +497,14 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                 setPtA(p => ({ ...p, [field]: val }))
                 setResults(null)
               }}
-              onToggleClick={() => setClickMode(clickMode === 'A' ? null : 'A')}
+              onToggleClick={() => {
+                const la = parseFloat(ptA.lat), lna = parseFloat(ptA.lng)
+                if (!isNaN(la) && isFinite(la) && !isNaN(lna) && isFinite(lna)) {
+                  try { mapRef.current?.setView([la, lna], Math.max(mapRef.current.getZoom() || 3, 14)) } catch {}
+                } else {
+                  setClickMode(m => m === 'A' ? null : 'A')
+                }
+              }}
             />
 
             <div style={{ borderTop: '1px solid var(--border)' }} />
@@ -505,7 +519,14 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                 setPtB(p => ({ ...p, [field]: val }))
                 setResults(null)
               }}
-              onToggleClick={() => setClickMode(clickMode === 'B' ? null : 'B')}
+              onToggleClick={() => {
+                const lb = parseFloat(ptB.lat), lnb = parseFloat(ptB.lng)
+                if (!isNaN(lb) && isFinite(lb) && !isNaN(lnb) && isFinite(lnb)) {
+                  try { mapRef.current?.setView([lb, lnb], Math.max(mapRef.current.getZoom() || 3, 14)) } catch {}
+                } else {
+                  setClickMode(m => m === 'B' ? null : 'B')
+                }
+              }}
             />
 
             <div style={{ borderTop: '1px solid var(--border)' }} />
