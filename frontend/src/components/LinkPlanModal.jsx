@@ -379,7 +379,23 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
   const [tile, setTile]           = useState('satellite')
   const [profileCollapsed, setProfileCollapsed] = useState(false)
 
-  const mapRef = useRef(null)
+  const mapRef     = useRef(null)
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
+
+  // Push a history entry on mount so the browser back button closes the modal
+  useEffect(() => {
+    window.history.pushState({ linkPlanModal: true }, '')
+    const handler = () => onCloseRef.current()
+    window.addEventListener('popstate', handler)
+    return () => window.removeEventListener('popstate', handler)
+  }, [])
+
+  // Use this instead of onClose directly so the history entry is consumed
+  const handleClose = useCallback(() => {
+    window.history.back()
+    onClose()
+  }, [onClose])
 
   const handleMapRef = useCallback((map) => {
     mapRef.current = map
@@ -467,8 +483,8 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
     persistPlans(plans)
     onSave?.(plan)
     toast.success(`Plan "${planName}" saved`)
-    onClose()
-  }, [results, planName, ptA, ptB, initialPlan, onClose, onSave])
+    handleClose()
+  }, [results, planName, ptA, ptB, initialPlan, handleClose, onSave])
 
   // Y-axis domain: cover both effective terrain and LOS line
   let yDomain = ['auto', 'auto']
@@ -520,7 +536,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
           </button>
         )}
 
-        <button onClick={onClose}
+        <button onClick={handleClose}
           className="p-1.5 rounded-lg transition-all flex-shrink-0"
           style={{ color: 'var(--text-3)' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover)'; e.currentTarget.style.color = 'var(--text-1)' }}
