@@ -107,7 +107,7 @@ netsupportai/
 │       │   ├── Sidebar.jsx          # Role-filtered nav (Main / Tools / Account groups)
 │       │   ├── Navbar.jsx
 │       │   ├── Terminal.jsx         # xterm.js SSH terminal over WebSocket
-│       │   ├── LinkPlanModal.jsx    # Full-screen RF link planner (Leaflet map + elevation chart)
+│       │   ├── LinkPlanModal.jsx    # Full-screen LOS planner (Leaflet satellite map + elevation chart, losAnalyze K=4/3)
 │       │   ├── Skeleton.jsx         # SkeletonCard, SkeletonTable, SkeletonStats
 │       │   ├── EmptyState.jsx
 │       │   ├── StatsCard.jsx
@@ -132,7 +132,7 @@ netsupportai/
 │           ├── Alerts.jsx           # Custom-rule alerts (edge-triggered) + recovery alerts
 │           ├── AlertRules.jsx       # Rule builder: ping params + SNMP OID params
 │           ├── Services.jsx         # Service catalog (localStorage)
-│           ├── LinkPlanning.jsx     # 5 GHz RF link plan list + stats (lazy-loads modal)
+│           ├── LinkPlanning.jsx     # LOS link plan list + stats (Clear/Marginal/Obstructed; lazy-loads modal)
 │           ├── Settings.jsx         # Profile, Team, Date/Time (12/24h + NTP/Manual)
 │           ├── UserManagement.jsx
 │           ├── Clients.jsx
