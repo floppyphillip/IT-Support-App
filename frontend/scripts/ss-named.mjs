@@ -14,15 +14,17 @@ await page.evaluateOnNewDocument(() => {
     name: 'Lagos HQ to Island Tower',
     pointA: { name: 'Main Tower', lat: '6.5244', lng: '3.3792', height: '30' },
     pointB: { name: 'Island Site', lat: '6.4550', lng: '3.4217', height: '20' },
-    frequency: 5800,
-    channelWidth: 20,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     results: {
-      distKm: 8.2, fspl: 115.5, rsl: -48.5, margin: 36.5,
-      f1Mid: 12.3, losObstructed: false, obstructedCount: 0,
-      mod: '256-QAM', throughput: 60, quality: 'excellent',
-      elevA: 12, elevB: 8, antA: 42, antB: 28, bearing: 142.3, profile: [],
+      distKm: 8.2, bearing: 142.3,
+      losObstructed: false, obstructedCount: 0,
+      minClearance: 22.4, minClearanceDist: 4.1,
+      maxTerrain: 18, avgTerrain: 9, maxBulgeM: 1.2,
+      verdict: 'Clear', verdictColor: '#059669', verdictBg: 'bg-emerald-500/10 border-emerald-500/20',
+      elevA: 12, elevB: 8, antA: 42, antB: 28,
+      worstObstruction: null, recommendedHeightA: null, recommendedHeightB: null,
+      profile: [],
     },
   }
   localStorage.setItem('netsupportai-link-plans', JSON.stringify([plan]))
@@ -36,7 +38,7 @@ await page.evaluateOnNewDocument(() => {
 })
 
 await page.goto('http://localhost:5173/link-planning', { waitUntil: 'networkidle2', timeout: 20000 })
-await new Promise(r => setTimeout(r, 2000))
+await new Promise(r => setTimeout(r, 4000))
 
 // Click the plan card (the first .card element that's also cursor-pointer, skip stat cards)
 const clicked = await page.evaluate(() => {

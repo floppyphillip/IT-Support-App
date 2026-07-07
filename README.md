@@ -213,7 +213,7 @@ netsupportai/
 - **Customer Management** — Service Details (type from Services catalog, name, capacity/bandwidth); Services and Customer Devices columns with inline table expansion; read-only customer view modal
   - **Delete guards**: a customer cannot be deleted while it has linked devices (shows count in toast); a customer device cannot be deleted while attached to a customer (delete modal shows which customer and blocks the button)
 - **Date/Time settings** (Settings, superadmin + admin) — 12/24h clock toggle, Manual date/time, NTP server picker (50+ servers, 7 regions); all timestamps respect this via `timeFormat.js`
-- **Link Planning** (`/link-planning`) — 5 GHz RF point-to-point link planning tool (localStorage). Full-screen modal with:
+- **Link Planning** (`/link-planning`) — Point-to-point line-of-sight analysis tool (localStorage). Full-screen modal with:
   - Live satellite map (Esri World Imagery via react-leaflet v4 + leaflet 1.9). **Free — no API key required.** Tile switcher: Satellite / Street / Topo. `minZoom={3}` prevents zooming out beyond the initial world view.
   - **Plan Name** field in the left panel (labeled input; same state as the inline-editable header title — both stay in sync).
   - Point A and Point B each have a **Site Name** field (e.g. "Main Tower", "Island Site"). Coordinate inputs accept **decimal degrees or DMS** — `parseDMSToDecimal()` auto-converts on blur. Site names appear as dark pill labels below the map markers; changing a name does not clear existing analysis results.
@@ -222,11 +222,13 @@ netsupportai/
   - Map auto-pans 400 ms after coordinates are typed (`MapContainer ref={handleMapRef}` + debounced `useEffect`).
   - **Locate** button pans to entered coordinates; **Pick on Map** enters click-to-place mode when no coordinates are set.
   - Markers are draggable; drag updates the coordinate inputs in real time.
-  - Frequency slider + text input (5000–6000 MHz); Channel width selector (5/10/20/40 MHz).
-  - RF calculations: FSPL, RSL, link margin, 1st Fresnel zone radius, modulation estimate (256-QAM → BPSK → No Link), throughput, quality (excellent/good/marginal/poor).
-  - Elevation profile: 60-point path from Open-Elevation API with sinusoidal fallback; `ComposedChart` with terrain, LOS line, Fresnel zone bounds, obstructed terrain overlay.
+  - **LOS analysis** (`losAnalyze`) — **K=4/3 atmospheric refraction** earth-curvature model. Per-sample earth bulge: `bulgeM = (dA × dB) / (2 × K × Re) × 1000`. Effective terrain = terrain + bulge. 100-sample elevation profile from Open-Elevation API with sinusoidal fallback.
+  - **Verdict system**: `Clear` (min clearance ≥ 10 m), `Marginal` (clearance < 10 m), `Obstructed` (any negative clearance). Drives badge color (green / amber / red) on modal and listing cards.
+  - Results: distance, bearing, min clearance + location, max terrain, max earth bulge, obstruction count, worst excess, recommended antenna heights for A and B.
+  - Elevation chart: `effectiveTerrain` fill, red obstructed overlay, blue dashed LOS line, `ReferenceLine` at tightest clearance point. Polyline on map is green/amber/red by verdict.
+  - Listing stats: 4-column — Total Plans / Clear LOS / Marginal / Obstructed.
   - Leaflet chunk lazy-loaded via `React.lazy()` + `Suspense` (loads only on first modal open).
-  - localStorage shape: `{ id, name, pointA: { name, lat, lng, height }, pointB: { name, lat, lng, height }, frequency, channelWidth, created_at, updated_at, results }[]`
+  - localStorage shape: `{ id, name, pointA: { name, lat, lng, height }, pointB: { name, lat, lng, height }, created_at, updated_at, results }[]`
 
 ---
 
@@ -388,7 +390,7 @@ Unit handling: `%` → float%, `s` → TimeTicks to `DDd:HH:MM:SS`, `B` → auto
 | `netsupportai-custom-alerts` | `{ id, severity_level, device_name, alert_name, iface_alert?, iface_speed_alert?, created_at, is_resolved, is_acknowledged }[]` | alertEngine, Alerts |
 | `netsupportai-customer-service-details` | `{ [customerId]: ServiceDetail[] }` | CustomerManagement |
 | `netsupportai-datetime` | `{ mode, ntpServer, clockFormat, manualDate, manualTime }` | Settings, timeFormat |
-| `netsupportai-link-plans` | `{ id, name, pointA, pointB, frequency, channelWidth, created_at, updated_at, results }[]` | LinkPlanning, LinkPlanModal |
+| `netsupportai-link-plans` | `{ id, name, pointA: { name, lat, lng, height }, pointB: { name, lat, lng, height }, created_at, updated_at, results }[]` | LinkPlanning, LinkPlanModal |
 
 ---
 
