@@ -219,12 +219,6 @@ const TILES = {
     attr: '&copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012',
     label: 'Street',
   },
-  topo: {
-    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    subdomains: 'abc',
-    attr: '&copy; OpenTopoMap contributors',
-    label: 'Topo',
-  },
 }
 
 // ─── Custom Leaflet marker icons ──────────────────────────────────────────────
@@ -825,7 +819,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                 <>
                   <div style={{ height: 190 }} className="px-2 pt-2 pb-0">
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={results.profile} margin={{ top: 8, right: 12, bottom: 4, left: 40 }}>
+                      <ComposedChart data={results.profile} margin={{ top: 8, right: 40, bottom: 4, left: 40 }}>
                         <defs>
                           <linearGradient id="terrainGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%"   stopColor="#78716c" stopOpacity={0.55} />
@@ -841,6 +835,16 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                           stroke="rgba(0,0,0,0.10)"
                         />
                         <YAxis
+                          yAxisId="left"
+                          domain={yDomain}
+                          tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'monospace' }}
+                          tickFormatter={v => `${v}m`}
+                          stroke="rgba(0,0,0,0.10)"
+                          width={38}
+                        />
+                        <YAxis
+                          yAxisId="right"
+                          orientation="right"
                           domain={yDomain}
                           tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'monospace' }}
                           tickFormatter={v => `${v}m`}
@@ -851,6 +855,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
 
                         {/* Minimum clearance point vertical reference line */}
                         <ReferenceLine
+                          yAxisId="left"
                           x={results.minClearanceDist}
                           stroke={results.minClearance < 0 ? '#dc2626' : results.minClearance < 10 ? '#d97706' : '#059669'}
                           strokeWidth={1.5}
@@ -859,16 +864,16 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                         />
 
                         {/* Effective terrain fill (earth-curvature corrected) */}
-                        <Area type="monotone" dataKey="effectiveTerrain" fill="url(#terrainGrad)"
+                        <Area yAxisId="left" type="monotone" dataKey="effectiveTerrain" fill="url(#terrainGrad)"
                           stroke="#78716c" strokeWidth={1.5} dot={false} legendType="none" />
 
                         {/* Obstructed terrain red overlay */}
-                        <Area type="monotone" dataKey="obstructedTerrain" fill="rgba(239,68,68,0.28)"
+                        <Area yAxisId="left" type="monotone" dataKey="obstructedTerrain" fill="rgba(239,68,68,0.28)"
                           stroke="rgba(220,38,38,0.75)" strokeWidth={1.5} dot={false}
                           legendType="none" connectNulls={false} />
 
                         {/* LOS line */}
-                        <Line type="monotone" dataKey="los" stroke="#3b82f6" strokeWidth={2.5}
+                        <Line yAxisId="left" type="monotone" dataKey="los" stroke="#3b82f6" strokeWidth={2.5}
                           strokeDasharray="8 4" dot={false} legendType="none" />
                       </ComposedChart>
                     </ResponsiveContainer>
