@@ -486,14 +486,15 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
     handleClose()
   }, [results, planName, ptA, ptB, initialPlan, handleClose, onSave])
 
-  // Y-axis domain: cover both effective terrain and LOS line
+  // Y-axis domain and ticks: 10 m spacing
   let yDomain = ['auto', 'auto']
+  let yTicks  = undefined
   if (results?.profile?.length) {
     const allY = results.profile.flatMap(p => [p.effectiveTerrain, p.los]).filter(v => v != null)
-    yDomain = [
-      Math.floor((Math.min(...allY) - 20) / 10) * 10,
-      Math.ceil((Math.max(...allY) + 30) / 10) * 10,
-    ]
+    const lo = Math.floor((Math.min(...allY) - 20) / 10) * 10
+    const hi = Math.ceil((Math.max(...allY)  + 30) / 10) * 10
+    yDomain = [lo, hi]
+    yTicks  = Array.from({ length: Math.round((hi - lo) / 10) + 1 }, (_, i) => lo + i * 10)
   }
 
   const tileConf    = TILES[tile] ?? TILES.satellite
@@ -853,6 +854,8 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                         <YAxis
                           yAxisId="left"
                           domain={yDomain}
+                          ticks={yTicks}
+                          interval={1}
                           tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'monospace' }}
                           tickFormatter={v => `${v}m`}
                           stroke="rgba(0,0,0,0.10)"
@@ -862,6 +865,8 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                           yAxisId="right"
                           orientation="right"
                           domain={yDomain}
+                          ticks={yTicks}
+                          interval={1}
                           tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'monospace' }}
                           tickFormatter={v => `${v}m`}
                           stroke="rgba(0,0,0,0.10)"
