@@ -486,15 +486,17 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
     handleClose()
   }, [results, planName, ptA, ptB, initialPlan, handleClose, onSave])
 
-  // Y-axis domain and ticks: 10 m spacing
-  let yDomain = ['auto', 'auto']
-  let yTicks  = undefined
+  // Y-axis domain and ticks: 10 m spacing, relative display (0 = lowest terrain on path)
+  let yDomain   = ['auto', 'auto']
+  let yTicks    = undefined
+  let yBaseline = 0   // ASL value that maps to 0 on the displayed axis
   if (results?.profile?.length) {
     const allY = results.profile.flatMap(p => [p.effectiveTerrain, p.los]).filter(v => v != null)
-    const lo = Math.floor((Math.min(...allY) - 10) / 10) * 10
-    const hi = Math.ceil((Math.max(...allY)  + 10) / 10) * 10
-    yDomain = [lo, hi]
-    yTicks  = Array.from({ length: Math.round((hi - lo) / 10) + 1 }, (_, i) => lo + i * 10)
+    const lo = Math.floor(Math.min(...allY) / 10) * 10
+    const hi = Math.ceil((Math.max(...allY) + 10) / 10) * 10
+    yBaseline = lo
+    yDomain   = [lo, hi]
+    yTicks    = Array.from({ length: Math.round((hi - lo) / 10) + 1 }, (_, i) => lo + i * 10)
   }
 
   const tileConf    = TILES[tile] ?? TILES.satellite
@@ -857,7 +859,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                           ticks={yTicks}
                           interval={1}
                           tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'monospace' }}
-                          tickFormatter={v => `${v}m`}
+                          tickFormatter={v => `${v - yBaseline}m`}
                           stroke="rgba(0,0,0,0.10)"
                           width={38}
                         />
@@ -868,7 +870,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
                           ticks={yTicks}
                           interval={1}
                           tick={{ fontSize: 11, fill: '#9ca3af', fontFamily: 'monospace' }}
-                          tickFormatter={v => `${v}m`}
+                          tickFormatter={v => `${v - yBaseline}m`}
                           stroke="rgba(0,0,0,0.10)"
                           width={38}
                         />
