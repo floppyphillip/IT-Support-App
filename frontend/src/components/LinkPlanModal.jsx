@@ -491,7 +491,7 @@ export default function LinkPlanModal({ onClose, onSave, initialPlan }) {
   let yTicks  = undefined
   if (results?.profile?.length) {
     const allY = results.profile.flatMap(p => [p.effectiveTerrain, p.los]).filter(v => v != null)
-    const lo = 0
+    const lo = Math.floor((Math.min(...allY) - 20) / 10) * 10
     const hi = Math.ceil((Math.max(...allY)  + 30) / 10) * 10
     yDomain = [lo, hi]
     yTicks  = Array.from({ length: Math.round((hi - lo) / 10) + 1 }, (_, i) => lo + i * 10)
