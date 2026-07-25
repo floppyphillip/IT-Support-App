@@ -214,7 +214,7 @@ netsupportai/
   - **Delete guards**: a customer cannot be deleted while it has linked devices (shows count in toast); a customer device cannot be deleted while attached to a customer (delete modal shows which customer and blocks the button)
 - **Date/Time settings** (Settings, superadmin + admin) — 12/24h clock toggle, Manual date/time, NTP server picker (50+ servers, 7 regions); all timestamps respect this via `timeFormat.js`
 - **Link Planning** (`/link-planning`) — Point-to-point line-of-sight analysis tool (localStorage). Full-screen modal with:
-  - Live satellite map (Esri World Imagery via react-leaflet v4 + leaflet 1.9). **Free — no API key required.** Tile switcher: Satellite / Street / Topo. `minZoom={3}` prevents zooming out beyond the initial world view.
+  - Live satellite map (Esri World Imagery via react-leaflet v4 + leaflet 1.9). **Free — no API key required.** Tile switcher: **Satellite / Street** only. `minZoom={3}` prevents zooming out beyond the initial world view.
   - **Plan Name** field in the left panel (labeled input; same state as the inline-editable header title — both stay in sync).
   - Point A and Point B each have a **Site Name** field (e.g. "Main Tower", "Island Site"). Coordinate inputs accept **decimal degrees or DMS** — `parseDMSToDecimal()` auto-converts on blur. Site names appear as dark pill labels below the map markers; changing a name does not clear existing analysis results.
   - `makeMarkerIcon(letter, color, name)` — Leaflet divIcon with coloured circle + optional name label; updates reactively as the user types.
@@ -222,10 +222,11 @@ netsupportai/
   - Map auto-pans 400 ms after coordinates are typed (`MapContainer ref={handleMapRef}` + debounced `useEffect`).
   - **Locate** button pans to entered coordinates; **Pick on Map** enters click-to-place mode when no coordinates are set.
   - Markers are draggable; drag updates the coordinate inputs in real time.
+  - **Browser back button closes modal**: `window.history.pushState` on mount + `popstate` listener calls `onClose`. Explicit close (X / Save) calls `window.history.back()` first to consume the entry; `handleClose` wraps this pattern.
   - **LOS analysis** (`losAnalyze`) — **K=4/3 atmospheric refraction** earth-curvature model. Per-sample earth bulge: `bulgeM = (dA × dB) / (2 × K × Re) × 1000`. Effective terrain = terrain + bulge. 100-sample elevation profile from Open-Elevation API with sinusoidal fallback.
   - **Verdict system**: `Clear` (min clearance ≥ 10 m), `Marginal` (clearance < 10 m), `Obstructed` (any negative clearance). Drives badge color (green / amber / red) on modal and listing cards.
   - Results: distance, bearing, min clearance + location, max terrain, max earth bulge, obstruction count, worst excess, recommended antenna heights for A and B.
-  - Elevation chart: `effectiveTerrain` fill, red obstructed overlay, blue dashed LOS line, `ReferenceLine` at tightest clearance point. Polyline on map is green/amber/red by verdict.
+  - Elevation chart: `effectiveTerrain` fill, red obstructed overlay, blue dashed LOS line, `ReferenceLine` at tightest clearance point. **Dual Y-axes** (left + right). **Relative elevation**: labels show height above path minimum (0 m = lowest ASL point); tick interval 10 m, labels every 20 m — so 400–480 m ASL reads as 0–80 m. Polyline on map is green/amber/red by verdict.
   - Listing stats: 4-column — Total Plans / Clear LOS / Marginal / Obstructed.
   - Leaflet chunk lazy-loaded via `React.lazy()` + `Suspense` (loads only on first modal open).
   - localStorage shape: `{ id, name, pointA: { name, lat, lng, height }, pointB: { name, lat, lng, height }, created_at, updated_at, results }[]`
